@@ -19,7 +19,53 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="..\..\..\..\Google Drive\Nematic Worms Project\Source Code\fluid_substrate\main.cu" />
+    <Text Include="cuda-memcheck_options.txt" />
+    <Text Include="nvcc_compiler_options.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="main.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NWBoundaryFunctions.h" />
+    <ClInclude Include="NWConstants.h" />
+    <ClInclude Include="NWDataStructs.h" />
+    <ClInclude Include="NWDeviceFunctions.h" />
+    <ClInclude Include="NWErrorHandler.h" />
+    <ClInclude Include="NWFluid.h" />
+    <ClInclude Include="NWFluidKernels.h" />
+    <ClInclude Include="NWFluidKernel_LennardJones.h" />
+    <ClInclude Include="NWFluidKernel_Noise.h" />
+    <ClInclude Include="NWFluidKernel_SetNList.h" />
+    <ClInclude Include="NWFluidKernel_SetXList.h" />
+    <ClInclude Include="NWFluidKernel_UpdateSystem.h" />
+    <ClInclude Include="NWFluidParameters.h" />
+    <ClInclude Include="NWForceXchanger.h" />
+    <ClInclude Include="NWForceXchangerKernels.h" />
+    <ClInclude Include="NWHalloweenSimulation.h" />
+    <ClInclude Include="NWHostFunctions.h" />
+    <ClInclude Include="NWKernels.h" />
+    <ClInclude Include="NWmain.h" />
+    <ClInclude Include="NWParams.h" />
+    <ClInclude Include="NWRandomNumberGenerator.h" />
+    <ClInclude Include="NWSim.h" />
+    <ClInclude Include="NWSimulation.h" />
+    <ClInclude Include="NWSimulationParameters.h" />
+    <ClInclude Include="NWWorms.h" />
+    <ClInclude Include="NWWormsKernels.h" />
+    <ClInclude Include="NWWormsKernel_CalculateTheta.h" />
+    <ClInclude Include="NWWormsKernel_DriveForce.h" />
+    <ClInclude Include="NWWormsKernel_InternalForce.h" />
+    <ClInclude Include="NWWormsKernel_LandscapeForce.h" />
+    <ClInclude Include="NWWormsKernel_LennardJones.h" />
+    <ClInclude Include="NWWormsKernel_SetNList.h" />
+    <ClInclude Include="NWWormsKernel_SetXList.h" />
+    <ClInclude Include="NWWormsKernel_UpdateSystem.h" />
+    <ClInclude Include="NWWormsParameters.h" />
+    <ClInclude Include="XYZPrinter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="poordraw.cfg" />
+    <None Include="run.pbs" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AFB9EADE-CCC6-4839-94C5-9B764B55658B}</ProjectGuid>

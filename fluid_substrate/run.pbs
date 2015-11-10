@@ -1,0 +1,26 @@
+#PBS -N NWSim
+#PBS -l walltime=96:00:00
+#PBS -l nodes=1:ppn=1:gpus=1
+#PBS -j oe
+#PBS -m ae
+#PBS -M mvarga6@kent.edu
+
+cd $PBS_O_WORKDIR
+mkdir $PBS_JOBID
+
+module load cuda/5.5
+
+nvcc main.cu -o Sim
+cp Sim $PBS_JOBID
+pbsdcp Sim $TMPDIR
+rm Sim
+
+cd $TMPDIR
+
+module load cuda/5.5
+./Sim
+
+cd $PBS_O_WORKDIR
+cp -R $TMPDIR/* $PBS_JOBID
+
+trap "cd $PBS_O_WORKDIR;cp -R $TMPDIR/* $PBS_JOBID" TERM
