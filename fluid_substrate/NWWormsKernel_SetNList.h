@@ -7,7 +7,7 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 
-__global__ void SetNeighborList_N2Kernel(float *x, float *y, int *nlist)
+__global__ void SetNeighborList_N2Kernel(float *x, float *y,  float *z, int *nlist)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
@@ -24,7 +24,9 @@ __global__ void SetNeighborList_N2Kernel(float *x, float *y, int *nlist)
 		int w1 = id / dev_Params._NP;
 		int found = 0;
 
-		float dx, dy, rr;
+		float dr[3], r[3], rid[3];
+		rid[0] = x[id]; rid[1] = y[id]; rid[2] = z[id];
+		float _rr;
 		for (int p2 = 0; p2 < dev_Params._NPARTICLES; p2++)
 		{
 			int w2 = p2 / dev_Params._NP;
@@ -47,12 +49,14 @@ __global__ void SetNeighborList_N2Kernel(float *x, float *y, int *nlist)
 			if (sep <= 5) continue;
 
 			//.. add to nlist if within range
-			dx = x[p2] - x[id];
-			dy = y[p2] - y[id];
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			rr = dx * dx + dy * dy;
-			if ((rr <= cutoff) && (found < dev_Params._NMAX))
+			r[0] = x[p2]; r[1] = y[p2]; r[2] = z[p2];
+			_rr = CalculateRR_3d(rid, r, dr);
+			//dx = x[p2] - x[id];
+			//dy = y[p2] - y[id];
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//rr = dx * dx + dy * dy;
+			if ((_rr <= cutoff) && (found < dev_Params._NMAX))
 			{
 				int plcid = id * dev_Params._NMAX + found++;
 				nlist[plcid] = p2;

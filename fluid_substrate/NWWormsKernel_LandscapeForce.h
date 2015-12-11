@@ -6,10 +6,11 @@
 #include "NWParams.h"
 #include "NWSimulationParameters.h"
 #include "NWWormsParameters.h"
-
-__global__ void WormsLandscapeKernel(float *fx, float *fy, float *x, float *y){
+//old
+/*__global__ void WormsLandscapeKernel(float *fx, float *fy, float *x, float *y){
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
+		
 		float _KK = 2.0f * PI * _N / dev_simParams._XBOX;
 
 		float dx = x[id] - (dev_simParams._XBOX / 2.0f);
@@ -22,6 +23,15 @@ __global__ void WormsLandscapeKernel(float *fx, float *fy, float *x, float *y){
 		fy[id] += -_KK * (coskr / r) * dy;
 	}
 
+}*/
+
+__global__ void WormsLandscapeKernel(float *fz, float *z){
+	int id = threadIdx.x + blockDim.x * blockIdx.x;
+
+	//.. pulls towards z = 0
+	if (id < dev_Params._NPARTICLES){
+		fz[id] -= 10.0f * z[id];
+	}
 }
 
 #endif

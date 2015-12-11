@@ -7,7 +7,10 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 
-__global__ void InterForceKernel(float *fx, float *fy, float *vx, float *vy, float *x, float *y, float * randNum)
+__global__ void InterForceKernel(float *fx, float *fy, float *fz,
+								 float *vx, float *vy, float *vz,
+								 float *x, float *y, float *z, 
+								 float * randNum)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
@@ -15,143 +18,178 @@ __global__ void InterForceKernel(float *fx, float *fy, float *vx, float *vy, flo
 		int p = id % dev_Params._NP;
 
 		//.. local memory
-		float xid = x[id];
-		float yid = y[id];
-		float fxid = 0.0f;
-		float fyid = 0.0f;
+		float rid[3], fid[3], dr[3], r[3];
+		float _r, _f;
+		rid[0] = x[id];
+		rid[1] = y[id];
+		rid[2] = z[id];
+		fid[0] = fid[1] = fid[2] = 0.0f;
+		dr[0] = dr[1] = dr[2] = 0.0f;
+		r[0] = r[1] = r[2] = 0.0f;
 #ifdef _DAMPING
-		float vxid = vx[id];
-		float vyid = vy[id];
+		float vid[3];
+		vid[0] = vx[id];
+		vid[1] = vy[id];
+		vid[2] = vz[id];
 #endif
 
 		//.. 1st neighbor spring forces ahead
 		if (p < (dev_Params._NP - 1))
 		{
 			int pp1 = id + 1;
-			float dx = x[pp1] - xid;
-			float dy = y[pp1] - yid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			float rr = dx*dx + dy*dy;
-			float _r = sqrtf(rr);
-			float ff = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
-			float ffx = ff * dx;
-			float ffy = ff * dy;
-			fxid -= ffx;
-			fyid -= ffy;
+			r[0] = x[pp1]; r[1] = y[pp1]; r[2] = z[pp1];
+			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			_f = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
+			//float dx = x[pp1] - xid;
+			//float dy = y[pp1] - yid;
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//float rr = dx*dx + dy*dy;
+			//float _r = sqrtf(rr);
+			//float ffx = ff * dx;
+			//float ffy = ff * dy;
+			//fxid -= ffx;
+			//fyid -= ffy;
 		}
 
 		//.. 1st neighbor spring forces behind
 		if (p > 0)
 		{
 			int pm1 = id - 1;
-			float dx = x[pm1] - xid;
-			float dy = y[pm1] - yid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			float rr = dx*dx + dy*dy;
-			float _r = sqrtf(rr);
-			float ff = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
-			float ffx = ff * dx;
-			float ffy = ff * dy;
-			fxid -= ffx;
-			fyid -= ffy;
+			r[0] = x[pm1]; r[1] = y[pm1]; r[2] = z[pm1];
+			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			_f = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
+			//float dx = x[pm1] - xid;
+			//float dy = y[pm1] - yid;
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//float rr = dx*dx + dy*dy;
+			//float _r = sqrtf(rr);
+			//float ff = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
+			//float ffx = ff * dx;
+			//float ffy = ff * dy;
+			//fxid -= ffx;
+			//fyid -= ffy;
 		}
 
 		//.. 2nd neighbor spring forces ahead
 		if (p < (dev_Params._NP - 2))
 		{
 			int pp2 = id + 2;
-			float dx = x[pp2] - xid;
-			float dy = y[pp2] - yid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			float rr = dx*dx + dy*dy;
-			float _r = sqrtf(rr);
-			float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
-			float ffx = ff * dx;
-			float ffy = ff * dy;
-			fxid -= ffx;
-			fyid -= ffy;
+			r[0] = x[pp2]; r[1] = y[pp2]; r[2] = z[pp2];
+			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			_f = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
+			//float dx = x[pp2] - xid;
+			//float dy = y[pp2] - yid;
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//float rr = dx*dx + dy*dy;
+			//float _r = sqrtf(rr);
+			//float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
+			//float ffx = ff * dx;
+			//float ffy = ff * dy;
+			//fxid -= ffx;
+			//fyid -= ffy;
 
-#ifdef _DAMPING1
-			float dvx = vx[pp2] - vxid;
-			float dvy = vy[pp2] - vyid;
-			fxid += dev_Params._DAMP * dvx;
-			fyid += dev_Params._DAMP * dvy;
-#endif
+//#ifdef _DAMPING1
+//			float dvx = vx[pp2] - vxid;
+//			float dvy = vy[pp2] - vyid;
+//			fxid += dev_Params._DAMP * dvx;
+//			fyid += dev_Params._DAMP * dvy;
+//#endif
 		}
 
 		//.. 2nd neighbor spring forces behind
 		if (p > 1)
 		{
 			int pm2 = id - 2;
-			float dx = x[pm2] - xid;
-			float dy = y[pm2] - yid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			float rr = dx*dx + dy*dy;
-			float _r = sqrtf(rr);
-			float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
-			float ffx = ff * dx;
-			float ffy = ff * dy;
-			fxid -= ffx;
-			fyid -= ffy;
+			r[0] = x[pm2]; r[1] = y[pm2]; r[2] = z[pm2];
+			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			_f = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
+			//float dx = x[pm2] - xid;
+			//float dy = y[pm2] - yid;
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//float rr = dx*dx + dy*dy;
+			//float _r = sqrtf(rr);
+			//float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
+			//float ffx = ff * dx;
+			//float ffy = ff * dy;
+			//fxid -= ffx;
+			//fyid -= ffy;
 
-#ifdef _DAMPING1
-			float dvx = vx[pm2] - vxid;
-			float dvy = vy[pm2] - vyid;
-			fxid += dev_Params._DAMP * dvx;
-			fyid += dev_Params._DAMP * dvy;
-#endif
+//#ifdef _DAMPING1
+			//float dvx = vx[pm2] - vxid;
+			//float dvy = vy[pm2] - vyid;
+			//fxid += dev_Params._DAMP * dvx;
+			//fyid += dev_Params._DAMP * dvy;
+//#endif
 		}
 
 		//.. 3nd neighbor spring forces ahead
 		if (p < (dev_Params._NP - 3))
 		{
 			int pp3 = id + 3;
-			float dx = x[pp3] - xid;
-			float dy = y[pp3] - yid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			float rr = dx*dx + dy*dy;
-			float _r = sqrtf(rr);
-			float ff = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
-			float ffx = ff * dx;
-			float ffy = ff * dy;
-			fxid -= ffx;
-			fyid -= ffy;
+			r[0] = x[pp3]; r[1] = y[pp3]; r[2] = z[pp3];
+			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			_f = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
+			//float dx = x[pp3] - xid;
+			//float dy = y[pp3] - yid;
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//float rr = dx*dx + dy*dy;
+			//float _r = sqrtf(rr);
+			//float ff = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
+			//float ffx = ff * dx;
+			//float ffy = ff * dy;
+			//fxid -= ffx;
+			//fyid -= ffy;
 
-#ifdef _DAMPING2
-			float dvx = vx[pp3] - vxid;
-			float dvy = vy[pp3] - vyid;
-			fxid += dev_Params._DAMP * dvx;
-			fyid += dev_Params._DAMP * dvy;
-#endif
+//#ifdef _DAMPING2
+//			float dvx = vx[pp3] - vxid;
+//			float dvy = vy[pp3] - vyid;
+//			fxid += dev_Params._DAMP * dvx;
+//			fyid += dev_Params._DAMP * dvy;
+//#endif
 		}
 
 		//.. 3nd neighbor spring forces behind
 		if (p > 2)
 		{
 			int pm3 = id - 3;
-			float dx = x[pm3] - xid;
-			float dy = y[pm3] - yid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			float rr = dx*dx + dy*dy;
-			float _r = sqrtf(rr);
-			float ff = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
-			float ffx = ff * dx;
-			float ffy = ff * dy;
-			fxid -= ffx;
-			fyid -= ffy;
+			r[0] = x[pm3]; r[1] = y[pm3]; r[2] = z[pm3];
+			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			_f = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
+			//float dx = x[pm3] - xid;
+			//float dy = y[pm3] - yid;
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//float rr = dx*dx + dy*dy;
+			//float _r = sqrtf(rr);
+			//float ff = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
+			//float ffx = ff * dx;
+			//float ffy = ff * dy;
+			//fxid -= ffx;
+			//fyid -= ffy;
 
-#ifdef _DAMPING2
-			float dvx = vx[pm3] - vxid;
-			float dvy = vy[pm3] - vyid;
-			fxid += dev_Params._DAMP * dvx;
-			fyid += dev_Params._DAMP * dvy;
-#endif
+//#ifdef _DAMPING2
+//			float dvx = vx[pm3] - vxid;
+//			float dvy = vy[pm3] - vyid;
+//			fxid += dev_Params._DAMP * dvx;
+//			fyid += dev_Params._DAMP * dvy;
+//#endif
 		}
 
 		/*//.. 4nd neighbor spring forces ahead
@@ -243,20 +281,23 @@ __global__ void InterForceKernel(float *fx, float *fy, float *vx, float *vy, flo
 		}*/
 
 #ifdef _DRAG
-		fxid -= dev_Params._GAMMA * vx[id];
-		fyid -= dev_Params._GAMMA * vy[id];
+		for (int d = 0; d < 3; d++)
+			fid[d] -= dev_Params._GAMMA * vid[d];
 #endif
 
 #ifdef _NOISE
 		float scalor = sqrtf(2.0f * dev_Params._GAMMA * dev_Params._KBT / dev_simParams._DT);
-		fxid += scalor * randNum[id];
-		fyid += scalor * randNum[id + dev_Params._NPARTICLES];
+		for (int d = 0; d < 3; d++)
+			fid[d] += scalor * randNum[id + d*dev_Params._NPARTICLES];
+		//fxid += scalor * randNum[id];
+		//fyid += scalor * randNum[id + dev_Params._NPARTICLES];
 		//printf("tid = %i:\tR = { %f, %f }\n", id, randNum[id], randNum[id + dev_Params._NPARTICLES]);
 #endif
 
 		//.. assign temp fxid and fyid to memory
-		fx[id] = fxid;
-		fy[id] = fyid;
+		fx[id] = fid[0];
+		fy[id] = fid[1];
+		fz[id] = fid[2];
 
 #ifdef __PRINT_FORCES__
 		if (id == 0)	

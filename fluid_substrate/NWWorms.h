@@ -22,12 +22,16 @@ class Worms {
 	//.. on gpu device
 	float * dev_X;
 	float * dev_Y;
+	float * dev_Z;
 	float * dev_Vx;
 	float * dev_Vy;
+	float * dev_Vz;
 	float * dev_Fx;
 	float * dev_Fy;
+	float * dev_Fz;
 	float * dev_Fx_old;
 	float * dev_Fy_old;
+	float * dev_Fz_old;
 	float * dev_theta;
 
 	//.. neighbors list within worms
@@ -57,8 +61,10 @@ public:
 	//.. on host (so print on host is easier)
 	float * X;
 	float * Y;
-	float * Vx;
-	float * Vy;
+	float * Z;
+	//float * Vx;
+	//float * Vy;
+	//float * Vz;
 
 	//.. construct with block-thread structure
 	//Worms(int BPK, int TPB, GRNG &RNG, WormsParameters &wormsParameters);
@@ -106,11 +112,13 @@ private:
 //	PUBLIC METHODS
 // ------------------------------------------------------------------------------------------
 //Worms::Worms(int BPK, int TPB, GRNG &RNG, WormsParameters &wormsParameters) :
-Worms::Worms() : 
-X(NULL), Y(NULL), Vx(NULL), Vy(NULL), dev_theta(NULL), 
+Worms::Worms() :
+X(NULL), Y(NULL), Z(NULL),/*Vx(NULL), Vy(NULL),*/ dev_theta(NULL),
 rng(NULL), parameters(NULL), envirn(NULL),
-dev_X(NULL),dev_Y(NULL), dev_Vx(NULL), dev_Vy(NULL),
-dev_Fx(NULL), dev_Fy(NULL), dev_Fx_old(NULL), dev_Fy_old(NULL){
+dev_X(NULL), dev_Y(NULL), dev_Z(NULL),
+dev_Vx(NULL), dev_Vy(NULL), dev_Vz(NULL),
+dev_Fx(NULL), dev_Fy(NULL), dev_Fz(NULL),
+dev_Fx_old(NULL), dev_Fy_old(NULL), dev_Fz_old(NULL){
 
 	//.. do necessities
 	srand(time(NULL));
@@ -127,12 +135,12 @@ Worms::~Worms(){
 void Worms::ClearAll(){
 	this->FreeGPUMemory();
 	this->FreeHostMemory();
-	this->X = this->Y = NULL;
-	this->Vx = this->Vy = NULL;
-	this->dev_X = this->dev_Y = NULL;
-	this->dev_Vx = this->dev_Vy = NULL;
-	this->dev_Fx = this->dev_Fy = NULL;
-	this->dev_Fx_old = this->dev_Fy_old = NULL;
+	this->X = this->Y = this->Z = NULL;
+	//this->Vx = this->Vy = NULL;
+	this->dev_X = this->dev_Y = this->dev_Z = NULL;
+	this->dev_Vx = this->dev_Vy = this->dev_Vz = NULL;
+	this->dev_Fx = this->dev_Fy = this->dev_Fz = NULL;
+	this->dev_Fx_old = this->dev_Fy_old = this->dev_Fz_old = NULL;
 	this->dev_theta = NULL;
 	this->rng = NULL;
 	this->parameters = NULL;
@@ -223,8 +231,8 @@ void Worms::DataDeviceToHost(){
 void Worms::DataHostToDevice(){
 	CheckSuccess(cudaMemcpy(this->dev_X, this->X, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 	CheckSuccess(cudaMemcpy(this->dev_Y, this->Y, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
-	CheckSuccess(cudaMemcpy(this->dev_Vx, this->Vx, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
-	CheckSuccess(cudaMemcpy(this->dev_Vy, this->Vy, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
+	//CheckSuccess(cudaMemcpy(this->dev_Vx, this->Vx, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
+	//CheckSuccess(cudaMemcpy(this->dev_Vy, this->Vy, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 }
 
 //.. sets neighbors list between worm-worm and worm-fluid
@@ -275,29 +283,34 @@ void Worms::DisplayErrors(){
 void Worms::AllocateHostMemory(){
 	this->X = new float[this->parameters->_NPARTICLES];
 	this->Y = new float[this->parameters->_NPARTICLES];
-	this->Vx = new float[this->parameters->_NPARTICLES];
-	this->Vy = new float[this->parameters->_NPARTICLES];
+	//this->Vx = new float[this->parameters->_NPARTICLES];
+	//this->Vy = new float[this->parameters->_NPARTICLES];
 }
 
 void Worms::FreeHostMemory(){
-	delete[] this->X, this->Y, this->Vx, this->Vy;
+	delete[] this->X, this->Y, this->Z;// , this->Vx, this->Vy;
 }
 
 void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&(this->dev_X), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Y), this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&(this->dev_Z), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Vx), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Vy), this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&(this->dev_Vz), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Fx), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Fy), this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&(this->dev_Fz), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Fx_old), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Fy_old), this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&(this->dev_Fz_old), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_theta, this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_nlist), this->parameters->_NMAX * this->nparticles_int_alloc));
 }
 
 void Worms::FreeGPUMemory(){
-	CheckSuccess(cudaFree(this->dev_X));
+	cudaDeviceReset();
+	/*CheckSuccess(cudaFree(this->dev_X));
 	CheckSuccess(cudaFree(this->dev_Y));
 	CheckSuccess(cudaFree(this->dev_Vx));
 	CheckSuccess(cudaFree(this->dev_Vy));
@@ -305,7 +318,7 @@ void Worms::FreeGPUMemory(){
 	CheckSuccess(cudaFree(this->dev_Fy));
 	CheckSuccess(cudaFree(this->dev_Fx_old));
 	CheckSuccess(cudaFree(this->dev_Fy_old));
-	CheckSuccess(cudaFree(this->dev_nlist));
+	CheckSuccess(cudaFree(this->dev_nlist));*/
 }
 
 void Worms::DistributeWormsOnHost(){
@@ -322,6 +335,7 @@ void Worms::DistributeWormsOnHost(){
 
 	float *x0 = new float[nworms];
 	float *y0 = new float[nworms];
+	float *z0 = new float[nworms];
 	int iw = 0;
 	for (int i = 0; i < xdim; i++)
 	{
@@ -329,6 +343,7 @@ void Worms::DistributeWormsOnHost(){
 		{
 			x0[iw] = 0.001 + float(i)*xbox / float(xdim);
 			y0[iw] = 0.001 + float(j)*ybox / float(ydim);
+			z0[iw] = 0.0f;
 			iw++;
 		}
 	}
@@ -345,10 +360,12 @@ void Worms::DistributeWormsOnHost(){
 		MovementBC(y, ybox);
 		this->X[i] = x;
 		this->Y[i] = y;
+		this->Z[i] = 0.0f;
 	}
 
 	delete[] x0;
 	delete[] y0;
+	delete[] z0;
 }
 
 void Worms::AdjustDistribute(float target_percent){
@@ -414,18 +431,22 @@ void Worms::PlaceWormExplicit(int wormId, float headX, float headY, float wormAn
 
 void Worms::ZeroHost(){
 	for (int i = 0; i < this->parameters->_NPARTICLES; i++)
-		this->X[i] = this->Y[i] = this->Vx[i] = this->Vy[i] = 0.0f;
+		this->X[i] = this->Y[i] = this->Z[i] = 0.0f;// = this->Vx[i] = this->Vy[i] = 0.0f;
 }
 
 void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_X, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Y, 0, this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_Z, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Vx, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Vy, 0, this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_Vz, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Fx, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Fy, 0, this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_Fz, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Fx_old, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Fy_old, 0, this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_Fz_old, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_theta, 0, this->nparticles_float_alloc));
 }
 
