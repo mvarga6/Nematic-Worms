@@ -32,6 +32,7 @@ class Worms {
 	float * dev_Fy_old;
 	float * dev_Fz_old;
 	float * dev_theta;
+	float * dev_phi;
 
 	//.. neighbors list within worms
 	int * dev_nlist;
@@ -218,7 +219,7 @@ void Worms::AutoDriveForces(){
 	DriveForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_Fx, this->dev_Fy, this->dev_Fz, 
-		this->dev_Z, this->dev_theta
+		this->dev_theta, this->dev_phi
 	);
 }
 
@@ -243,11 +244,11 @@ void Worms::Update(){
 void Worms::CalculateTheta(){
 	CalculateThetaKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
-		this->dev_X, this->dev_Y, this->dev_theta
+		this->dev_X, this->dev_Y, this->dev_Z, this->dev_theta, this->dev_phi
 	);
 	FinishCalculateThetaKernel <<< (this->parameters->_NWORMS / this->Threads_Per_Block) + 1, this->Threads_Per_Block >>>
 	(
-		this->dev_theta
+		this->dev_theta, this->dev_phi
 	);
 	ErrorHandler(cudaGetLastError());
 }
@@ -341,6 +342,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Fy_old), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_Fz_old), this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_theta, this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_phi, this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&(this->dev_nlist), this->parameters->_NMAX * this->nparticles_int_alloc));
 }
 
@@ -484,6 +486,7 @@ void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_Fy_old, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_Fz_old, 0, this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_theta, 0, this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_phi, 0, this->nparticles_float_alloc));
 }
 
 void Worms::CheckSuccess(cudaError_t err){

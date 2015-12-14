@@ -50,14 +50,14 @@ NWSimulation::NWSimulation(){
 	this->params->_NMAX = 28;
 	this->params->_EPSILON = 1.0f;
 	this->params->_SIGMA = 1.0f;
-	this->params->_DRIVE = 0.5f;
+	this->params->_DRIVE = 1.0f;
 	this->params->_K1 = 57.146f;
 	this->params->_K2 = 10.0f * params->_K1;
 	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
 	this->params->_L1 = 0.8f;
 	this->params->_L2 = 2.0f * params->_L1;
 	this->params->_L3 = 3.0f * params->_L1;
-	this->params->_KBT = 0.5f;
+	this->params->_KBT = 0.1f;
 	this->params->_GAMMA = 2.0f;
 	this->params->_DAMP = 3.0f;
 	this->params->_SIGMA6 = powf(params->_SIGMA, 6.0f);
@@ -68,7 +68,7 @@ NWSimulation::NWSimulation(){
 	this->params->_RCUT = params->_RMIN; // 2.5f * params->_SIGMA;
 	this->params->_R2CUT = params->_RCUT * params->_RCUT;
 	this->params->_BUFFER = 1.5f;
-	this->params->_LANDSCALE = 50.0f;
+	this->params->_LANDSCALE = 1.0f;
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
@@ -76,7 +76,7 @@ NWSimulation::NWSimulation(){
 	this->simparams->_FRAMERATE = 1000;
 	this->simparams->_FRAMESPERFILE = 200;
 	this->simparams->_NSTEPS = 1000000;
-	this->simparams->_XBOX = 120.0f;
+	this->simparams->_XBOX = 100.0f;
 	this->simparams->_YBOX = 120.0f;
 
 	//.. parameters to device
@@ -103,7 +103,7 @@ NWSimulation::~NWSimulation(){
 void NWSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams);
 	this->DisplayErrors();
-	this->fxyz.open("output//3d_test.xyz");
+	this->fxyz.open("output//3d_test3.xyz");
 	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
 		this->worms->ResetNeighborsList(itime);
 		this->worms->InternalForces();
