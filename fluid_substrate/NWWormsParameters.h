@@ -15,8 +15,11 @@ typedef struct {
 	//.. default setup config
 	int _XDIM, _YDIM;
 
-	//.. Particles per worm, # of worms, total particle #
+	//.. particles per worm, # of worms, total particle #
 	int _NP, _NWORMS, _NPARTICLES;
+
+	//.. scales the landscape forces
+	float _LANDSCALE;
 
 	//.. time steps between reseting neighbors lists, maximum # of neighbors
 	int _LISTSETGAP, _NMAX;

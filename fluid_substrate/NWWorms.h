@@ -16,7 +16,6 @@ class ForceXchanger;
 // -----------------------------------------------------------------------------------------
 //	This class defines a set of active flexible worms.
 // -----------------------------------------------------------------------------------------
-//.. data structure for worms
 class Worms {	
 
 	//.. on gpu device
@@ -194,43 +193,75 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 }
 
 void Worms::InternalForces(){
-	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_Vx, this->dev_Vy, this->dev_X, this->dev_Y, this->rng->Get(2 * this->parameters->_NPARTICLES));
+	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_Fx, this->dev_Fy, this->dev_Fz,
+		this->dev_Vx, this->dev_Vy, this->dev_Vz, 
+		this->dev_X, this->dev_Y, this->dev_Z, 
+		this->rng->Get(3 * this->parameters->_NPARTICLES)
+	);
 	ErrorHandler(cudaGetLastError());
 }
 
 void Worms::LJForces(){
-	LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_X, this->dev_Y, this->dev_nlist);
+	LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_Fx, this->dev_Fy, this->dev_Fz, 
+		this->dev_X, this->dev_Y, this->dev_Z, 
+		this->dev_nlist
+	);
 	ErrorHandler(cudaGetLastError());
 }
 
 void Worms::AutoDriveForces(){
 	this->CalculateTheta();
-	DriveForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_theta);
+	DriveForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_Fx, this->dev_Fy, this->dev_Fz, 
+		this->dev_Z, this->dev_theta
+	);
 }
 
 void Worms::LandscapeForces(){
-	WormsLandscapeKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_X, this->dev_Y);
+	WormsLandscapeKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_Fz, this->dev_Z
+	);
 }
 
 void Worms::Update(){
-	UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_Fx_old, this->dev_Fy_old, this->dev_Vx, this->dev_Vy, this->dev_X, this->dev_Y);
+	UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_Fx, this->dev_Fy, this->dev_Fz, 
+		this->dev_Fx_old, this->dev_Fy_old, this->dev_Fz_old, 
+		this->dev_Vx, this->dev_Vy, this->dev_Vz, 
+		this->dev_X, this->dev_Y, this->dev_Z
+	);
 	ErrorHandler(cudaGetLastError());
 }
 
 void Worms::CalculateTheta(){
-	CalculateThetaKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_X, this->dev_Y, this->dev_theta);
-	FinishCalculateThetaKernel <<< (this->parameters->_NWORMS / this->Threads_Per_Block) + 1, this->Threads_Per_Block >>>(this->dev_theta);
+	CalculateThetaKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_X, this->dev_Y, this->dev_theta
+	);
+	FinishCalculateThetaKernel <<< (this->parameters->_NWORMS / this->Threads_Per_Block) + 1, this->Threads_Per_Block >>>
+	(
+		this->dev_theta
+	);
 	ErrorHandler(cudaGetLastError());
 }
 
 void Worms::DataDeviceToHost(){
 	CheckSuccess(cudaMemcpy(this->X, this->dev_X, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
 	CheckSuccess(cudaMemcpy(this->Y, this->dev_Y, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
+	CheckSuccess(cudaMemcpy(this->Z, this->dev_Z, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
 }
 
 void Worms::DataHostToDevice(){
 	CheckSuccess(cudaMemcpy(this->dev_X, this->X, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 	CheckSuccess(cudaMemcpy(this->dev_Y, this->Y, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
+	CheckSuccess(cudaMemcpy(this->dev_Z, this->Z, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 	//CheckSuccess(cudaMemcpy(this->dev_Vx, this->Vx, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 	//CheckSuccess(cudaMemcpy(this->dev_Vy, this->Vy, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 }
@@ -238,7 +269,11 @@ void Worms::DataHostToDevice(){
 //.. sets neighbors list between worm-worm and worm-fluid
 void Worms::ResetNeighborsList(){
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
-	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_X, this->dev_Y, this->dev_nlist);
+	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_X, this->dev_Y, 
+		this->dev_Z, this->dev_nlist
+	);
 	ErrorHandler(cudaGetLastError());
 }
 
@@ -283,6 +318,7 @@ void Worms::DisplayErrors(){
 void Worms::AllocateHostMemory(){
 	this->X = new float[this->parameters->_NPARTICLES];
 	this->Y = new float[this->parameters->_NPARTICLES];
+	this->Z = new float[this->parameters->_NPARTICLES];
 	//this->Vx = new float[this->parameters->_NPARTICLES];
 	//this->Vy = new float[this->parameters->_NPARTICLES];
 }

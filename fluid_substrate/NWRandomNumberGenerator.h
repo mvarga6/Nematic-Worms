@@ -2,6 +2,9 @@
 #ifndef __RANDOM_NUMBER_GENERATOR_H__
 #define __RANDOM_NUMBER_GENERATOR_H__
 
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "cuda_runtime_api.h"
 #include "curand_kernel.h"
 #include "NWmain.h"
 
@@ -68,6 +71,7 @@ float* GRNG::Get(unsigned count){
 		call_size = this->alloc_size;
 	}
 	CheckStatus(curandGenerateNormal(*this->generator, this->dev_r, call_size, this->mean, this->stddev));
+	cudaDeviceSynchronize();
 	return this->dev_r;
 }
 

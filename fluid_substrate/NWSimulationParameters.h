@@ -25,7 +25,7 @@ typedef struct {
 	float _DT;
 
 	//..system physical size
-	float _XBOX, _YBOX, _ZBOX;
+	float _XBOX, _YBOX;
 
 } SimulationParameters;
 /* ------------------------------------------------------------------------

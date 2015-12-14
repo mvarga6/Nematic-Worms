@@ -30,7 +30,7 @@ __global__ void WormsLandscapeKernel(float *fz, float *z){
 
 	//.. pulls towards z = 0
 	if (id < dev_Params._NPARTICLES){
-		fz[id] -= 10.0f * z[id];
+		fz[id] -= dev_Params._LANDSCALE * z[id];
 	}
 }
 
