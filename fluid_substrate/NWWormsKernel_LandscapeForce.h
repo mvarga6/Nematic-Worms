@@ -25,12 +25,19 @@
 
 }*/
 
-__global__ void WormsLandscapeKernel(float *fz, float *z){
-	int id = threadIdx.x + blockDim.x * blockIdx.x;
+__global__ void WormsLandscapeKernel(float *f,
+									 int fpitch,
+									 float *r,
+									 int rpitch){
 
-	//.. pulls towards z = 0
+	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
-		fz[id] -= dev_Params._LANDSCALE * z[id];
+
+		int fshift = fpitch / sizeof(float);
+		int rshift = rpitch / sizeof(float);
+
+		//.. harmonic potential zeroed around z = 0
+		f[id + 2 * fshift] -= dev_Params._LANDSCALE * r[id + 2 * rshift];
 	}
 }
 

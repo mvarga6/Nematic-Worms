@@ -7,7 +7,10 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 
-__global__ void SetNeighborList_N2Kernel(float *x, float *y,  float *z, int *nlist)
+__global__ void SetNeighborList_N2Kernel(float *r,
+										 int rpitch, 
+										 int *nlist,
+										 int nlpitch)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
@@ -20,12 +23,21 @@ __global__ void SetNeighborList_N2Kernel(float *x, float *y,  float *z, int *nli
 		//__shared__ float r2cut = dev_Params._R2CUT;
 		//__shared__ float buffer = dev_Params._BUFFER;
 
+		int rshift = rpitch / sizeof(float);
+		int nshift = nlpitch / sizeof(int);
+
 		int n1 = id % dev_Params._NP;
 		int w1 = id / dev_Params._NP;
 		int found = 0;
 
-		float dr[3], r[3], rid[3];
-		rid[0] = x[id]; rid[1] = y[id]; rid[2] = z[id];
+		int ix = id;
+		int iy = id + rshift;
+		int iz = id + 2*rshift;
+
+		float dr[3], _r[3], rid[3];
+		rid[0] = r[ix]; 
+		rid[1] = r[iy]; 
+		rid[2] = r[iz];
 		float _rr;
 		for (int p2 = 0; p2 < dev_Params._NPARTICLES; p2++)
 		{
@@ -49,8 +61,11 @@ __global__ void SetNeighborList_N2Kernel(float *x, float *y,  float *z, int *nli
 			if (sep <= 5) continue;
 
 			//.. add to nlist if within range
-			r[0] = x[p2]; r[1] = y[p2]; r[2] = z[p2];
-			_rr = CalculateRR_3d(rid, r, dr);
+			_r[0] = r[p2]; 
+			_r[1] = r[p2 + rshift]; 
+			_r[2] = r[p2 + 2*rshift];
+			_rr = CalculateRR_3d(rid, _r, dr);
+
 			//dx = x[p2] - x[id];
 			//dy = y[p2] - y[id];
 			//DevicePBC(dx, dev_simParams._XBOX);
@@ -58,7 +73,9 @@ __global__ void SetNeighborList_N2Kernel(float *x, float *y,  float *z, int *nli
 			//rr = dx * dx + dy * dy;
 			if ((_rr <= cutoff) && (found < dev_Params._NMAX))
 			{
-				int plcid = id * dev_Params._NMAX + found++;
+				//printf("\n%i on %i", p2, id);
+
+				int plcid = id + found++ * nshift;
 				nlist[plcid] = p2;
 			}
 		}

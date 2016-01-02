@@ -18,6 +18,9 @@
 //__global__ void InterForceKernel(float *fx, float *fy, float *vx, float *vy, float *x, float *y, float * randNum);
 #include "NWWormsKernel_InternalForce.h"
 
+//__global__ void NoiseKernel(float *f, int fshift, float *rn, float noise);
+#include "NWWormsKernel_Noise.h"
+
 //__global__ void LennardJonesNListKernel(float *fx, float *fy, float *x, float *y, int *nlist);
 #include "NWWormsKernel_LennardJones.h"
 
@@ -38,5 +41,18 @@
 
 //__global__ void SetXListWormsKernel(float *wx, float *wy, float *flx, float *fly, int *xlist);
 #include "NWWormsKernel_SetXList.h"
+
+// ----------------------
+// Just for debugging
+// ----------------------
+
+__global__ void AddForce(float *f, int fpitch, int dim, float force){
+	int id = threadIdx.x + blockDim.x * blockIdx.x;
+	if (id < dev_Params._NPARTICLES){
+		int fshift = fpitch / sizeof(float);
+		int index = id + dim * fshift;
+		f[index] += force;
+	}
+}
 
 #endif

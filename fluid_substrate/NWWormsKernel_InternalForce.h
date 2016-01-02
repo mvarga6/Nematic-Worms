@@ -1,44 +1,72 @@
-
 #ifndef __WORMS_KERNEL__INTERNAL_FORCE_H__
 #define __WORMS_KERNEL__INTERNAL_FORCE_H__
-
+// ------------------------------------------------------------------------------------------
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
-
-__global__ void InterForceKernel(float *fx, float *fy, float *fz,
-								 float *vx, float *vy, float *vz,
-								 float *x, float *y, float *z, 
-								 float * randNum)
+//#define __PRINT_FORCES__
+//#define __PRINT_POS_1__
+//#define __PRINT_POS_2__
+//#define __PRINT_INDEX__ 999
+// ------------------------------------------------------------------------------------------
+__global__ void InterForceKernel(float *f,
+								 int fshift,
+								 float *v,
+								 int vshift,
+								 float *r,
+								 int rshift,
+								 float *randNum,
+								 float noiseScaler)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
+		//.. pitched memory index shifts
+		//int fshift = (int)(fpitch / sizeof(float));
+		//int vshift = (int)(vpitch / sizeof(float));
+		//int rshift = (int)(rpitch / sizeof(float));
+
+#ifdef __PRINT_SHIFTS__
+		if (id == __PRINT_INDEX__) 
+			printf("\nf,v,r shifts: %i ,\t%i ,\t%i", fshift, vshift, rshift);
+#endif
+		//.. particel number in worm
 		int p = id % dev_Params._NP;
 
 		//.. local memory
-		float rid[3], fid[3], dr[3], r[3];
+		float rid[3], fid[3], dr[3], rnab[3], vid[3];
 		float _r, _f;
-		rid[0] = x[id];
-		rid[1] = y[id];
-		rid[2] = z[id];
-		fid[0] = fid[1] = fid[2] = 0.0f;
-		dr[0] = dr[1] = dr[2] = 0.0f;
-		r[0] = r[1] = r[2] = 0.0f;
-#ifdef _DAMPING
-		float vid[3];
-		vid[0] = vx[id];
-		vid[1] = vy[id];
-		vid[2] = vz[id];
-#endif
 
+		//.. init local as needed
+		for (int i = 0; i < 3; i++){
+			rid[i] = r[id + i * rshift];
+			rnab[i] = 0.0f;
+			dr[i] = 0.0f;
+			fid[i] = 0.0f;
+			vid[i] = v[id + i * vshift];
+		}
+
+#ifdef __PRINT_POS_1__
+		if (id == __PRINT_INDEX__) 
+			printf("\nrid = { %f, %f, %f }", rid[0], rid[1], rid[2]);
+#endif
+			
+		//.. first neighbor forces
 		//.. 1st neighbor spring forces ahead
 		if (p < (dev_Params._NP - 1))
 		{
 			int pp1 = id + 1;
-			r[0] = x[pp1]; r[1] = y[pp1]; r[2] = z[pp1];
-			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			rnab[0] = r[pp1 + 0 * rshift];
+			rnab[1] = r[pp1 + 1 * rshift];
+			rnab[2] = r[pp1 + 2 * rshift];
+
+#ifdef __PRINT_POS_2__
+			if (id == __PRINT_INDEX__) 
+				printf("\nrnab = { %f, %f, %f }", rnab[0], rnab[1], rnab[2]);
+#endif
+
+			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
 			_f = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
 			for (int d = 0; d < 3; d++)
 				fid[d] -= _f * dr[d];
@@ -58,8 +86,10 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 		if (p > 0)
 		{
 			int pm1 = id - 1;
-			r[0] = x[pm1]; r[1] = y[pm1]; r[2] = z[pm1];
-			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			rnab[0] = r[pm1 + 0 * rshift];
+			rnab[1] = r[pm1 + 1 * rshift];
+			rnab[2] = r[pm1 + 2 * rshift];
+			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
 			_f = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
 			for (int d = 0; d < 3; d++)
 				fid[d] -= _f * dr[d];
@@ -80,8 +110,10 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 		if (p < (dev_Params._NP - 2))
 		{
 			int pp2 = id + 2;
-			r[0] = x[pp2]; r[1] = y[pp2]; r[2] = z[pp2];
-			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			rnab[0] = r[pp2 + 0 * rshift];
+			rnab[1] = r[pp2 + 1 * rshift];
+			rnab[2] = r[pp2 + 2 * rshift];
+			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
 			_f = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
 			for (int d = 0; d < 3; d++)
 				fid[d] -= _f * dr[d];
@@ -96,7 +128,6 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 			//float ffy = ff * dy;
 			//fxid -= ffx;
 			//fyid -= ffy;
-
 //#ifdef _DAMPING1
 //			float dvx = vx[pp2] - vxid;
 //			float dvy = vy[pp2] - vyid;
@@ -109,8 +140,10 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 		if (p > 1)
 		{
 			int pm2 = id - 2;
-			r[0] = x[pm2]; r[1] = y[pm2]; r[2] = z[pm2];
-			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			rnab[0] = r[pm2 + 0 * rshift];
+			rnab[1] = r[pm2 + 1 * rshift];
+			rnab[2] = r[pm2 + 2 * rshift];
+			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
 			_f = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
 			for (int d = 0; d < 3; d++)
 				fid[d] -= _f * dr[d];
@@ -125,7 +158,6 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 			//float ffy = ff * dy;
 			//fxid -= ffx;
 			//fyid -= ffy;
-
 //#ifdef _DAMPING1
 			//float dvx = vx[pm2] - vxid;
 			//float dvy = vy[pm2] - vyid;
@@ -138,8 +170,10 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 		if (p < (dev_Params._NP - 3))
 		{
 			int pp3 = id + 3;
-			r[0] = x[pp3]; r[1] = y[pp3]; r[2] = z[pp3];
-			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			rnab[0] = r[pp3 + 0 * rshift];
+			rnab[1] = r[pp3 + 1 * rshift];
+			rnab[2] = r[pp3 + 2 * rshift];
+			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
 			_f = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
 			for (int d = 0; d < 3; d++)
 				fid[d] -= _f * dr[d];
@@ -167,8 +201,10 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 		if (p > 2)
 		{
 			int pm3 = id - 3;
-			r[0] = x[pm3]; r[1] = y[pm3]; r[2] = z[pm3];
-			_r = sqrtf(CalculateRR_3d(rid, r, dr));
+			rnab[0] = r[pm3 + 0 * rshift];
+			rnab[1] = r[pm3 + 1 * rshift];
+			rnab[2] = r[pm3 + 2 * rshift];
+			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
 			_f = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
 			for (int d = 0; d < 3; d++)
 				fid[d] -= _f * dr[d];
@@ -192,8 +228,8 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 //#endif
 		}
 
-		/*//.. 4nd neighbor spring forces ahead
-		if (p < (_NP - 4))
+		//.. 4nd neighbor spring forces ahead
+		/*if (p < (_NP - 4))
 		{
 		int pp4 = id + 4;
 		float dx = x[pp4] - xid;
@@ -285,23 +321,23 @@ __global__ void InterForceKernel(float *fx, float *fy, float *fz,
 			fid[d] -= dev_Params._GAMMA * vid[d];
 #endif
 
-#ifdef _NOISE
-		float scalor = sqrtf(2.0f * dev_Params._GAMMA * dev_Params._KBT / dev_simParams._DT);
-		for (int d = 0; d < 3; d++)
-			fid[d] += scalor * randNum[id + d*dev_Params._NPARTICLES];
+//#ifdef _NOISE
+		//for (int d = 0; d < 3; d++)
+			//fid[d] += noiseScaler * randNum[id + d*dev_Params._NPARTICLES];
 		//fxid += scalor * randNum[id];
 		//fyid += scalor * randNum[id + dev_Params._NPARTICLES];
 		//printf("tid = %i:\tR = { %f, %f }\n", id, randNum[id], randNum[id + dev_Params._NPARTICLES]);
-#endif
+//#endif
 
 		//.. assign temp fxid and fyid to memory
-		fx[id] = fid[0];
-		fy[id] = fid[1];
-		fz[id] = fid[2];
+		f[id + 0 * fshift] += fid[0];
+		f[id + 1 * fshift] += fid[1];
+		f[id + 2 * fshift] += fid[2];
+
 
 #ifdef __PRINT_FORCES__
-		if (id == 0)	
-			printf("\n\tInternal Kernel:\n\tfx = %f,\tfy = %f\n", fxid, fyid);
+		if (id == __PRINT_INDEX__) 
+			printf("\n\tInternal Kernel:\n\tf = { %f, %f, %f }", f[id], f[id + fshift], f[id + 2*fshift]);
 #endif
 	}
 }

@@ -57,6 +57,7 @@
     <ClInclude Include="NWWormsKernel_InternalForce.h" />
     <ClInclude Include="NWWormsKernel_LandscapeForce.h" />
     <ClInclude Include="NWWormsKernel_LennardJones.h" />
+    <ClInclude Include="NWWormsKernel_Noise.h" />
     <ClInclude Include="NWWormsKernel_SetNList.h" />
     <ClInclude Include="NWWormsKernel_SetXList.h" />
     <ClInclude Include="NWWormsKernel_UpdateSystem.h" />
