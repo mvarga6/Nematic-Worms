@@ -317,8 +317,8 @@ __global__ void InterForceKernel(float *f,
 		}*/
 
 #ifdef _DRAG
-		for (int d = 0; d < 3; d++)
-			fid[d] -= dev_Params._GAMMA * vid[d];
+		//for (int d = 0; d < 3; d++)
+		//	fid[d] -= dev_Params._GAMMA * vid[d];
 #endif
 
 //#ifdef _NOISE

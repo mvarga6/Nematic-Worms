@@ -2,7 +2,7 @@
 #ifndef __RANDOM_NUMBER_GENERATOR_H__
 #define __RANDOM_NUMBER_GENERATOR_H__
 // ----------------------------------------------------------------------------
-//	INIT and GENERATE KERNELS
+//	INIT and GENERATE KERNELS (when using curandState methods)
 // ----------------------------------------------------------------------------
 __global__ void initKernel(curandState *dev_state, int max){
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
@@ -44,7 +44,7 @@ __global__ void generateKernel_1d(curandState *dev_state, float *dev_rand, int n
 class GRNG {
 	//.. device ptr for numbers
 	float * dev_n;
-	curandState *dev_s;
+	//curandState *dev_s;
 
 	//.. actual number generator
 	curandGenerator_t * generator;
@@ -86,35 +86,30 @@ GRNG::GRNG(int maxCallSize, float distributionMean, float standardDeviation)
 	alloc_size(sizeof(float)*maxCallSize), mean(distributionMean),
 	stddev(standardDeviation), max_size(maxCallSize){
 	
-	//CheckStatus(curandCreateGenerator(this->generator, CURAND_RNG_PSEUDO_DEFAULT));
+	CheckStatus(curandCreateGenerator(this->generator, CURAND_RNG_PSEUDO_DEFAULT));
 	
 	this->Threads_Per_Block = 256;
 	this->Blocks_Per_Kernel = (this->max_size / this->Threads_Per_Block) + 1;
 	this->AllocateGPUMemory(this->max_size);
-	initKernel <<<this->Blocks_Per_Kernel, this->Threads_Per_Block >>> (this->dev_s, this->max_size);
+	//initKernel <<<this->Blocks_Per_Kernel, this->Threads_Per_Block >>> (this->dev_s, this->max_size);
 }
-
+//-------------------------------------------------------------------------------------------
 GRNG::~GRNG(){
 	this->FreeGPUMemory();
-	//CheckStatus(curandDestroyGenerator(*this->generator));
+	CheckStatus(curandDestroyGenerator(*this->generator));
 }
-
+//-------------------------------------------------------------------------------------------
 float* GRNG::Get(unsigned count){
-	/*size_t call_size = count * sizeof(float);
+	size_t call_size = count * sizeof(float);
 	if (call_size > this->alloc_size){
 		printf("\n\tWarning:\ttoo large of call to RNG!\n");
-		call_size = this->alloc_size;
-	}*/
-	//CheckStatus(curandGenerateNormal(*this->generator, this->dev_n, call_size, this->mean, this->stddev));
-	
-	if (count > this->max_size){
-		printf("\n\tWarning:\ttoo large of call to RNG!\n");
-		count = this->max_size;
+		count = this->alloc_size / sizeof(float);
 	}
+	CheckStatus(curandGenerateNormal(*this->generator, this->dev_n, count, this->mean, this->stddev));
 	CheckSuccess(cudaDeviceSynchronize());
 	return this->dev_n;
 }
-
+//-------------------------------------------------------------------------------------------
 float* GRNG::Generate(unsigned count){
 	
 	//.. protect against out of range
@@ -130,12 +125,12 @@ float* GRNG::Generate(unsigned count){
 	dim3 gridStruct(c_root / t_root + 1, c_root / t_root + 1);
 
 	//.. generate random numbers
-	generateKernel_2d <<< blockStruct, gridStruct >>>
+	/*generateKernel_2d <<< blockStruct, gridStruct >>>
 	(
 		this->dev_s,
 		this->dev_n,
 		count
-	);
+	);*/
 
 	//.. check for errors
 	CheckSuccess(cudaDeviceSynchronize());
@@ -144,16 +139,16 @@ float* GRNG::Generate(unsigned count){
 	//.. return device pointer
 	return this->dev_n;
 }
-
+//-------------------------------------------------------------------------------------------
 float* GRNG::GenerateAll(){
 
 	//.. fill entire array with random numbers
-	generateKernel_1d <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>> 
+	/*generateKernel_1d <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>> 
 	(
 		this->dev_s, 
 		this->dev_n, 
 		this->max_size
-	);
+	);*/
 
 	/*int c_root = (int)ceil(sqrt(float(this->max_size)));
 	int t_root = 32;
@@ -174,7 +169,7 @@ float* GRNG::GenerateAll(){
 	//.. return device pointer
 	return this->dev_n;
 }
-
+//-------------------------------------------------------------------------------------------
 void GRNG::DisplayErrors(){
 	if (this->status.size() > 0 || this->errorState.size() > 0){
 		printf("\nGRNG ERRORS:\n");
@@ -217,20 +212,20 @@ void GRNG::DisplayErrors(){
 // -------------------------------------------------------------------------
 void GRNG::AllocateGPUMemory(int N){
 	CheckSuccess(cudaMalloc((void**)&this->dev_n, this->alloc_size));
-	CheckSuccess(cudaMalloc((void**)&this->dev_s, N*sizeof(curandState)));
+	//CheckSuccess(cudaMalloc((void**)&this->dev_s, N*sizeof(curandState)));
 }
-
+//-------------------------------------------------------------------------------------------
 void GRNG::FreeGPUMemory(){
 	CheckSuccess(cudaFree(this->dev_n));
-	CheckSuccess(cudaFree(this->dev_s));
+	//CheckSuccess(cudaFree(this->dev_s));
 }
-
+//-------------------------------------------------------------------------------------------
 void GRNG::CheckStatus(curandStatus_t stat){
 	if (stat != CURAND_STATUS_SUCCESS) this->status.push_back(stat);
 }
-
+//-------------------------------------------------------------------------------------------
 void GRNG::CheckSuccess(cudaError_t err){
 	if (err != cudaSuccess) this->errorState.push_back(err);
 }
-
+//-------------------------------------------------------------------------------------------
 #endif

@@ -8,29 +8,28 @@
 #include "NWSimulationParameters.h"
 
 __global__ void LennardJonesNListKernel(float *f,
-										int fpitch,
+										int fshift,
 										float *r,
-										int rpitch,
+										int rshift,
 										int *nlist,
-										int nlpitch )
+										int nshift )
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
 	{
-		int fshift = fpitch / sizeof(float);
-		int rshift = rpitch / sizeof(float);
-		int nshift = nlpitch / sizeof(int);
+		//int fshift = fpitch / sizeof(float);
+		//int rshift = rpitch / sizeof(float);
+		//int nshift = nlpitch / sizeof(int);
 
 		int ix = id;
 		int iy = id + rshift;
-		int iz = id * 2*rshift;
-		
-//		int listid = id * dev_Params._NMAX;
-		float fid[3], dr[3], _r[3], rid[3];
+		int iz = id + 2 * rshift;
+
+		float fid[3], rid[3], dr[3], _r[3];
 		float _f, _rr;
-		fid[0] = fid[1] = fid[2] = 0.0f;
-		rid[0] = r[ix]; 
-		rid[1] = r[iy]; 
+		fid[0] = 0.0f; fid[1] = 0.0f; fid[2] = 0.0f;
+		rid[0] = r[ix];
+		rid[1] = r[iy];
 		rid[2] = r[iz];
 
 		//.. loop through neighbors
@@ -42,9 +41,10 @@ __global__ void LennardJonesNListKernel(float *f,
 			//.. if no more players
 			if (nid == -1) break;
 
-			_r[0] = r[nid]; 
-			_r[1] = r[nid + rshift]; 
-			_r[2] = r[nid + 2*rshift];
+			_r[0] = r[nid];
+			_r[1] = r[nid + rshift];
+			_r[2] = r[nid + 2 * rshift];
+
 			_rr = CalculateRR_3d(rid, _r, dr);
 			//float dx = x[nid] - x[id];
 			//float dy = y[nid] - y[id];
@@ -56,7 +56,7 @@ __global__ void LennardJonesNListKernel(float *f,
 
 			//.. stop if too far
 			if (_rr > dev_Params._R2CUT) continue;
-			
+
 			//.. calculate LJ force
 			_f = CalculateLJ_3d(_rr);
 

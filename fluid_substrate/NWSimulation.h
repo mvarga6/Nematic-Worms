@@ -36,11 +36,13 @@ private:
 	void DisplayErrors();
 
 };
-// ---------------------------------------------
-////////	IMPLEMENTATION HERE			////////
-// ---------------------------------------------
-
+//-------------------------------------------------------------------------------------------
+//		IMPLEMENTATION HERE
+//-------------------------------------------------------------------------------------------
 NWSimulation::NWSimulation(){
+
+	//.. clear everything on GPU
+	cudaDeviceReset();
 
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
@@ -53,14 +55,14 @@ NWSimulation::NWSimulation(){
 	this->params->_NMAX = 28;
 	this->params->_EPSILON = 1.0f;
 	this->params->_SIGMA = 1.0f;
-	this->params->_DRIVE = 1.0f;
+	this->params->_DRIVE = 0.1f;
 	this->params->_K1 = 57.146f;
-	this->params->_K2 = 10.0f * params->_K1;
+	this->params->_K2 = 20.0f * params->_K1;
 	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
 	this->params->_L1 = 0.8f;
 	this->params->_L2 = 2.0f * params->_L1;
 	this->params->_L3 = 3.0f * params->_L1;
-	this->params->_KBT = 0.0001f;
+	this->params->_KBT = 0.000f;
 	this->params->_GAMMA = 2.0f;
 	this->params->_DAMP = 3.0f;
 	this->params->_SIGMA6 = powf(params->_SIGMA, 6.0f);
@@ -68,10 +70,10 @@ NWSimulation::NWSimulation(){
 	this->params->_LJ_AMP = 24.0f * params->_EPSILON * params->_SIGMA6;
 	this->params->_RMIN = _216 * params->_SIGMA;
 	this->params->_R2MIN = params->_RMIN * params->_RMIN;
-	this->params->_RCUT = params->_RMIN; // 2.5f * params->_SIGMA;
+	this->params->_RCUT = 2.5f * params->_SIGMA;
 	this->params->_R2CUT = params->_RCUT * params->_RCUT;
 	this->params->_BUFFER = 1.5f;
-	this->params->_LANDSCALE = 10.0f;
+	this->params->_LANDSCALE = 1.0f;
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
@@ -99,41 +101,38 @@ NWSimulation::NWSimulation(){
 	//.. define the worms
 	this->worms = new Worms();
 }
-
+//-------------------------------------------------------------------------------------------
 NWSimulation::~NWSimulation(){
 	delete this->worms;
 	delete this->rng;
 	delete this->params;
 	delete this->simparams;
 }
-
+//-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams);
 	//this->DisplayErrors();
-	this->fxyz.open("output//3d_test3.xyz");
+	this->fxyz.open("output//3d_test4.xyz");
 
 	this->XYZPrint(0);
-	this->worms->ResetNeighborsList(0);
-	//this->worms->DislayThetaPhi();
+	//this->worms->ResetNeighborsList(0);
 	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
 
-		this->worms->ZeroForce(); // works
+		this->worms->ZeroForce();
 		this->worms->ResetNeighborsList(itime);
-	//	this->worms->DisplayNList();
 		this->worms->InternalForces(); 
 		this->worms->LJForces();
 		this->worms->AutoDriveForces();
 		this->worms->LandscapeForces();
-	//	this->worms->AddConstantForce(0, 1.0f);
-		this->worms->Update(); // works
-		this->XYZPrint(itime); // works
+		this->worms->Update();
+		this->XYZPrint(itime);
 		this->DisplayErrors();
 
 		this->time += this->simparams->_DT;
 	}
 	this->fxyz.close();
 }
-
+//-------------------------------------------------------------------------------------------
 void NWSimulation::XYZPrint(int itime){
 	//.. only print when it itime == 0
 	if (itime % simparams->_FRAMERATE != 0) return;
@@ -166,10 +165,10 @@ void NWSimulation::XYZPrint(int itime){
 	this->fxyz << "E " << 0 << " " << simparams->_YBOX << " 0 " << std::endl;
 	this->fxyz << "E " << simparams->_XBOX << " " << simparams->_YBOX << " 0 " << std::endl;
 }
-
+//-------------------------------------------------------------------------------------------
 void NWSimulation::DisplayErrors(){
 	this->rng->DisplayErrors();
 	this->worms->DisplayErrors();
 }
-
+//-------------------------------------------------------------------------------------------
 #endif 

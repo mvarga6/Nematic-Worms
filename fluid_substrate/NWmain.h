@@ -2,6 +2,10 @@
 // 5.12.15
 // Mike Varga
 
+#ifndef __MAIN_HEADERS__
+#define __MAIN_HEADERS__
+
+
 // CUDA Library
 #include "cuda.h"
 #include "cuda_runtime.h"
@@ -35,3 +39,12 @@ __host__ void ClockWorks(int &,std::clock_t &, std::clock_t &, std::clock_t &);
 __host__ void PrintXYZ(float *wx, float *wy, float *flx, float *fly, int *xlist);
 __host__ void SaveSimulationConfiguration(void);
 
+void DEBUG_MESSAGE(const char *s)
+{
+#ifdef __DEBUG__
+	static unsigned call = 1;
+	printf("\n%u\t%s",call++,s);
+#endif
+}
+
+#endif

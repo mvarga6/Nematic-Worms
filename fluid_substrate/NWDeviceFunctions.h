@@ -35,7 +35,7 @@ __device__ float CalculateRR_3d(const float rid[3], const float rnab[3], float d
 	dr[2] = rnab[2] - rid[2];
 	DevicePBC(dr[0], dev_simParams._XBOX);
 	DevicePBC(dr[1], dev_simParams._YBOX);
-	return dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+	return (dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2]);
 }
 //-----------------------------------------------------------------------------------
 __device__ float CalculateLJ_3d(float &rr){
