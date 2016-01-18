@@ -26,7 +26,7 @@
 
 // Host Function Prototypes
 __host__ int ProcessCommandLine(int argc, char *argv[]);
-__host__ int OpenDataFiles(void);
+//__host__ int OpenDataFiles(void);
 __host__ void ErrorHandler(cudaError_t Status);
 __host__ void MovementBC(float &, float L);
 __host__ void PBC(float &, float L);

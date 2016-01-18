@@ -114,10 +114,7 @@ dev_Fx(NULL), dev_Fy(NULL), dev_Fx_old(NULL), dev_Fy_old(NULL){
 
 	//.. do necessities
 	srand(time(NULL));
-	/*Threads_Per_Block = TPB;
-	Blocks_Per_Kernel = BPK;
-	this->nparticles_int_alloc = wormsParameters._NPARTICLES * sizeof(int);
-	this->nparticles_float_alloc = wormsParameters._NPARTICLES * sizeof(float);*/
+	printf("Worms object created with %i errors.\n", this->errorState.size());
 }
 
 Worms::~Worms(){
@@ -170,6 +167,7 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	this->DataHostToDevice();
 	this->CalculateTheta();
 	this->ResetNeighborsList();
+	printf("Worms object initialized with %i errors.\n", this->errorState.size());
 }
 
 void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
@@ -186,7 +184,8 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 }
 
 void Worms::InternalForces(){
-	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_Vx, this->dev_Vy, this->dev_X, this->dev_Y, this->rng->Get(2 * this->parameters->_NPARTICLES));
+	float * dev_rng_ptr = this->rng->Get(2 * this->parameters->_NPARTICLES);
+	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_Vx, this->dev_Vy, this->dev_X, this->dev_Y, dev_rng_ptr);
 	ErrorHandler(cudaGetLastError());
 }
 
@@ -267,7 +266,7 @@ void Worms::DisplayErrors(){
 			printf("%i -- %s\n", i, cudaGetErrorString(this->errorState[i]));
 		this->errorState.empty();
 	}
-	this->DislayTheta();
+	//this->DislayTheta();
 }
 // -------------------------------------------------------------------------------------------
 //	PRIVATE METHODS
@@ -439,7 +438,7 @@ void Worms::FigureBlockThreadStructure(int tpb){
 	this->Blocks_Per_Kernel = this->parameters->_NPARTICLES / this->Threads_Per_Block + 1; // add one to guarentee enough
 	this->nparticles_float_alloc = this->parameters->_NPARTICLES * sizeof(float);
 	this->nparticles_int_alloc = this->parameters->_NPARTICLES * sizeof(int);
-	printf("\n\tWorms:\n\tTotalThreads = %i\n\tBlocksPerKernel = %i\n\tThreadsPerBlock = %i\n", this->parameters->_NPARTICLES, this->Blocks_Per_Kernel, this->Threads_Per_Block);
+	printf("\nWorms:\nTotalThreads = %i\nBlocksPerKernel = %i\nThreadsPerBlock = %i\n", this->parameters->_NPARTICLES, this->Blocks_Per_Kernel, this->Threads_Per_Block);
 }
 
 #endif

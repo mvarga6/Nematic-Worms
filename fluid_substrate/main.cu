@@ -4,8 +4,8 @@
 
 int main(int argc, char *argv[])
 {
-    //return NematicWormsSimulation(argc,argv);
-	HalloweenSimulation halloSim;
+	//return NematicWormsSimulation(argc, argv);
+ 	HalloweenSimulation halloSim;
 	halloSim.Run();
 	return 0;
 }

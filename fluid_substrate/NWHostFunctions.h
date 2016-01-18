@@ -24,42 +24,43 @@ __host__ int ProcessCommandLine(int argc, char *argv[])
 	//.. Not writen yet
 	printf("Processing cmdline arguments...\t");
 
-	return OpenDataFiles();
+	return 0; // OpenDataFiles();
 }
 
 //.. open data files such as *.xyz
-__host__ int OpenDataFiles(void)
-{
-	int numerr = 0;
 
-	//.. generate file names
-	stringstream ssxyz;
-	ssxyz << key << "_" << xyzfile << "_1" << xyz;
-	string sxyz = ssxyz.str();
-	printf("\nOpening *.xyz file:\t '%s'\n", sxyz.c_str());
-	routput.open(sxyz.c_str());
+//__host__ int OpenDataFiles(void)
+//{
+//	int numerr = 0;
+//
+//	//.. generate file names
+//	stringstream ssxyz;
+//	ssxyz << key << "_" << xyzfile << "_1" << xyz;
+//	string sxyz = ssxyz.str();
+//	printf("\nOpening *.xyz file:\t '%s'\n", sxyz.c_str());
+//	routput.open(sxyz.c_str());
+//
+//	if (!routput.is_open()) numerr++;
+//	if (numerr != 0)
+//		printf("Completed with %d errors.\n", numerr);
+//	else
+//		printf("Complete.\n");
+//
+//	return numerr;
+//}
 
-	if (!routput.is_open()) numerr++;
-	if (numerr != 0)
-		printf("Completed with %d errors.\n", numerr);
-	else
-		printf("Complete.\n");
-
-	return numerr;
-}
-
-__host__ void ErrorHandler(cudaError_t Status)
-{
-	if (cudaSuccess != Status)
-	{
-		fprintf(stderr, "\nfail msg:  '%s'\n", cudaGetErrorString(Status));
-		//fprintf(stderr, "\npress any key to clear memory...");
-		//cin.get();
-		//ShutDownGPUDevice();
-		//CleanUpHost();
-		abort();
-	}
-}
+//__host__ void ErrorHandler(cudaError_t Status)
+//{
+//	if (cudaSuccess != Status)
+//	{
+//		fprintf(stderr, "\nfail msg:  '%s'\n", cudaGetErrorString(Status));
+//		//fprintf(stderr, "\npress any key to clear memory...");
+//		//cin.get();
+//		//ShutDownGPUDevice();
+//		//CleanUpHost();
+//		abort();
+//	}
+//}
 
 __host__ void DisplayErrors(Worms &w, Fluid &f, ForceXchanger &x, GRNG &r)
 {
@@ -75,28 +76,30 @@ __host__ void DisplayErrors(Worms &w, Fluid &f, ForceXchanger &x, GRNG &r)
 // ******************* SIMULATION UTILITIES **************************
 //  *****************************************************************
 
-__host__ void MovementBC(float &pos, float L)
-{
-	if (pos > L) pos -= L;
-	if (pos < 0) pos += L;
-}
+//__host__ void MovementBC(float &pos, float L)
+//{
+//	if (pos > L) pos -= L;
+//	if (pos < 0) pos += L;
+//}
 
-__host__ void PBC(float &dr, float L)
-{
-	if (dr > L / 2.0) dr -= L;
-	if (dr < -L / 2.0) dr += L;
-}
+//__host__ void PBC(float &dr, float L)
+//{
+//	if (dr > L / 2.0) dr -= L;
+//	if (dr < -L / 2.0) dr += L;
+//}
 
 //.. memory must be pre-copied from device to host
-__host__ void PrintXYZ(float *wx, float *wy, float *flx, float *fly, int *xlist)
+__host__ void PrintXYZ(string fileName, float *wx, float *wy, float *flx, float *fly, int *xlist, 
+	WormsParameters &wparams, SimulationParameters &sparams, FluidParameters &fparams)
 {
 	static int framesinfile = 0;
 	static int filenum = 1;
 	static const int ntypes = 4;
 	static const char ptype[ntypes] = { 'A', 'B', 'C', 'D'};
+	static string key = fileName;
 
 	//.. close then open new file when full
-	if (framesinfile >= _FRAMESPERFILE)
+	if (framesinfile >= sparams._FRAMESPERFILE)
 	{
 		//.. adjust counting and current file
 		framesinfile = 0;
@@ -120,12 +123,13 @@ __host__ void PrintXYZ(float *wx, float *wy, float *flx, float *fly, int *xlist)
 	framesinfile++;
 
 	//.. top of the frame data
-	routput << _NPARTICLES + _NFLUID + 4 << endl;
-	routput << _NP << " " << _K2 << " " << _XBOX << " " << _YBOX << endl;
+	routput << wparams._NPARTICLES + fparams._NFLUID + 4 << endl;
+	routput << wparams._NP << " " << wparams._K2 << " " 
+		<< sparams._XBOX << " " << sparams._YBOX << endl;
 
 	//.. print worm particles
 	//bool * bound = new bool[_NFLUID];
-	for (int i = 0; i < _NPARTICLES; i++)
+	for (int i = 0; i < wparams._NPARTICLES; i++)
 	{
 		//.. exit if blown up
 		if (isnan(wx[i]))
@@ -136,14 +140,14 @@ __host__ void PrintXYZ(float *wx, float *wy, float *flx, float *fly, int *xlist)
 		}
 
 		//.. choose type
-		int t = (i / _NP) % ntypes;
+		int t = (i / wparams._NP) % ntypes;
 
 		//.. print type and positions
 		routput << ptype[t] << " " << wx[i] << " " << wy[i] << " 0 " << endl;
 	}
 
 	//.. print fluid particles (shifted in z direction by 1.0)
-	for (int i = 0; i < _NFLUID; i++)
+	for (int i = 0; i < fparams._NFLUID; i++)
 	{
 		if (isnan(flx[i]))
 		{
@@ -162,9 +166,9 @@ __host__ void PrintXYZ(float *wx, float *wy, float *flx, float *fly, int *xlist)
 
 	//Mark box corners
 	routput << "G " << "0 " << "0 " << "0" << endl;
-	routput << "E " << _XBOX << " 0 " << "0" << endl;
-	routput << "E " << "0 " << _YBOX << " 0" << endl;
-	routput << "E " << _XBOX << " " << _YBOX << " 0" << endl;
+	routput << "E " << sparams._XBOX << " 0 " << "0" << endl;
+	routput << "E " << "0 " << sparams._YBOX << " 0" << endl;
+	routput << "E " << sparams._XBOX << " " << sparams._YBOX << " 0" << endl;
 }
 
 //.. save to *_cfg.dat file parameters used
@@ -245,7 +249,7 @@ __host__ void SaveSimulationConfiguration(void)
 
 	save.close();*/
 }
-
+/*
 __host__ void ClockWorks(int &frame, std::clock_t &start_t, std::clock_t &intra_t, std::clock_t &inter_t)
 {
 	//.. Estimate time remaining
@@ -268,7 +272,7 @@ __host__ void ClockWorks(int &frame, std::clock_t &start_t, std::clock_t &intra_
 
 	intra_t = 0.0;
 	inter_t = 0.0;
-}
+}*/
 
 
 #endif 

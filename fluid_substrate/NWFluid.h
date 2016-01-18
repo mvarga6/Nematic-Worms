@@ -148,7 +148,7 @@ void Fluid::Init(GRNG * gaussianRandomNumberGenerator,
 }
 
 void Fluid::InternalForces(){
-	FluidNoiseKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_Vx, this->dev_Vy, this->dev_X, this->dev_Y, this->rng.Get(2*parameters->_NFLUID));
+	FluidNoiseKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>(this->dev_Fx, this->dev_Fy, this->dev_Vx, this->dev_Vy, this->dev_X, this->dev_Y, this->rng->Get(2*parameters->_NFLUID));
 	ErrorHandler(cudaGetLastError());
 }
 

@@ -52,7 +52,17 @@ __constant__ WormsParameters dev_Params;
 *	Function to allocate WormsParameters on GPU device.  Returns the
 *	errors directly.  Basically acts as a typedef for cudaMemcpy(..)
 --------------------------------------------------------------------------*/
-cudaError_t ParametersToDevice(WormsParameters &params){
+cudaError_t ParametersToDevice(WormsParameters &params, bool attractivePotentialCutoff = false){
+
+	//.. pre-calculated variables
+	//params._SIGMA6 = powf(params._SIGMA, 6.0f);
+	//params._2SIGMA6 = 2.0f * params._SIGMA6;
+	//params._RMIN = powf(2.0f, 1.0f / 6.0f) * params._SIGMA;
+	//params._R2MIN = params._RMIN * params._RMIN;
+	//if (attractivePotentialCutoff) params._RCUT = 2.5f * params._SIGMA;
+	//else params._RCUT = params._RMIN;
+	//params._R2MIN = params._RMIN * params._RMIN;
+	//params._LJ_AMP = 24.0f * params._EPSILON * params._SIGMA6;
 	return cudaMemcpyToSymbol(dev_Params, &params, sizeof(WormsParameters));
 }
 

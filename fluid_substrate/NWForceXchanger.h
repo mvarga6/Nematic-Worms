@@ -80,12 +80,12 @@ void ForceXchanger::Init(){
 	//curandCreateGenerator(this->curandGen, CURAND_RNG_PSEUDO_DEFAULT);
 	this->AllocateGPUMemory();
 	this->AllocateHostMemory();
-	CheckSuccess(cudaMemset(this->dev_xlist, -1, nfluid_int_alloc));
+	CheckSuccess(cudaMemset(this->dev_xlist, -1, this->fluid.nfluid_int_alloc));
 }
 
 void ForceXchanger::UpdateXList(){
 	//CheckSuccess(curandGenerateUniform(*this->curandGen, this->curandNumsx, 2 * nfluid_float_alloc));
-	UpdateXchangeListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >> >(this->fluid.dev_X, this->fluid.dev_Y, this->worms.dev_X, this->worms.dev_Y, this->dev_xlist, this->rng.Get(2*_NFLUID)); 
+	UpdateXchangeListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >> >(this->fluid.dev_X, this->fluid.dev_Y, this->worms.dev_X, this->worms.dev_Y, this->dev_xlist, this->rng.Get(2*this->fluid.parameters->_NFLUID)); 
 	ErrorHandler(cudaGetLastError());
 }
 
@@ -95,7 +95,7 @@ void ForceXchanger::XchangeForces(){
 }
 
 void ForceXchanger::XListToHost(){
-	CheckSuccess(cudaMemcpy(this->xlist, this->dev_xlist, nfluid_int_alloc, cudaMemcpyDeviceToHost));
+	CheckSuccess(cudaMemcpy(this->xlist, this->dev_xlist, this->fluid.nfluid_int_alloc, cudaMemcpyDeviceToHost));
 }
 
 void ForceXchanger::DisplayErrors(){
@@ -110,7 +110,7 @@ void ForceXchanger::DisplayErrors(){
 /////////////////////////////// PRIVATE METHODS //////////////////////////////////
 
 void ForceXchanger::AllocateGPUMemory(){
-	CheckSuccess(cudaMalloc((void**)&(this->dev_xlist), nfluid_int_alloc));
+	CheckSuccess(cudaMalloc((void**)&(this->dev_xlist), this->fluid.nfluid_int_alloc));
 	//CheckSuccess(cudaMalloc((void**)&(this->curandNumsx), 2 * nfluid_float_alloc));
 }
 
@@ -120,7 +120,7 @@ void ForceXchanger::FreeGPUMemory(){
 }
 
 void ForceXchanger::AllocateHostMemory(){
-	this->xlist = new int[_NFLUID];
+	this->xlist = new int[this->fluid.parameters->_NFLUID];
 }
 
 void ForceXchanger::FreeHostMemory(){

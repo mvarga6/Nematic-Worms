@@ -11,7 +11,7 @@ __global__ void UpdateXchangeListKernel(
 	int *xlist, float *randx)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-	if (id < _NFLUID)
+	if (id < dev_flParams._NFLUID)
 	{
 		//.. if not bound, try to bind
 		float rand = randx[id];
@@ -19,19 +19,19 @@ __global__ void UpdateXchangeListKernel(
 		if (xlist[id] == -1)
 		{
 			//.. loop over worm particles (need better search)
-			for (int i = 0; i < _NPARTICLES; i++)
+			for (int i = 0; i < dev_Params._NPARTICLES; i++)
 			{
 				float dx = flx[id] - wx[i];
 				float dy = fly[id] - wy[i];
-				DevicePBC(dx, _XBOX);
-				DevicePBC(dy, _YBOX);
+				DevicePBC(dx, dev_simParams._XBOX);
+				DevicePBC(dy, dev_simParams._YBOX);
 				float rr = dx * dx + dy * dy;
 
 				if (rr >= _XCUT2) continue;
 				if (rand > _MAKEBINDING)
 				{
 					xlist[id] = i; // fluid id linked to particle i
-					i = _NPARTICLES;
+					i = dev_Params._NPARTICLES;
 				}
 			}
 		}
@@ -52,10 +52,10 @@ __global__ void UpdateXchangeListKernel(
 __global__ void EliminateXListDoublesKernel(int *xlist)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-	if (id < _NFLUID)
+	if (id < dev_flParams._NFLUID)
 	{
 		bool found = false;
-		for (int i = 0; i < _NPARTICLES; i++)
+		for (int i = 0; i < dev_Params._NPARTICLES; i++)
 		{
 			//.. if fluid id is linked to particle i
 			if (xlist[id] == i)
@@ -76,7 +76,7 @@ __global__ void XchangeForceKernel(
 	int *xlist)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-	if (id < _NFLUID)
+	if (id < dev_flParams._NFLUID)
 	{
 		//.. if worm particle id is bound to something
 		if (xlist[id] != -1)
@@ -84,8 +84,8 @@ __global__ void XchangeForceKernel(
 			//.. calculate distence and force
 			float dx = flx[id] - wx[xlist[id]];
 			float dy = fly[id] - wy[xlist[id]];
-			DevicePBC(dx, _XBOX);
-			DevicePBC(dy, _YBOX);
+			DevicePBC(dx, dev_simParams._XBOX);
+			DevicePBC(dy, dev_simParams._YBOX);
 			float r = sqrtf(dx * dx + dy * dy);
 			float ff = -_KBIND * r;
 			float ffx = ff * dx;

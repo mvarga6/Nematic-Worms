@@ -13,7 +13,7 @@ __global__ void InterForceKernel(float *fx, float *fy, float *vx, float *vy, flo
 	if (id < dev_Params._NPARTICLES){
 
 		int p = id % dev_Params._NP;
-
+		
 		//.. local memory
 		float xid = x[id];
 		float yid = y[id];

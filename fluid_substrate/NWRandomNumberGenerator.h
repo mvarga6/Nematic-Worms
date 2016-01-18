@@ -16,6 +16,8 @@
 class GRNG {
 	//.. device ptr for numbers
 	float * dev_r;
+	//float * dev_rx;
+	//float * dev_ry;
 
 	//.. actual number generator
 	curandGenerator_t * generator;
@@ -25,7 +27,7 @@ class GRNG {
 	std::vector<cudaError_t> errorState;
 
 	//.. size of allocation on device
-	const size_t alloc_size;
+	size_t alloc_size;
 
 	//.. Gaussian distribution specs
 	const float mean;
@@ -36,11 +38,11 @@ public:
 	~GRNG();
 
 	float* Get(unsigned count);
-
+	void PointToRandom(float *ptrToRx, float *ptrToRy);
 	void DisplayErrors();
 
 private:
-	void AllocateGPUMemory();
+	void AllocateGPUMemory(int maxRequested);
 	void FreeGPUMemory();
 	void CheckStatus(curandStatus_t stat);
 	void CheckSuccess(cudaError_t err);
@@ -49,11 +51,13 @@ private:
 //	PUBLIC METHODS
 // ---------------------------------------------------------------------------
 GRNG::GRNG(int maxCallSize, float distributionMean, float standardDeviation)
-	: generator(new curandGenerator_t), dev_r(NULL),
-	alloc_size(sizeof(float)*maxCallSize), mean(distributionMean),
-	stddev(standardDeviation){
+	: generator(new curandGenerator_t), dev_r(NULL), /*dev_rx(NULL), dev_ry(NULL),*/
+	mean(distributionMean), stddev(standardDeviation){
+
+	this->AllocateGPUMemory(maxCallSize);
 	CheckStatus(curandCreateGenerator(this->generator, CURAND_RNG_PSEUDO_DEFAULT));
-	this->AllocateGPUMemory();
+	CheckStatus(curandSetPseudoRandomGeneratorSeed(*this->generator, 2345));
+	printf("Random number generater created with %i errors.\n", this->status.size() + this->errorState.size());
 }
 
 GRNG::~GRNG(){
@@ -65,10 +69,16 @@ float* GRNG::Get(unsigned count){
 	size_t call_size = count * sizeof(float);
 	if (call_size > this->alloc_size){
 		printf("\n\tWarning:\ttoo large of call to RNG!\n");
-		call_size = this->alloc_size;
+		count = this->alloc_size / sizeof(float);
 	}
-	CheckStatus(curandGenerateNormal(*this->generator, this->dev_r, call_size, this->mean, this->stddev));
+	CheckStatus(curandGenerateNormal(*this->generator, this->dev_r, count, this->mean, this->stddev));
+	cudaDeviceSynchronize();
+	//cudaMemset(this->dev_r, 0, this->alloc_size);
 	return this->dev_r;
+}
+
+void GRNG::PointToRandom(float *ptrToRx, float *ptrToRy){
+	//CheckStatus(curandGenerateNormal(*(this->generator), this->dev_rx, ))
 }
 
 void GRNG::DisplayErrors(){
@@ -111,7 +121,15 @@ void GRNG::DisplayErrors(){
 // -------------------------------------------------------------------------
 //	PRIVATE METHODS
 // -------------------------------------------------------------------------
-void GRNG::AllocateGPUMemory(){
+void GRNG::AllocateGPUMemory(int maxRequested){
+
+	float ratio = float(maxRequested) / 32.0f;
+	float incr = float(ceilf(ratio)) - ratio;
+	this->alloc_size = sizeof(float) * (maxRequested + int(ceilf(incr*32.0f)));
+
+	printf("Memory requested for RNG:\t\t%i\n", sizeof(float)*maxRequested);
+	printf("Adjusted to increment of warp size:\t%i\n", this->alloc_size);
+
 	CheckSuccess(cudaMalloc((void**)&this->dev_r, this->alloc_size));
 }
 

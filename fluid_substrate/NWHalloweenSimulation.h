@@ -45,10 +45,13 @@ private:
 // ------------------------------------------------------------------------------------------
 HalloweenSimulation::HalloweenSimulation(){
 
+	//.. reset device before starting
+	cudaDeviceReset();
+
 	//.. setup parameters (should be done with user input)
 	this->params = new WormsParameters();
-	this->params->_XDIM		  = 12;
-	this->params->_YDIM		  = 100;
+	this->params->_XDIM		  = 11;
+	this->params->_YDIM		  = 10;
 	this->params->_NP		  = 10;
 	this->params->_NWORMS	  = params->_XDIM * params->_YDIM;
 	this->params->_NPARTICLES = params->_NP * params->_NWORMS;
@@ -66,6 +69,7 @@ HalloweenSimulation::HalloweenSimulation(){
 	this->params->_KBT		  = 0.5f;
 	this->params->_GAMMA	  = 2.0f;
 	this->params->_DAMP		  = 3.0f;
+	this->params->_BUFFER	  = 1.5f;
 	this->params->_SIGMA6	  = powf(params->_SIGMA, 6.0f);
 	this->params->_2SIGMA6	  = params->_SIGMA6 * 2.0f;
 	this->params->_LJ_AMP	  = 24.0f * params->_EPSILON * params->_SIGMA6;
@@ -73,7 +77,6 @@ HalloweenSimulation::HalloweenSimulation(){
 	this->params->_R2MIN	  = params->_RMIN * params->_RMIN;
 	this->params->_RCUT		  = params->_RMIN; // 2.5f * params->_SIGMA;
 	this->params->_R2CUT	  = params->_RCUT * params->_RCUT;
-	this->params->_BUFFER	  = 1.5f;
 
 	//.. parameters to device
 	cudaError_t err;
@@ -82,7 +85,7 @@ HalloweenSimulation::HalloweenSimulation(){
 
 	this->simparams = new SimulationParameters();
 	this->simparams->_DT			= 0.001f;
-	this->simparams->_FRAMERATE		= 40000;
+	this->simparams->_FRAMERATE		= 4000;
 	this->simparams->_FRAMESPERFILE = 200;
 	this->simparams->_NSTEPS		= 1000000;
 	this->simparams->_XBOX			= 110.0f;
@@ -130,8 +133,8 @@ void HalloweenSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams);
 	this->DisplayErrors();
 	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
-		this->worms->ResetNeighborsList(itime);
 		this->worms->InternalForces();
+		this->worms->ResetNeighborsList(itime);
 		this->worms->LJForces();
 		this->worms->AutoDriveForces();
 		this->worms->Update();
@@ -290,7 +293,8 @@ void HalloweenSimulation::XYZPrint(int itime){
 	this->worms->DislayTheta();
 	this->DisplayErrors();
 	this->worms->DataDeviceToHost();
-	
+	this->DisplayErrors();
+
 	//.. print to ntypes
 	static const int ntypes = 4;
 	static const char ptypes[ntypes] = { 'A', 'B', 'C', 'D' };
