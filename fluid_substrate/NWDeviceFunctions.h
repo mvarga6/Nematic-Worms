@@ -29,13 +29,16 @@ __device__ bool InList(int arg, int* list, int listSize)
 	return false;
 }
 //-----------------------------------------------------------------------------------
-__device__ float CalculateRR_3d(const float rid[3], const float rnab[3], float dr[3]){
-	dr[0] = rnab[0] - rid[0];
-	dr[1] = rnab[1] - rid[1];
-	dr[2] = rnab[2] - rid[2];
-	DevicePBC(dr[0], dev_simParams._XBOX);
-	DevicePBC(dr[1], dev_simParams._YBOX);
-	return (dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2]);
+__device__ float CalculateRR_3d(const float _rid[3], const float _rnab[3], float _dr[3]){
+	float x = _rnab[0] - _rid[0];
+	float y = _rnab[1] - _rid[1];
+	float z = _rnab[2] - _rid[2];
+	DevicePBC(x, dev_simParams._XBOX);
+	DevicePBC(y, dev_simParams._YBOX);
+	_dr[0] = x;
+	_dr[1] = y;
+	_dr[2] = z;
+	return (_dr[0]*_dr[0] + _dr[1]*_dr[1] + _dr[2]*_dr[2]);
 }
 //-----------------------------------------------------------------------------------
 __device__ float CalculateLJ_3d(float &rr){

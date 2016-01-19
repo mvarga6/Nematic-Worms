@@ -9,21 +9,21 @@
 
 //.. Update positions and velocities of particles then save forces
 __global__ void UpdateSystemKernel(float *f,
-								   int fpitch,
+								   int fshift,
 								   float *f_old,
-								   int fopitch,
+								   int foshift,
 								   float *v,
-								   int vpitch, 
+								   int vshift, 
 								   float *r,
-								   int rpitch)
+								   int rshift)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
 	{
-		int fshift = fpitch / sizeof(float);
-		int foshift = fopitch / sizeof(float);
-		int vshift = vpitch / sizeof(float);
-		int rshift = rpitch / sizeof(float);
+		//int fshift = fpitch / sizeof(float);
+		//int foshift = fopitch / sizeof(float);
+		//int vshift = vpitch / sizeof(float);
+		//int rshift = rpitch / sizeof(float);
 	
 		//.. change in velocity
 		float dvx = 0.5f * (f[id] + f_old[id]) * dev_simParams._DT;

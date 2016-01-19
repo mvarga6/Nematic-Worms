@@ -8,15 +8,15 @@
 #include "NWSimulationParameters.h"
 
 __global__ void CalculateThetaKernel(float *r,
-									int rpitch,
+									int rshift,
 									float *thphi,
-									int tpitch)
+									int tshift)
 {
 	int id = threadIdx.x + blockIdx.x * blockDim.x;
 	if (id < dev_Params._NPARTICLES)
 	{
-		int rshift = rpitch / sizeof(float);
-		int tshift = tpitch / sizeof(float);
+		//int rshift = rpitch / sizeof(float);
+		//int tshift = tpitch / sizeof(float);
 
 		int p = id % dev_Params._NP;
 		if (p < (dev_Params._NP - 1))
@@ -39,11 +39,11 @@ __global__ void CalculateThetaKernel(float *r,
 }
 
 //.. launch one for each worm
-__global__ void FinishCalculateThetaKernel(float *thphi, int tpitch){
+__global__ void FinishCalculateThetaKernel(float *thphi, int tshift){
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 	if (tid < dev_Params._NWORMS){
 
-		int tshift = tpitch / sizeof(float);
+		//int tshift = tpitch / sizeof(float);
 
 		// get to last particle in worm tid
 		int id = (tid * dev_Params._NP) + (dev_Params._NP - 1);

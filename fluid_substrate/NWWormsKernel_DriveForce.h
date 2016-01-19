@@ -7,14 +7,14 @@
 #include "NWWormsParameters.h"
 // -----------------------------------------------------------------------------------------
 __global__ void DriveForceKernel(float *f,
-								 int fpitch,
+								 int fshift,
 								 float *thphi,
-								 int tpitch){
+								 int tshift){
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-		int fshift = fpitch / sizeof(float);
-		int tshift = tpitch / sizeof(float);
+		//int fshift = fpitch / sizeof(float);
+		//int tshift = tpitch / sizeof(float);
 
 		//float phi = atan2f(z[id], dev_Params._L1);
 		float sinphi = sinf(thphi[id + tshift]);

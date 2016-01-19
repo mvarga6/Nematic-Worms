@@ -92,6 +92,7 @@ GRNG::GRNG(int maxCallSize, float distributionMean, float standardDeviation)
 	this->Blocks_Per_Kernel = (this->max_size / this->Threads_Per_Block) + 1;
 	this->AllocateGPUMemory(this->max_size);
 	//initKernel <<<this->Blocks_Per_Kernel, this->Threads_Per_Block >>> (this->dev_s, this->max_size);
+	printf("\nRandom Number Generator (GRNG) Created");
 }
 //-------------------------------------------------------------------------------------------
 GRNG::~GRNG(){

@@ -52,15 +52,15 @@ NWSimulation::NWSimulation(){
 	this->params->_NWORMS = params->_XDIM * params->_YDIM;
 	this->params->_NPARTICLES = params->_NP * params->_NWORMS;
 	this->params->_LISTSETGAP = 100;
-	this->params->_NMAX = 48;
+	this->params->_NMAX = 32;
 	this->params->_EPSILON = 0.25f;
 	this->params->_SIGMA = 1.0f;
 	this->params->_DRIVE = 0.5f;
-	this->params->_K1 = 2.0f * 57.146f;
+	this->params->_K1 = 57.146f;
 	this->params->_K2 = 10.0f * params->_K1;
 	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
-	this->params->_L1 = 0.8000f;
-	this->params->_L2 = 1.6000f;
+	this->params->_L1 = 0.80000f;
+	this->params->_L2 = 1.60000f;
 	this->params->_L3 = 2.400f;
 	this->params->_KBT = 0.0001f;
 	this->params->_GAMMA = 2.0f;
@@ -99,7 +99,7 @@ NWSimulation::NWSimulation(){
 	this->rng = new GRNG(3 * params->_NPARTICLES, 0.0f, 1.0f);
 
 	//.. define the worms
-	this->worms = new Worms(10000);
+	this->worms = new Worms();
 }
 //-------------------------------------------------------------------------------------------
 NWSimulation::~NWSimulation(){
@@ -111,8 +111,8 @@ NWSimulation::~NWSimulation(){
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams);
-	//this->DisplayErrors();
-	this->fxyz.open("output//3d_test7.xyz");
+	this->DisplayErrors();
+	this->fxyz.open("output//3d_test9.xyz");
 
 	this->XYZPrint(0);
 	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){

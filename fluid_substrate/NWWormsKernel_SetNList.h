@@ -8,9 +8,9 @@
 #include "NWSimulationParameters.h"
 
 __global__ void SetNeighborList_N2Kernel(float *r,
-										 int rpitch, 
+										 int rshift, 
 										 int *nlist,
-										 int nlpitch)
+										 int nlshift)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
@@ -23,8 +23,8 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 		//__shared__ float r2cut = dev_Params._R2CUT;
 		//__shared__ float buffer = dev_Params._BUFFER;
 
-		int rshift = rpitch / sizeof(float);
-		int nshift = nlpitch / sizeof(int);
+		//int rshift = rpitch / sizeof(float);
+		//int nshift = nlpitch / sizeof(int);
 
 		int n1 = id % dev_Params._NP;
 		int w1 = id / dev_Params._NP;
@@ -58,7 +58,7 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 			}
 
 			//.. skip if to near in same worm
-			if (sep == 1) continue;
+			if (sep <= 2) continue;
 
 			//.. add to nlist if within range
 			_r[0] = r[p2]; 
@@ -75,7 +75,7 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 			{
 				//printf("\n%i on %i", p2, id);
 
-				int plcid = id + found++ * nshift;
+				int plcid = id + found++ * nlshift;
 				nlist[plcid] = p2;
 			}
 		}
