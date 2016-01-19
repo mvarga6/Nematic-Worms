@@ -48,7 +48,7 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 			int sep = 10; //.. any number 6 or greater would work here
 			if (w2 == w1)
 			{
-				cutoff = dev_Params._R2MIN + dev_Params._BUFFER;
+				cutoff = dev_Params._R2MIN;// +dev_Params._BUFFER;
 				int n2 = p2 % dev_Params._NP;
 				sep = abs(n2 - n1);
 			}
@@ -58,7 +58,7 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 			}
 
 			//.. skip if to near in same worm
-			if (sep <= 5) continue;
+			if (sep == 1) continue;
 
 			//.. add to nlist if within range
 			_r[0] = r[p2]; 

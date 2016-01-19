@@ -10,8 +10,8 @@
 //-----------------------------------------------------------------------------------
 __device__ void DevicePBC(float &dr, float L)
 {
-	if (dr > L / 2.0) dr -= L;
-	if (dr < -L / 2.0) dr += L;
+	if (dr > L / 2.0f) dr -= L;
+	if (dr < -L / 2.0f) dr += L;
 }
 //-----------------------------------------------------------------------------------
 __device__ void DeviceMovementPBC(float &pos, float L)

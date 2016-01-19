@@ -51,18 +51,18 @@ NWSimulation::NWSimulation(){
 	this->params->_NP = 10;
 	this->params->_NWORMS = params->_XDIM * params->_YDIM;
 	this->params->_NPARTICLES = params->_NP * params->_NWORMS;
-	this->params->_LISTSETGAP = 200;
-	this->params->_NMAX = 28;
-	this->params->_EPSILON = 1.0f;
+	this->params->_LISTSETGAP = 100;
+	this->params->_NMAX = 48;
+	this->params->_EPSILON = 0.25f;
 	this->params->_SIGMA = 1.0f;
-	this->params->_DRIVE = 0.1f;
-	this->params->_K1 = 57.146f;
-	this->params->_K2 = 20.0f * params->_K1;
+	this->params->_DRIVE = 0.5f;
+	this->params->_K1 = 2.0f * 57.146f;
+	this->params->_K2 = 10.0f * params->_K1;
 	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
-	this->params->_L1 = 0.8f;
-	this->params->_L2 = 2.0f * params->_L1;
-	this->params->_L3 = 3.0f * params->_L1;
-	this->params->_KBT = 0.000f;
+	this->params->_L1 = 0.8000f;
+	this->params->_L2 = 1.6000f;
+	this->params->_L3 = 2.400f;
+	this->params->_KBT = 0.0001f;
 	this->params->_GAMMA = 2.0f;
 	this->params->_DAMP = 3.0f;
 	this->params->_SIGMA6 = powf(params->_SIGMA, 6.0f);
@@ -70,15 +70,15 @@ NWSimulation::NWSimulation(){
 	this->params->_LJ_AMP = 24.0f * params->_EPSILON * params->_SIGMA6;
 	this->params->_RMIN = _216 * params->_SIGMA;
 	this->params->_R2MIN = params->_RMIN * params->_RMIN;
-	this->params->_RCUT = 2.5f * params->_SIGMA;
+	this->params->_RCUT = 2.5f * params->_SIGMA; // params->_RMIN; //
 	this->params->_R2CUT = params->_RCUT * params->_RCUT;
-	this->params->_BUFFER = 1.5f;
+	this->params->_BUFFER = 0.5f;
 	this->params->_LANDSCALE = 1.0f;
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
-	this->simparams->_DT = 0.001f;
-	this->simparams->_FRAMERATE = 1000;
+	this->simparams->_DT = 0.00075f;
+	this->simparams->_FRAMERATE = 2000;
 	this->simparams->_FRAMESPERFILE = 200;
 	this->simparams->_NSTEPS = 1000000;
 	this->simparams->_XBOX = 100.0f;
@@ -99,7 +99,7 @@ NWSimulation::NWSimulation(){
 	this->rng = new GRNG(3 * params->_NPARTICLES, 0.0f, 1.0f);
 
 	//.. define the worms
-	this->worms = new Worms();
+	this->worms = new Worms(10000);
 }
 //-------------------------------------------------------------------------------------------
 NWSimulation::~NWSimulation(){
@@ -112,10 +112,9 @@ NWSimulation::~NWSimulation(){
 void NWSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams);
 	//this->DisplayErrors();
-	this->fxyz.open("output//3d_test4.xyz");
+	this->fxyz.open("output//3d_test7.xyz");
 
 	this->XYZPrint(0);
-	//this->worms->ResetNeighborsList(0);
 	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
 
 		this->worms->ZeroForce();
@@ -126,6 +125,7 @@ void NWSimulation::Run(){
 		this->worms->LandscapeForces();
 		this->worms->Update();
 		this->XYZPrint(itime);
+		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
 
 		this->time += this->simparams->_DT;
@@ -151,19 +151,25 @@ void NWSimulation::XYZPrint(int itime){
 	static const int ntypes = 4;
 	static const char ptypes[ntypes] = { 'A', 'B', 'C', 'D' };
 	static const int N = params->_NPARTICLES;
+
+	int nBlownUp = 0;
 	this->fxyz << N + 4 << std::endl;
 	this->fxyz << "Comment line" << std::endl;
 	for (int i = 0; i < params->_NPARTICLES; i++){
-		int t = (i / params->_NP) % ntypes;
+		int w = i / params->_NP;
+		int t = w % ntypes;
+		float x = worms->r[i], y = worms->r[i + N], z = worms->r[i + 2 * N];
+		if (abs(z) > 50.0f) nBlownUp++;
 		this->fxyz << ptypes[t] << " " 
-				   << worms->r[i] << " " 
-				   << worms->r[i + N] << " "
-				   << worms->r[i + 2*N] << std::endl;
+				   << x << " " << y << " " << z << std::endl;
 	}
 	this->fxyz << "E " << 0 << " " << 0 << " 0 " << std::endl;
 	this->fxyz << "E " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;
 	this->fxyz << "E " << 0 << " " << simparams->_YBOX << " 0 " << std::endl;
 	this->fxyz << "E " << simparams->_XBOX << " " << simparams->_YBOX << " 0 " << std::endl;
+
+	if (nBlownUp > 0) printf("\n%i particles blown up", nBlownUp);
+	if (nBlownUp == params->_NPARTICLES) abort();
 }
 //-------------------------------------------------------------------------------------------
 void NWSimulation::DisplayErrors(){

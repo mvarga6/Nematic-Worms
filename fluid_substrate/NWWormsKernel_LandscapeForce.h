@@ -26,15 +26,15 @@
 }*/
 
 __global__ void WormsLandscapeKernel(float *f,
-									 int fpitch,
+									 int fshift,
 									 float *r,
-									 int rpitch){
+									 int rshift){
 
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-		int fshift = fpitch / sizeof(float);
-		int rshift = rpitch / sizeof(float);
+		//int fshift = fpitch / sizeof(float);
+		//int rshift = rpitch / sizeof(float);
 
 		//.. harmonic potential zeroed around z = 0
 		f[id + 2 * fshift] -= dev_Params._LANDSCALE * r[id + 2 * rshift];

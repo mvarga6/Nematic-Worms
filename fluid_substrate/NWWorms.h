@@ -77,6 +77,18 @@ class Worms {
 	size_t nparticles_int_alloc;
 	size_t nparticles_float_alloc;
 
+	//.. clocking the function calls
+	const int clock_rate;
+	std::clock_t LJ_clock,
+				 Noise_clock,
+				 Internal_clock,
+				 Drive_clock,
+				 ThPhi_clock,
+				 Nlist_clock,
+				 Land_clock,
+				 Update_clock,
+				 DataTrans_clock;
+
 public:
 	//.. on host (so print on host is easier)
 	//float * X;
@@ -89,7 +101,7 @@ public:
 
 	//.. construct with block-thread structure
 	//Worms(int BPK, int TPB, GRNG &RNG, WormsParameters &wormsParameters);
-	Worms();
+	Worms(int clockingRate);
 	~Worms();
 
 	//.. user access to running simulation
@@ -100,6 +112,7 @@ public:
 	void LJForces();
 	void AutoDriveForces();
 	void LandscapeForces();
+	void AddConstantForce(int dim, float force);
 	void Update();
 	void CalculateThetaPhi();
 	void DataDeviceToHost();
@@ -107,13 +120,13 @@ public:
 	void ResetNeighborsList();
 	void ResetNeighborsList(int itime);
 	void ClearAll();
+	void ZeroForce();
 
 	//.. for Debugging
 	void DisplayNList();
 	void DislayThetaPhi();
 	void DisplayErrors();
-	void ZeroForce();
-	void AddConstantForce(int dim, float force);
+	void DisplayClocks(int itime);
 
 	//.. so force exchanger can do what i needs
 	friend class ForceXchanger;
@@ -129,15 +142,16 @@ private:
 	void AdjustDistribute(float target_percent);
 	void ZeroHost();
 	void ZeroGPU();
+	void ZeroClocks();
 	void CheckSuccess(cudaError_t err);
 	void FigureBlockThreadStructure(int threadsPerBlock);
 };
 // ------------------------------------------------------------------------------------------
 //	PUBLIC METHODS
 // ------------------------------------------------------------------------------------------
-Worms::Worms() : 
+Worms::Worms(int clockingRate = -1) : 
 r(NULL), dev_r(NULL), dev_v(NULL), dev_f(NULL), 
-dev_f_old(NULL), dev_thphi(NULL)
+dev_f_old(NULL), dev_thphi(NULL), clock_rate(clockingRate)
 /*X(NULL), Y(NULL), Z(NULL),Vx(NULL), Vy(NULL), dev_theta(NULL),
 rng(NULL), parameters(NULL), envirn(NULL),
 dev_X(NULL), dev_Y(NULL), dev_Z(NULL),
@@ -194,7 +208,6 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 				SimulationParameters * simParameters,
 				int threadsPerBlock = 256){
 	DEBUG_MESSAGE("Init");
-
 	this->rng = gaussianRandomNumberGenerator;
 	this->parameters = wormsParameters;
 	this->envirn = simParameters;
@@ -203,6 +216,7 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	this->ZeroHost();
 	this->AllocateGPUMemory();
 	this->ZeroGPU();
+	this->ZeroClocks();
 	this->DistributeWormsOnHost();
 	this->AdjustDistribute(0.5f);
 	this->DataHostToDevice();
@@ -227,7 +241,7 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 //-------------------------------------------------------------------------------------------
 void Worms::InternalForces(){
 	DEBUG_MESSAGE("InternalForces");
-
+	std::clock_t b4 = std::clock();
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
 	int N = 3 * this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
@@ -240,11 +254,12 @@ void Worms::InternalForces(){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->Internal_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::NoiseForces(){
 	DEBUG_MESSAGE("NoiseForces");
-
+	std::clock_t b4 = std::clock();
 	dim3 gridStruct(this->Blocks_Per_Kernel, 3);
 	dim3 blockStruct(this->Threads_Per_Block);
 	int N = 3 * this->parameters->_NPARTICLES;
@@ -256,11 +271,12 @@ void Worms::NoiseForces(){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->Noise_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::LJForces(){
 	DEBUG_MESSAGE("LJForces");
-
+	std::clock_t b4 = std::clock();
 	LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fpitch / sizeof(float), 
@@ -269,12 +285,13 @@ void Worms::LJForces(){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->LJ_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::AutoDriveForces(){
 	DEBUG_MESSAGE("AutoDriveForces");
-
 	this->CalculateThetaPhi();
+	std::clock_t b4 = std::clock();
 	DriveForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fpitch, 
@@ -282,18 +299,21 @@ void Worms::AutoDriveForces(){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->Drive_clock += std::clock() - b4;
+	
 }
 //-------------------------------------------------------------------------------------------
 void Worms::LandscapeForces(){
 	DEBUG_MESSAGE("LandscapeForces");
-
+	std::clock_t b4 = std::clock();
 	WormsLandscapeKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
-		this->dev_f, this->fpitch,
-		this->dev_r, this->rpitch
+		this->dev_f, this->fpitch / sizeof(float),
+		this->dev_r, this->rpitch / sizeof(float)
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->Land_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::Update(){
@@ -306,7 +326,7 @@ void Worms::Update(){
 		this->dev_v, this->vpitch, 
 		this->dev_r, this->rpitch
 	);*/
-
+	std::clock_t b4 = std::clock();
 	dim3 gridStruct(this->Blocks_Per_Kernel, 3);
 	dim3 blockStruct(this->Threads_Per_Block);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>
@@ -318,11 +338,12 @@ void Worms::Update(){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->Update_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::CalculateThetaPhi(){
 	DEBUG_MESSAGE("CalculateThetaPhi");
-
+	std::clock_t b4 = std::clock();
 	CalculateThetaKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_r, this->rpitch, 
@@ -335,6 +356,7 @@ void Worms::CalculateThetaPhi(){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->ThPhi_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::DataDeviceToHost(){
@@ -342,7 +364,7 @@ void Worms::DataDeviceToHost(){
 	//CheckSuccess(cudaMemcpy(this->X, this->dev_X, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
 	//CheckSuccess(cudaMemcpy(this->Y, this->dev_Y, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
 	//CheckSuccess(cudaMemcpy(this->Z, this->dev_Z, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
-	
+	std::clock_t b4 = std::clock();
 	CheckSuccess(cudaMemcpy2D(this->r,
 		this->nparticles_float_alloc,
 		this->dev_r,
@@ -350,8 +372,9 @@ void Worms::DataDeviceToHost(){
 		this->nparticles_float_alloc,
 		this->height3,
 		cudaMemcpyDeviceToHost));
-	//ErrorHandler(cudaDeviceSynchronize());
+	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->DataTrans_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::DataHostToDevice(){
@@ -376,7 +399,7 @@ void Worms::DataHostToDevice(){
 //.. sets neighbors list between worm-worm and worm-fluid
 void Worms::ResetNeighborsList(){
 	DEBUG_MESSAGE("ResetNeighborsList");
-
+	std::clock_t b4 = std::clock();
 	CheckSuccess(cudaMemset2D(this->dev_nlist,
 		this->nlpitch,
 		-1, 
@@ -391,6 +414,7 @@ void Worms::ResetNeighborsList(){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	this->Nlist_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ResetNeighborsList(int itime){
@@ -454,6 +478,25 @@ void Worms::DisplayErrors(){
 	//this->DislayThetaPhi();
 }
 //-------------------------------------------------------------------------------------------
+void Worms::DisplayClocks(int itime){
+
+	if (this->clock_rate == -1) return;
+	if (itime % this->clock_rate != 0) return;
+
+	printf("\n\nWorms Performance");
+	printf("\nLJ\t\t%d", this->LJ_clock / this->clock_rate);
+	printf("\nNoise\t\t%d", this->Noise_clock / this->clock_rate);
+	printf("\nInternal\t%d", this->Internal_clock / this->clock_rate);
+	printf("\nDrive\t\t%d", this->Drive_clock / this->clock_rate);
+	printf("\nDataTrans\t%d", this->DataTrans_clock / this->clock_rate);
+	printf("\nThPhi\t\t%d", this->ThPhi_clock / this->clock_rate);
+	printf("\nNlist\t\t%d", this->Nlist_clock / this->clock_rate);
+	printf("\nLand\t\t%d", this->Land_clock / this->clock_rate);
+	printf("\nUpdate\t\t%d\n", this->Update_clock / this->clock_rate);
+
+	this->ZeroClocks();
+}
+//-------------------------------------------------------------------------------------------
 void Worms::ZeroForce(){
 	DEBUG_MESSAGE("ZeroForces");
 
@@ -486,6 +529,8 @@ void Worms::AllocateHostMemory(){
 	//this->Vx = new float[this->parameters->_NPARTICLES];
 	//this->Vy = new float[this->parameters->_NPARTICLES];
 	this->r = new float[3*this->parameters->_NPARTICLES];
+
+	
 }
 //-------------------------------------------------------------------------------------------
 void Worms::FreeHostMemory(){
@@ -751,6 +796,18 @@ void Worms::ZeroGPU(){
 		this->heightNMAX));
 }
 //-------------------------------------------------------------------------------------------
+void Worms::ZeroClocks(){
+	this->LJ_clock = 0.0f;
+	this->Land_clock = 0.0f;
+	this->Nlist_clock = 0.0f;
+	this->Update_clock = 0.0f;
+	this->DataTrans_clock = 0.0f;
+	this->Drive_clock = 0.0f;
+	this->ThPhi_clock = 0.0f;
+	this->Noise_clock = 0.0f;
+	this->Internal_clock = 0.0f;
+}
+//-------------------------------------------------------------------------------------------
 void Worms::CheckSuccess(cudaError_t err){
 	if (err != cudaSuccess) this->errorState.push_back(err);
 }
@@ -770,4 +827,6 @@ void Worms::FigureBlockThreadStructure(int tpb){
 		this->nparticles_int_alloc);
 }
 //-------------------------------------------------------------------------------------------
+
+
 #endif
