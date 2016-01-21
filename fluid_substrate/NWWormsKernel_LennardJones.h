@@ -1,12 +1,12 @@
 
 #ifndef __WORMS_KERNEL__LENNARD_JONES_H__
 #define __WORMS_KERNEL__LENNARD_JONES_H__
-
+//-------------------------------------------------------------------------------------------------
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
-
+//------------------------------------------------------------------------------------------------
 __global__ void LennardJonesNListKernel(float *f,
 										int fshift,
 										float *r,
@@ -76,5 +76,30 @@ __global__ void LennardJonesNListKernel(float *f,
 #endif
 	}
 }
+//---------------------------------------------------------------------------------------------------
+__global__ void FastLennardJonesNListKernel(float *f, int fshift,
+											float *r, int rshift,
+											int *nlist, int nlshift){
+	int pid = threadIdx.x + blockDim.x * blockIdx.x; // particle index
+	int nab = threadIdx.y + blockDim.y * blockIdx.y; // neighbor count
+	if ((pid < dev_Params._NPARTICLES) && (nab < dev_Params._NMAX)){
+		int nid = nlist[pid + nab * nlshift];
+		if (nid != -1){
+			float rid[3], rnab[3], _f, rr, dr[3];
+			rid[0] = r[pid];
+			rid[1] = r[pid + rshift];
+			rid[2] = r[pid + 2 * rshift];
+			rnab[0] = r[nid];
+			rnab[1] = r[nid + rshift];
+			rnab[2] = r[nid + 2 * rshift];
+			rr = CalculateRR_3d(rid, rnab, dr);
+			if (rr < dev_Params._R2CUT){
+				_f = CalculateLJ_3d(rr);
+				for (int d = 0; d < 3; d++)
+					f[pid + d * fshift] -= _f * dr[d];
+			}
+		}
+	}
 
+}
 #endif

@@ -15,7 +15,8 @@ __global__ void UpdateSystemKernel(float *f,
 								   float *v,
 								   int vshift, 
 								   float *r,
-								   int rshift)
+								   int rshift,
+								   float dt)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
@@ -26,14 +27,14 @@ __global__ void UpdateSystemKernel(float *f,
 		//int rshift = rpitch / sizeof(float);
 	
 		//.. change in velocity
-		float dvx = 0.5f * (f[id] + f_old[id]) * dev_simParams._DT;
-		float dvy = 0.5f * (f[id + fshift] + f_old[id + foshift]) * dev_simParams._DT;
-		float dvz = 0.5f * (f[id + 2*fshift] + f_old[id + 2*foshift]) * dev_simParams._DT;
+		float dvx = 0.5f * (f[id] + f_old[id]) * dt;
+		float dvy = 0.5f * (f[id + fshift] + f_old[id + foshift]) * dt;
+		float dvz = 0.5f * (f[id + 2*fshift] + f_old[id + 2*foshift]) * dt;
 
 		//.. change in position
-		float dx = v[id] * dev_simParams._DT + 0.5f * f_old[id] * dev_simParams._DT * dev_simParams._DT;
-		float dy = v[id + vshift] * dev_simParams._DT + 0.5f * f_old[id + foshift] * dev_simParams._DT * dev_simParams._DT;
-		float dz = v[id + 2*vshift] * dev_simParams._DT + 0.5f * f_old[id + 2*foshift] * dev_simParams._DT * dev_simParams._DT;
+		float dx = v[id] * dt + 0.5f * f_old[id] * dt * dt;
+		float dy = v[id + vshift] * dt + 0.5f * f_old[id + foshift] * dt * dt;
+		float dz = v[id + 2*vshift] * dt + 0.5f * f_old[id + 2*foshift] * dt * dt;
 
 		//.. save forces
 		f_old[id] = f[id];
@@ -59,7 +60,8 @@ __global__ void UpdateSystemKernel(float *f,
 __global__ void FastUpdateKernel(float *f, int fshift,
 								 float *f_old, int foshift,
 								 float *v, int vshift,
-								 float *r, int rshift){
+								 float *r, int rshift,
+								 float dt){
 	int tid = threadIdx.x + blockDim.x * blockIdx.x;
 	int bid = blockIdx.y;
 	if (tid < dev_Params._NPARTICLES){
@@ -74,8 +76,8 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		int vid = tid + bid * vshift;
 		int rid = tid + bid * rshift;
 
-		float dvx = 0.5f * (f[fid] + f_old[foid]) * dev_simParams._DT;
-		float dx = v[vid] * dev_simParams._DT + 0.5f * f_old[foid] * dev_simParams._DT * dev_simParams._DT;
+		float dvx = 0.5f * (f[fid] + f_old[foid]) * dt;
+		float dx = v[vid] * dt + 0.5f * f_old[foid] * dt * dt;
 		f_old[foid] = f[fid];
 		r[rid] += dx;
 		v[vid] += dvx;

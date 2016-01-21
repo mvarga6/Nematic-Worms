@@ -122,7 +122,8 @@ public:
 	void AutoDriveForces();
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
-	void Update();
+	void SlowUpdate();
+	void QuickUpdate(float increaseRatio);
 	void CalculateThetaPhi();
 	void DataDeviceToHost();
 	void DataHostToDevice();
@@ -318,6 +319,15 @@ void Worms::LJForces(){
 		this->dev_r, this->rshift, 
 		this->dev_nlist, this->nlshift
 	);
+	/*dim3 threadStruct(16, 16);
+	dim3 numBlocks((this->parameters->_NPARTICLES / threadStruct.x) + 1, 
+				   (this->parameters->_NMAX / threadStruct.y) + 1);
+	FastLennardJonesNListKernel <<< numBlocks, threadStruct >>>
+	(
+		this->dev_f, this->fshift,
+		this->dev_r, this->rshift,
+		this->dev_nlist, this->nlshift
+	);*/
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->LJ_clock += std::clock() - b4;
@@ -351,7 +361,7 @@ void Worms::LandscapeForces(){
 	this->Land_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::Update(){
+void Worms::SlowUpdate(){
 	DEBUG_MESSAGE("Update");
 
 	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -369,7 +379,34 @@ void Worms::Update(){
 		this->dev_f, this->fshift,
 		this->dev_f_old, this->foshift,
 		this->dev_v, this->vshift,
-		this->dev_r, this->rshift
+		this->dev_r, this->rshift,
+		this->envirn->_DT
+	);
+	ErrorHandler(cudaDeviceSynchronize());
+	ErrorHandler(cudaGetLastError());
+	this->Update_clock += std::clock() - b4;
+}
+//-------------------------------------------------------------------------------------------
+void Worms::QuickUpdate(float increaseRatio = 10.0f){
+	DEBUG_MESSAGE("Update");
+
+	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+	this->dev_f, this->fpitch,
+	this->dev_f_old, this->fopitch,
+	this->dev_v, this->vpitch,
+	this->dev_r, this->rpitch
+	);*/
+	std::clock_t b4 = std::clock();
+	dim3 gridStruct(this->Blocks_Per_Kernel, 3);
+	dim3 blockStruct(this->Threads_Per_Block);
+	FastUpdateKernel <<< gridStruct, blockStruct >>>
+	(
+		this->dev_f, this->fshift,
+		this->dev_f_old, this->foshift,
+		this->dev_v, this->vshift,
+		this->dev_r, this->rshift,
+		this->envirn->_DT / increaseRatio
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
@@ -730,7 +767,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 		this->tpshift,
 		this->nlshift);
 
-	printf("Allocated");
+	printf("Allocated\n");
 }
 //-------------------------------------------------------------------------------------------
 void Worms::FreeGPUMemory(){

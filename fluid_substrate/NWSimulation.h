@@ -26,6 +26,9 @@ class NWSimulation {
 	//.. time
 	float time;
 
+	//.. clocking
+	clock_t timer;
+
 public:
 	NWSimulation();
 	~NWSimulation();
@@ -47,16 +50,16 @@ NWSimulation::NWSimulation(){
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
 	this->params->_XDIM = 5;
-	this->params->_YDIM = 20;
+	this->params->_YDIM = 40;
 	this->params->_NP = 20;
 	this->params->_NWORMS = params->_XDIM * params->_YDIM;
 	this->params->_NPARTICLES = params->_NP * params->_NWORMS;
-	this->params->_LISTSETGAP = 100;
-	this->params->_NMAX = 42;
+	this->params->_LISTSETGAP = 50;
+	this->params->_NMAX = 128;
 	this->params->_EPSILON = 0.25f;
 	this->params->_SIGMA = 1.0f;
 	this->params->_DRIVE = 0.5f;
-	this->params->_K1 = 57.146f;
+	this->params->_K1 = 57.146f / 2.0f;
 	this->params->_K2 = 10.0f * params->_K1;
 	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
 	this->params->_Ka = 5.0f;
@@ -73,17 +76,17 @@ NWSimulation::NWSimulation(){
 	this->params->_R2MIN = params->_RMIN * params->_RMIN;
 	this->params->_RCUT = 2.5f * params->_SIGMA; // params->_RMIN; //
 	this->params->_R2CUT = params->_RCUT * params->_RCUT;
-	this->params->_BUFFER = 0.5f;
+	this->params->_BUFFER = 0.20f;
 	this->params->_LANDSCALE = 1.0f;
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
-	this->simparams->_DT = 0.001f;
-	this->simparams->_FRAMERATE = 5000;
+	this->simparams->_DT = 0.05f;
+	this->simparams->_FRAMERATE = 1000;
 	this->simparams->_FRAMESPERFILE = 200;
-	this->simparams->_NSTEPS = 1000000;
+	this->simparams->_NSTEPS = 100000;
 	this->simparams->_XBOX = 100.0f;
-	this->simparams->_YBOX = 40.0f;
+	this->simparams->_YBOX = 80.0f;
 	this->time = 0.0f;
 
 	//.. parameters to device
@@ -114,18 +117,25 @@ void NWSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
 	this->DisplayErrors();
 	this->fxyz.open("output//3d_test10.xyz");
+	const int innerSteps = 25;
 
-	this->XYZPrint(0);
+	//this->XYZPrint(0);
+	this->timer = clock();
 	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
 
-		this->worms->ZeroForce();
+		//this->worms->ZeroForce();
 		this->worms->ResetNeighborsList(itime);
-		this->worms->InternalForces(); 
-		this->worms->BendingForces();
-		this->worms->LJForces();
+		for (int jtime = 0; jtime < innerSteps; jtime++){
+			this->worms->ZeroForce();
+			this->worms->InternalForces();
+			this->worms->BendingForces();
+			this->worms->LJForces();
+			this->worms->QuickUpdate(25.0f);
+		}
+		this->worms->ZeroForce();
 		this->worms->AutoDriveForces();
 		this->worms->LandscapeForces();
-		this->worms->Update();
+		this->worms->SlowUpdate();
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
@@ -144,7 +154,6 @@ void NWSimulation::XYZPrint(int itime){
 
 	//.. count and grab errors
 	static int frame = 1;
-	printf("\nPrinting frame %i", frame++);
 	//this->worms->DislayThetaPhi();
 	this->DisplayErrors();
 	this->worms->DataDeviceToHost();
@@ -170,8 +179,21 @@ void NWSimulation::XYZPrint(int itime){
 	this->fxyz << "E " << 0 << " " << simparams->_YBOX << " 0 " << std::endl;
 	this->fxyz << "E " << simparams->_XBOX << " " << simparams->_YBOX << " 0 " << std::endl;
 
+	//.. report blown up particles
 	if (nBlownUp > 0) printf("\n%i particles blown up", nBlownUp);
 	if (nBlownUp == params->_NPARTICLES) abort();
+
+	//.. clocking
+	clock_t now = clock();
+	double frame_t = (now - this->timer) / (double)(CLOCKS_PER_SEC * 60.0);
+	double frames_left = double(this->simparams->_NSTEPS / this->simparams->_FRAMERATE)
+		- (double)(frame - 1);
+	double mins_left = frame_t * frames_left;
+	double hours_left = mins_left / 60.0;
+	int hours = int(hours_left);
+	int mins = int((hours_left - (double)hours) * 60);
+	printf("\nframe %i: %i hrs %i mins remaining", frame++, hours, mins);
+	this->timer = clock();
 }
 //-------------------------------------------------------------------------------------------
 void NWSimulation::DisplayErrors(){
