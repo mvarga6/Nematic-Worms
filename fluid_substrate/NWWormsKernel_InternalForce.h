@@ -33,6 +33,7 @@ __global__ void InterForceKernel(float *f,
 #endif
 		//.. particel number in worm
 		int p = id % dev_Params._NP;
+		int w = id / dev_Params._NP;
 
 		//.. local memory
 		float rid[3], fid[3], vid[3]; // , dr[3], rnab[3];
@@ -113,70 +114,70 @@ __global__ void InterForceKernel(float *f,
 		}
 
 		//.. 2nd neighbor spring forces ahead
-		if (p < (dev_Params._NP - 2))
-		{
-			int pp2 = id + 2;
-			float rnab[3];
-			float dr[3];
-			float _r, _f;
-			rnab[0] = r[pp2 + 0 * rshift];
-			rnab[1] = r[pp2 + 1 * rshift];
-			rnab[2] = r[pp2 + 2 * rshift];
-			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
-			_f = -(dev_Params._K2 * (_r - dev_Params._L2)) / _r;
-			for (int d = 0; d < 3; d++)
-				fid[d] -= _f * dr[d];
-			//float dx = x[pp2] - xid;
-			//float dy = y[pp2] - yid;
-			//DevicePBC(dx, dev_simParams._XBOX);
-			//DevicePBC(dy, dev_simParams._YBOX);
-			//float rr = dx*dx + dy*dy;
-			//float _r = sqrtf(rr);
-			//float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
-			//float ffx = ff * dx;
-			//float ffy = ff * dy;
-			//fxid -= ffx;
-			//fyid -= ffy;
-//#ifdef _DAMPING1
-//			float dvx = vx[pp2] - vxid;
-//			float dvy = vy[pp2] - vyid;
-//			fxid += dev_Params._DAMP * dvx;
-//			fyid += dev_Params._DAMP * dvy;
-//#endif
-		}
-
-		//.. 2nd neighbor spring forces behind
-		if (p > 1)
-		{
-			int pm2 = id - 2;
-			float rnab[3];
-			float dr[3];
-			float _r, _f;
-			rnab[0] = r[pm2 + 0 * rshift];
-			rnab[1] = r[pm2 + 1 * rshift];
-			rnab[2] = r[pm2 + 2 * rshift];
-			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
-			_f = -(dev_Params._K2 * (_r - dev_Params._L2)) / _r;
-			for (int d = 0; d < 3; d++)
-				fid[d] -= _f * dr[d];
-			//float dx = x[pm2] - xid;
-			//float dy = y[pm2] - yid;
-			//DevicePBC(dx, dev_simParams._XBOX);
-			//DevicePBC(dy, dev_simParams._YBOX);
-			//float rr = dx*dx + dy*dy;
-			//float _r = sqrtf(rr);
-			//float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
-			//float ffx = ff * dx;
-			//float ffy = ff * dy;
-			//fxid -= ffx;
-			//fyid -= ffy;
-//#ifdef _DAMPING1
-			//float dvx = vx[pm2] - vxid;
-			//float dvy = vy[pm2] - vyid;
-			//fxid += dev_Params._DAMP * dvx;
-			//fyid += dev_Params._DAMP * dvy;
-//#endif
-		}
+//		if (p < (dev_Params._NP - 2))
+//		{
+//			int pp2 = id + 2;
+//			float rnab[3];
+//			float dr[3];
+//			float _r, _f;
+//			rnab[0] = r[pp2 + 0 * rshift];
+//			rnab[1] = r[pp2 + 1 * rshift];
+//			rnab[2] = r[pp2 + 2 * rshift];
+//			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
+//			_f = -(dev_Params._K2 * (_r - dev_Params._L2)) / _r;
+//			for (int d = 0; d < 3; d++)
+//				fid[d] -= _f * dr[d];
+//			//float dx = x[pp2] - xid;
+//			//float dy = y[pp2] - yid;
+//			//DevicePBC(dx, dev_simParams._XBOX);
+//			//DevicePBC(dy, dev_simParams._YBOX);
+//			//float rr = dx*dx + dy*dy;
+//			//float _r = sqrtf(rr);
+//			//float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
+//			//float ffx = ff * dx;
+//			//float ffy = ff * dy;
+//			//fxid -= ffx;
+//			//fyid -= ffy;
+////#ifdef _DAMPING1
+////			float dvx = vx[pp2] - vxid;
+////			float dvy = vy[pp2] - vyid;
+////			fxid += dev_Params._DAMP * dvx;
+////			fyid += dev_Params._DAMP * dvy;
+////#endif
+//		}
+//
+//		//.. 2nd neighbor spring forces behind
+//		if (p > 1)
+//		{
+//			int pm2 = id - 2;
+//			float rnab[3];
+//			float dr[3];
+//			float _r, _f;
+//			rnab[0] = r[pm2 + 0 * rshift];
+//			rnab[1] = r[pm2 + 1 * rshift];
+//			rnab[2] = r[pm2 + 2 * rshift];
+//			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
+//			_f = -(dev_Params._K2 * (_r - dev_Params._L2)) / _r;
+//			for (int d = 0; d < 3; d++)
+//				fid[d] -= _f * dr[d];
+//			//float dx = x[pm2] - xid;
+//			//float dy = y[pm2] - yid;
+//			//DevicePBC(dx, dev_simParams._XBOX);
+//			//DevicePBC(dy, dev_simParams._YBOX);
+//			//float rr = dx*dx + dy*dy;
+//			//float _r = sqrtf(rr);
+//			//float ff = -dev_Params._K2 * (_r - dev_Params._L2) / _r;
+//			//float ffx = ff * dx;
+//			//float ffy = ff * dy;
+//			//fxid -= ffx;
+//			//fyid -= ffy;
+////#ifdef _DAMPING1
+//			//float dvx = vx[pm2] - vxid;
+//			//float dvy = vy[pm2] - vyid;
+//			//fxid += dev_Params._DAMP * dvx;
+//			//fyid += dev_Params._DAMP * dvy;
+////#endif
+//		}
 
 		//.. 3nd neighbor spring forces ahead
 //		if (p < (dev_Params._NP - 3))
@@ -189,7 +190,7 @@ __global__ void InterForceKernel(float *f,
 //			rnab[1] = r[pp3 + 1 * rshift];
 //			rnab[2] = r[pp3 + 2 * rshift];
 //			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
-//			_f = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
+//			_f = -(dev_Params._K3 * (_r - dev_Params._L3)) / _r;
 //			for (int d = 0; d < 3; d++)
 //				fid[d] -= _f * dr[d];
 //			//float dx = x[pp3] - xid;
@@ -223,7 +224,7 @@ __global__ void InterForceKernel(float *f,
 //			rnab[1] = r[pm3 + 1 * rshift];
 //			rnab[2] = r[pm3 + 2 * rshift];
 //			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
-//			_f = -dev_Params._K3 * (_r - dev_Params._L3) / _r;
+//			_f = -(dev_Params._K3 * (_r - dev_Params._L3)) / _r;
 //			for (int d = 0; d < 3; d++)
 //				fid[d] -= _f * dr[d];
 //			//float dx = x[pm3] - xid;
@@ -315,24 +316,46 @@ __global__ void InterForceKernel(float *f,
 		}*/
 
 		//.. LJ between inter-worm particles
-		/*for (int id2 = w*_NP; id2 < w*_NP + _NP; id2++)
+		for (int id2 = w*dev_Params._NP; id2 < (w + 1)*dev_Params._NP; id2++)
 		{
-		if (abs(id2 - id) >= 5)
-		{
-		float dx = x[id2] - xid;
-		float dy = y[id2] - yid;
-		DevicePBC(dx, _XBOX);
-		DevicePBC(dy, _YBOX);
-		float rr = dx*dx + dy*dy;
-		//.. only repulsive for intraworm
-		if (rr <= _R2MIN)
-		{
-		float ff = _LJ_AMP*((_2SIGMA6 / (rr*rr*rr*rr*rr*rr*rr)) - (1.0f / (rr*rr*rr*rr)));
-		fxid -= ff * dx;
-		fyid -= ff * dy;
+
+			int p2 = id2 % dev_Params._NP;
+			int sep = abs(p2 - p);
+			
+			//.. everything but 1st neighbors
+			if (sep <= 1) continue;
+
+			float rnab[3];
+			float dr[3];
+			float rr, _f;
+			rnab[0] = r[id2];
+			rnab[1] = r[id2 + rshift];
+			rnab[2] = r[id2 + 2 * rshift];
+			rr = CalculateRR_3d(rid, rnab, dr);
+
+			//.. repulsive only
+			if (rr > dev_Params._R2MIN) continue;
+
+			_f = CalculateLJ_3d(rr);
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
+ 
+			//if (abs(id2 - id) >= 5)
+			//{
+			//	float dx = x[id2] - xid;
+			//	float dy = y[id2] - yid;
+			//	DevicePBC(dx, _XBOX);
+			//	DevicePBC(dy, _YBOX);
+			//	float rr = dx*dx + dy*dy;
+			//	//.. only repulsive for intraworm
+			//	if (rr <= _R2MIN)
+			//	{
+			//		float ff = _LJ_AMP*((_2SIGMA6 / (rr*rr*rr*rr*rr*rr*rr)) - (1.0f / (rr*rr*rr*rr)));
+			//		fxid -= ff * dx;
+			//		fyid -= ff * dy;
+			//	}
+			//}
 		}
-		}
-		}*/
 
 		//.. viscous drag
 		for (int d = 0; d < 3; d++)

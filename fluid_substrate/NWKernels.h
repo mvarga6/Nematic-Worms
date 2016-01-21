@@ -29,7 +29,7 @@ __global__ void CheckParametersOnDevice(){
 	printf("LISTSETGAP = %i\nNMAX = %i\n", dev_Params._LISTSETGAP, dev_Params._NMAX);
 	printf("EPSILON = %f\nSIGMA = %f\n", dev_Params._EPSILON, dev_Params._SIGMA);
 	printf("DRIVE = %f\n", dev_Params._DRIVE);
-	printf("K1 = %f\nK2 = %f\nK3 = %f\n", dev_Params._K1, dev_Params._K2, dev_Params._K3);
+	printf("K1 = %f\nK2 = %f\nK3 = %f\nKa = %f\n", dev_Params._K1, dev_Params._K2, dev_Params._K3, dev_Params._Ka);
 	printf("L1 = %f\nL2 = %f\nL3 = %f\n", dev_Params._L1, dev_Params._L2, dev_Params._L3);
 	printf("KBT = %f\nGAMMA = %f\nDAMP = %f\n", dev_Params._KBT, dev_Params._GAMMA, dev_Params._DAMP);
 	printf("SIG6 = %f\n2SIG6 = %f\nLJAMP = %f\n", dev_Params._SIGMA6, dev_Params._2SIGMA6, dev_Params._LJ_AMP);

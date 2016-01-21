@@ -116,6 +116,7 @@ public:
 	void Init(GRNG *, WormsParameters *, SimulationParameters *, bool, int);
 	void CustomInit(float *headX, float *headY, float *wormAngle);
 	void InternalForces();
+	void BendingForces();
 	void NoiseForces();
 	void LJForces();
 	void AutoDriveForces();
@@ -279,6 +280,16 @@ void Worms::InternalForces(){
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Internal_clock += std::clock() - b4;
+}
+//-------------------------------------------------------------------------------------------
+void Worms::BendingForces(){
+	DEBUG_MESSAGE("BendingForces");
+	int Blocks = 1 + (this->parameters->_NWORMS / this->Threads_Per_Block);
+	BondBendingForces <<< Blocks, this->Threads_Per_Block >>>
+	(
+			this->dev_f, this->fshift,
+			this->dev_r, this->rshift
+	);
 }
 //-------------------------------------------------------------------------------------------
 void Worms::NoiseForces(){

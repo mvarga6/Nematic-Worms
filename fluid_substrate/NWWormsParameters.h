@@ -28,7 +28,7 @@ typedef struct {
 	float _EPSILON, _SIGMA, _DRIVE;
 
 	//.. spring constants in worms
-	float _K1, _K2, _K3;
+	float _K1, _K2, _K3, _Ka;
 
 	//.. spring equilibrium lengths
 	float _L1, _L2, _L3;

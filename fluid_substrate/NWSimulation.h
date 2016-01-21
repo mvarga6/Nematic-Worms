@@ -46,23 +46,24 @@ NWSimulation::NWSimulation(){
 
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
-	this->params->_XDIM = 10;
-	this->params->_YDIM = 10;
-	this->params->_NP = 10;
+	this->params->_XDIM = 5;
+	this->params->_YDIM = 20;
+	this->params->_NP = 20;
 	this->params->_NWORMS = params->_XDIM * params->_YDIM;
 	this->params->_NPARTICLES = params->_NP * params->_NWORMS;
 	this->params->_LISTSETGAP = 100;
-	this->params->_NMAX = 32;
+	this->params->_NMAX = 42;
 	this->params->_EPSILON = 0.25f;
 	this->params->_SIGMA = 1.0f;
 	this->params->_DRIVE = 0.5f;
 	this->params->_K1 = 57.146f;
 	this->params->_K2 = 10.0f * params->_K1;
 	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
+	this->params->_Ka = 5.0f;
 	this->params->_L1 = 0.80000f;
 	this->params->_L2 = 1.60000f;
-	this->params->_L3 = 2.400f;
-	this->params->_KBT = 0.0001f;
+	this->params->_L3 = 2.40000f;
+	this->params->_KBT = 0.05f;
 	this->params->_GAMMA = 2.0f;
 	this->params->_DAMP = 3.0f;
 	this->params->_SIGMA6 = powf(params->_SIGMA, 6.0f);
@@ -77,8 +78,8 @@ NWSimulation::NWSimulation(){
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
-	this->simparams->_DT = 0.00075f;
-	this->simparams->_FRAMERATE = 2000;
+	this->simparams->_DT = 0.001f;
+	this->simparams->_FRAMERATE = 5000;
 	this->simparams->_FRAMESPERFILE = 200;
 	this->simparams->_NSTEPS = 1000000;
 	this->simparams->_XBOX = 100.0f;
@@ -110,9 +111,9 @@ NWSimulation::~NWSimulation(){
 }
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
-	this->worms->Init(this->rng, this->params, this->simparams);
+	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
 	this->DisplayErrors();
-	this->fxyz.open("output//3d_test9.xyz");
+	this->fxyz.open("output//3d_test10.xyz");
 
 	this->XYZPrint(0);
 	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
@@ -120,6 +121,7 @@ void NWSimulation::Run(){
 		this->worms->ZeroForce();
 		this->worms->ResetNeighborsList(itime);
 		this->worms->InternalForces(); 
+		this->worms->BendingForces();
 		this->worms->LJForces();
 		this->worms->AutoDriveForces();
 		this->worms->LandscapeForces();
@@ -159,7 +161,7 @@ void NWSimulation::XYZPrint(int itime){
 		int w = i / params->_NP;
 		int t = w % ntypes;
 		float x = worms->r[i], y = worms->r[i + N], z = worms->r[i + 2 * N];
-		if (abs(z) > 50.0f) nBlownUp++;
+		if (abs(z) > 100.0f) nBlownUp++;
 		this->fxyz << ptypes[t] << " " 
 				   << x << " " << y << " " << z << std::endl;
 	}
