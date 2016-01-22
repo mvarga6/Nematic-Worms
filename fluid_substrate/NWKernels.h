@@ -17,7 +17,7 @@ __global__ void CheckParametersOnDevice(){
 	printf("\nSimulation Parameters:\n");
 	printf("----------------------\n");
 	printf("XBOX = %f\nYBOX = %f\n", dev_simParams._XBOX, dev_simParams._YBOX);
-	printf("DT = %f\nNSTEPS = %i\n", dev_simParams._DT, dev_simParams._NSTEPS);
+	printf("DT = %f\nNSTEPS = %i\n(inner) = %i\n", dev_simParams._DT, dev_simParams._NSTEPS, dev_simParams._NSTEPS_INNER);
 	printf("PRATE = %i\nMAXFILE = %i\n", dev_simParams._FRAMERATE, dev_simParams._FRAMESPERFILE);
 #endif
 

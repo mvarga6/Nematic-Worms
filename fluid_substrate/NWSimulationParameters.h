@@ -21,8 +21,11 @@ typedef struct {
 	//.. rate of printing frames, and max frames per output file
 	int _FRAMERATE, _FRAMESPERFILE;
 
-	//.. time integration constant
+	//.. long time integration constant
 	float _DT;
+
+	//.. number of inner time steps for fast potential calculations
+	int _NSTEPS_INNER;
 
 	//..system physical size
 	float _XBOX, _YBOX;

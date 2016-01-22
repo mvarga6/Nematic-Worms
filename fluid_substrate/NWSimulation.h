@@ -85,10 +85,11 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
-	this->simparams->_DT = 0.025f;
-	this->simparams->_FRAMERATE = 1000;
+	this->simparams->_DT = 0.01f;
+	this->simparams->_FRAMERATE = 2500;
 	this->simparams->_FRAMESPERFILE = 200;
 	this->simparams->_NSTEPS = 100000;
+	this->simparams->_NSTEPS_INNER = 10;
 	this->simparams->_XBOX = 100.0f;
 	this->simparams->_YBOX = 80.0f;
 	this->time = 0.0f;
@@ -128,7 +129,6 @@ NWSimulation::~NWSimulation(){
 void NWSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
 	this->DisplayErrors();
-	const int innerSteps = 25;
 	
 	//.. start timer clock
 	this->timer = clock();
@@ -140,12 +140,12 @@ void NWSimulation::Run(){
 		this->worms->ResetNeighborsList(itime);
 
 		//.. inner loop for high frequency potentials
-		for (int jtime = 0; jtime < innerSteps; jtime++){
+		for (int jtime = 0; jtime < this->simparams->_NSTEPS_INNER; jtime++){
 			this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
 			this->worms->LJForces();
-			this->worms->QuickUpdate(25.0f);
+			this->worms->QuickUpdate((float)this->simparams->_NSTEPS_INNER);
 		}
 
 		//.. finish time set with slow potential forces
@@ -166,13 +166,11 @@ void NWSimulation::XYZPrint(int itime){
 	//.. only print when it itime == 0
 	if (itime % simparams->_FRAMERATE != 0) return;
 
-	//.. debugging
-	//this->worms->DisplayNList();
-
 	//.. count and grab errors
 	static int frame = 1;
-	//this->worms->DislayThetaPhi();
 	this->DisplayErrors();
+
+	//.. pull data from GPU
 	this->worms->DataDeviceToHost();
 
 	//.. print to ntypes
