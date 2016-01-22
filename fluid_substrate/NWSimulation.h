@@ -58,8 +58,8 @@ NWSimulation::NWSimulation(){
 	this->params->_NMAX = 128;
 	this->params->_EPSILON = 0.25f;
 	this->params->_SIGMA = 1.0f;
-	this->params->_DRIVE = 0.5f;
-	this->params->_K1 = 57.146f / 2.0f;
+	this->params->_DRIVE = 1.0f;
+	this->params->_K1 = 57.146f;
 	this->params->_K2 = 10.0f * params->_K1;
 	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
 	this->params->_Ka = 5.0f;
@@ -81,7 +81,7 @@ NWSimulation::NWSimulation(){
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
-	this->simparams->_DT = 0.05f;
+	this->simparams->_DT = 0.025f;
 	this->simparams->_FRAMERATE = 1000;
 	this->simparams->_FRAMESPERFILE = 200;
 	this->simparams->_NSTEPS = 100000;

@@ -1,10 +1,11 @@
 // Includes all necessary files
 // 5.12.15
 // Mike Varga
+// Liquid Crystal Institute
+// Chemical Physics 2016
 
 #ifndef __MAIN_HEADERS__
 #define __MAIN_HEADERS__
-
 
 // CUDA Library
 #include "cuda.h"
