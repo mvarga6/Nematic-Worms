@@ -13,7 +13,7 @@
 typedef struct {
 
 	//.. default setup config
-	int _XDIM, _YDIM;
+	int _XDIM, _YDIM, _ZDIM;
 
 	//.. particles per worm, # of worms, total particle #
 	int _NP, _NWORMS, _NPARTICLES;

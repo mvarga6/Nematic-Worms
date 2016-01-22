@@ -51,8 +51,9 @@ NWSimulation::NWSimulation(){
 	this->params = new WormsParameters();
 	this->params->_XDIM = 5;
 	this->params->_YDIM = 40;
+	this->params->_ZDIM = 2;
 	this->params->_NP = 20;
-	this->params->_NWORMS = params->_XDIM * params->_YDIM;
+	this->params->_NWORMS = params->_XDIM * params->_YDIM * params->_ZDIM;
 	this->params->_NPARTICLES = params->_NP * params->_NWORMS;
 	this->params->_LISTSETGAP = 50;
 	this->params->_NMAX = 128;

@@ -792,6 +792,7 @@ void Worms::DistributeWormsOnHost(){
 	int np = this->parameters->_NP;
 	int xdim = this->parameters->_XDIM;
 	int ydim = this->parameters->_YDIM;
+	int zdim = this->parameters->_ZDIM;
 	float l1 = this->parameters->_L1;
 	float xbox = this->envirn->_XBOX;
 	float ybox = this->envirn->_YBOX;
@@ -800,14 +801,16 @@ void Worms::DistributeWormsOnHost(){
 	float *y0 = new float[nworms];
 	float *z0 = new float[nworms];
 	int iw = 0;
-	for (int i = 0; i < xdim; i++)
-	{
-		for (int j = 0; j < ydim; j++)
+	for (int k = 0; k < zdim; k++){
+		for (int i = 0; i < xdim; i++)
 		{
-			x0[iw] = 0.001 + float(i)*xbox / float(xdim);
-			y0[iw] = 0.001 + float(j)*ybox / float(ydim);
-			z0[iw] = 0.0f;
-			iw++;
+			for (int j = 0; j < ydim; j++)
+			{
+				x0[iw] = 0.001 + float(i)*xbox / float(xdim);
+				y0[iw] = 0.001 + float(j)*ybox / float(ydim);
+				z0[iw] = float(k) * parameters->_RCUT;
+				iw++;
+			}
 		}
 	}
 
@@ -821,11 +824,12 @@ void Worms::DistributeWormsOnHost(){
 		int p = i % np;
 		float x = x0[w] + p * l1;
 		float y = y0[w];
+		float z = z0[w];
 		MovementBC(x, xbox);
 		MovementBC(y, ybox);
-		this->r[i] = x + rx;
-		this->r[i + nparts] = y + ry;
-		this->r[i + 2*nparts] = rz;
+		this->r[i + 0*nparts] = x + rx;
+		this->r[i + 1*nparts] = y + ry;
+		this->r[i + 2*nparts] = z + rz;
 	}
 
 	delete[] x0;
@@ -843,6 +847,7 @@ void Worms::AdjustDistribute(float target_percent){
 	//.. flip orientation for target_percent of worms
 	float * savex = new float[np]; 
 	float * savey = new float[np];
+	float * savez = new float[np]; 
 
 	for (int w = 0; w < nworms; w++)
 	{
@@ -852,15 +857,19 @@ void Worms::AdjustDistribute(float target_percent){
 			//.. store position of particles to be flipped
 			for (int i = 0; i < np; i++)
 			{
-				savex[i] = this->r[(w*np + i)];
-				savey[i] = this->r[(w*np + i) + N];
+				int id = w*np + i;
+				savex[i] = this->r[id];
+				savey[i] = this->r[id + N];
+				savez[i] = this->r[id + 2 * N];
 			}
 
 			//.. replace reversed particles
 			for (int j = 0; j < np; j++)
 			{
-				this->r[(w*np + j)] = savex[(np - 1 - j)];
-				this->r[(w*np + j) + N] = savey[(np - 1 - j)];
+				int id = w*np + j;
+				this->r[id] = savex[(np - 1 - j)];
+				this->r[id + N] = savey[(np - 1 - j)];
+				this->r[id + 2 * N] = savez[(np - 1) - j];
 			}
 		}
 	}
