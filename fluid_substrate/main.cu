@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 	//HalloweenSimulation halloSim;
 	//halloSim.Run();
 
-	NWSimulation mySim;
+	NWSimulation mySim(argc, argv);
 	mySim.Run();
 	return 0;
 }

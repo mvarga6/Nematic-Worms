@@ -23,6 +23,9 @@ class NWSimulation {
 	//.. file stream
 	std::ofstream fxyz;
 
+	//.. outputfile
+	std::string outputfile;
+
 	//.. time
 	float time;
 
@@ -30,7 +33,7 @@ class NWSimulation {
 	clock_t timer;
 
 public:
-	NWSimulation();
+	NWSimulation(int argc, char *argv[]);
 	~NWSimulation();
 	void Run();
 
@@ -42,7 +45,7 @@ private:
 //-------------------------------------------------------------------------------------------
 //		IMPLEMENTATION HERE
 //-------------------------------------------------------------------------------------------
-NWSimulation::NWSimulation(){
+NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. clear everything on GPU
 	cudaDeviceReset();
@@ -105,6 +108,14 @@ NWSimulation::NWSimulation(){
 
 	//.. define the worms
 	this->worms = new Worms();
+
+	//.. outputfile
+	this->outputfile = std::string(argv[1]);
+	this->fxyz.open(this->outputfile);
+	if (!this->fxyz.is_open())
+		printf("\n***\nError opening output file: %s!\n***", this->outputfile.c_str());
+	else
+		printf("\nWriting data to outfile: %s", this->outputfile.c_str());
 }
 //-------------------------------------------------------------------------------------------
 NWSimulation::~NWSimulation(){
@@ -117,15 +128,18 @@ NWSimulation::~NWSimulation(){
 void NWSimulation::Run(){
 	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
 	this->DisplayErrors();
-	this->fxyz.open("output//3d_test10.xyz");
 	const int innerSteps = 25;
-
-	//this->XYZPrint(0);
+	
+	//.. start timer clock
 	this->timer = clock();
-	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
 
-		//this->worms->ZeroForce();
+	//.. MAIN SIMULATION LOOP
+	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
+		
+		//.. setup neighbors for iteration
 		this->worms->ResetNeighborsList(itime);
+
+		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < innerSteps; jtime++){
 			this->worms->ZeroForce();
 			this->worms->InternalForces();
@@ -133,6 +147,8 @@ void NWSimulation::Run(){
 			this->worms->LJForces();
 			this->worms->QuickUpdate(25.0f);
 		}
+
+		//.. finish time set with slow potential forces
 		this->worms->ZeroForce();
 		this->worms->AutoDriveForces();
 		this->worms->LandscapeForces();
