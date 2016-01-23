@@ -110,7 +110,6 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
 
 	//.. outputfile
-	this->outputfile = std::string(argv[1]);
 	this->fxyz.open(this->outputfile);
 	if (!this->fxyz.is_open())
 		printf("\n***\nError opening output file: %s!\n***", this->outputfile.c_str());

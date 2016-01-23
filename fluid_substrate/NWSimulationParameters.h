@@ -63,54 +63,51 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		std::string val;
 		if (arg == "-dt"){
 			if (i + 1 < argc){
-				std::string val = argv[++i];
+				std::string val = argv[1 + i++];
 				parameters->_DT = std::stof(val);
 			}
 		}
 		else if (arg == "-xbox"){
 			if (i + 1 < argc){
-				val = argv[++i];
+				val = argv[1 + i++];
 				parameters->_XBOX = std::stof(val);
 			}
 		}
 		else if (arg == "-ybox"){
 			if (i + 1 < argc){
-				val = argv[++i];
+				val = argv[1 + i++];
 				parameters->_YBOX = std::stof(val);
 			}
 		}
 		else if (arg == "-nsteps"){
 			if (i + 1 < argc){
-				val = argv[++i];
+				val = argv[1 + i++];
 				parameters->_NSTEPS = std::stoi(val);
 			}
 		}
 		else if (arg == "-nsteps-inner"){
 			if (i + 1 < argc){
-				val = argv[++i];
+				val = argv[1 + i++];
 				parameters->_NSTEPS_INNER = std::stoi(val);
 			}
 		}
 		else if (arg == "-framerate"){
 			if (i + 1 < argc){
-				val = argv[++i];
+				val = argv[1 + i++];
 				parameters->_FRAMERATE = std::stoi(val);
 			}
 		}
 		else if (arg == "-framesperfile"){
 			if (i + 1 < argc){
-				val = argv[++i];
+				val = argv[1 + i++];
 				parameters->_FRAMESPERFILE = std::stoi(val);
 			}
 		}
 		else if (arg == "-o"){
 			if (i + 1 < argc){
-				val = argv[++i];
+				val = argv[1 + i++];
 				outfile = val;
 			}
-		}
-		else{
-			printf("\nOption %s not found.", arg.c_str());
 		}
 	}
 }
@@ -132,7 +129,7 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	//.. put on GPU and check for error
 	cudaError_t err;
 	err = ParametersToDevice(*parameters);
-	std::cout << "Simulation parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err) << std::endl;
+	std::cout << "\nSimulation parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err);
 }
 //--------------------------------------------------------------------------
 #endif
