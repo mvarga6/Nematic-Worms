@@ -55,7 +55,69 @@ namespace DEFAULT {
 	}
 }
 //--------------------------------------------------------------------------
-void Init(SimulationParameters * parameters){
+void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], std::string &outfile){
+
+	//.. cycle through arguments
+	for (int i = 1; i < argc; i++){
+		std::string arg = argv[i];
+		std::string val;
+		if (arg == "-dt"){
+			if (i + 1 < argc){
+				std::string val = argv[++i];
+				parameters->_DT = std::stof(val);
+			}
+		}
+		else if (arg == "-xbox"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_XBOX = std::stof(val);
+			}
+		}
+		else if (arg == "-ybox"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_YBOX = std::stof(val);
+			}
+		}
+		else if (arg == "-nsteps"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_NSTEPS = std::stoi(val);
+			}
+		}
+		else if (arg == "-nsteps-inner"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_NSTEPS_INNER = std::stoi(val);
+			}
+		}
+		else if (arg == "-framerate"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_FRAMERATE = std::stoi(val);
+			}
+		}
+		else if (arg == "-framesperfile"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_FRAMESPERFILE = std::stoi(val);
+			}
+		}
+		else if (arg == "-o"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				outfile = val;
+			}
+		}
+		else{
+			printf("\nOption %s not found.", arg.c_str());
+		}
+	}
+}
+//--------------------------------------------------------------------------
+void Init(SimulationParameters * parameters, int argc, char *argv[], std::string &outfile){
+
+	//.. init with default parameters
 	parameters->_DT = DEFAULT::SIM::DT;
 	parameters->_XBOX = DEFAULT::SIM::XBOX;
 	parameters->_YBOX = DEFAULT::SIM::YBOX;
@@ -64,6 +126,10 @@ void Init(SimulationParameters * parameters){
 	parameters->_FRAMERATE = DEFAULT::SIM::FRAMERATE;
 	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
 
+	//.. get assign cmdline parameters
+	GrabParameters(parameters, argc, argv, outfile);
+
+	//.. put on GPU and check for error
 	cudaError_t err;
 	err = ParametersToDevice(*parameters);
 	std::cout << "Simulation parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err) << std::endl;

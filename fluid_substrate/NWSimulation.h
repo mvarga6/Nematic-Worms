@@ -52,7 +52,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
-	Init(this->params);
+	Init(this->params, argc, argv);
 	//this->params->_XDIM = 5;
 	//this->params->_YDIM = 40;
 	//this->params->_ZDIM = 2;
@@ -86,7 +86,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
-	Init(this->simparams);
+	Init(this->simparams, argc, argv, this->outputfile);
 	/*this->simparams->_DT = 0.01f;
 	this->simparams->_FRAMERATE = 2500;
 	this->simparams->_FRAMESPERFILE = 200;
@@ -94,10 +94,9 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	this->simparams->_NSTEPS_INNER = 10;
 	this->simparams->_XBOX = 100.0f;
 	this->simparams->_YBOX = 80.0f;*/
-	this->time = 0.0f;
 
 	//.. show parameters on device
-	CheckParametersOnDevice << < 1, 1 >> >();
+	CheckParametersOnDevice <<< 1, 1 >>>();
 	ErrorHandler(cudaDeviceSynchronize());
 
 	//.. setup random number generator
@@ -107,6 +106,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	this->worms = new Worms();
 
 	//.. initial worms object
+	this->time = 0.0f;
 	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
 
 	//.. outputfile

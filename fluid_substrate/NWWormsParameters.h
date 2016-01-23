@@ -71,7 +71,7 @@ namespace DEFAULT {
 		static const int	NPARTICLES = NP * NWORMS;
 		static const int	LISTSETGAP = 50;
 		static const int	NMAX = 128;
-		static const float	EPSILON = 1.0f;
+		static const float	EPSILON = 0.2f;
 		static const float	SIGMA = 1.0f;
 		static const float	DRIVE = 1.0f;
 		static const float	K1 = 57.146f;
@@ -84,12 +84,14 @@ namespace DEFAULT {
 		static const float	KBT = 0.05f;
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
-		static const float	BUFFER = 0.25f;
+		static const float	BUFFER = 0.5f;
 		static const float	LANDSCALE = 1.0f;
 	}
 }
 //----------------------------------------------------------------------------
 void CalculateParameters(WormsParameters * parameters, bool WCA = false){
+	parameters->_NWORMS = parameters->_XDIM * parameters->_YDIM * parameters->_ZDIM;
+	parameters->_NPARTICLES = parameters->_NP * parameters->_NWORMS;
 	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f);
 	parameters->_2SIGMA6 = 2.0f * parameters->_SIGMA6;
 	parameters->_LJ_AMP = 24.0f * parameters->_EPSILON * parameters->_SIGMA6;
@@ -102,14 +104,157 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT;
 }
 //----------------------------------------------------------------------------
+void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &wca){
+
+	//.. cycle through arguments
+	for (int i = 1; i < argc; i++){
+		std::string arg = argv[i];
+		std::string val;
+		if (arg == "-xdim"){
+			if (i + 1 < argc){
+				std::string val = argv[++i];
+				parameters->_XDIM = std::stoi(val);
+			}
+		}
+		else if (arg == "-ydim"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_YDIM = std::stoi(val);
+			}
+		}
+		else if (arg == "-zdim"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_ZDIM = std::stoi(val);
+			}
+		}
+		else if (arg == "-np"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_NP = std::stoi(val);
+			}
+		}
+		else if (arg == "-listsetgap"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_LISTSETGAP = std::stoi(val);
+			}
+		}
+		else if (arg == "-nmax"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_NMAX = std::stoi(val);
+			}
+		}
+		else if (arg == "-epsilon"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_EPSILON = std::stof(val);
+			}
+		}
+		else if (arg == "-sigma"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_SIGMA = std::stof(val);
+			}
+		}
+		else if (arg == "-drive"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_DRIVE = std::stof(val);
+			}
+		}
+		else if (arg == "-k1"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_K1 = std::stof(val);
+			}
+		}
+		else if (arg == "-k2"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_K2 = std::stof(val);
+			}
+		}
+		else if (arg == "-k3"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_EPSILON = std::stof(val);
+			}
+		}
+		else if (arg == "-ka"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_Ka = std::stof(val);
+			}
+		}
+		else if (arg == "-l1"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_L1 = std::stof(val);
+			}
+		}
+		else if (arg == "-l2"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_L2 = std::stof(val);
+			}
+		}
+		else if (arg == "-l3"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_L3 = std::stof(val);
+			}
+		}
+		else if (arg == "-kbt"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_KBT = std::stof(val);
+			}
+		}
+		else if (arg == "-gamma"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_GAMMA = std::stof(val);
+			}
+		}
+		else if (arg == "-damp"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_DAMP = std::stof(val);
+			}
+		}
+		else if (arg == "-buffer"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_BUFFER = std::stof(val);
+			}
+		}
+		else if (arg == "-landscale"){
+			if (i + 1 < argc){
+				val = argv[++i];
+				parameters->_LANDSCALE = std::stof(val);
+			}
+		}
+		else if (arg == "-wca"){
+			if (i + 1 < argc){
+				wca = true;
+			}
+		}
+		else{
+			printf("\nOption %s not found.", arg.c_str());
+		}
+	}
+}
+//--------------------------------------------------------------------------
 //.. initialization function
-void Init(WormsParameters * parameters, bool WCA = false){
+void Init(WormsParameters * parameters, int argc, char *argv[], bool WCA = false){
 	parameters->_XDIM = DEFAULT::WORMS::XDIM;
 	parameters->_YDIM = DEFAULT::WORMS::YDIM;
 	parameters->_ZDIM = DEFAULT::WORMS::ZDIM;
 	parameters->_NP = DEFAULT::WORMS::NP;
-	parameters->_NWORMS = DEFAULT::WORMS::NWORMS;
-	parameters->_NPARTICLES = DEFAULT::WORMS::NPARTICLES;
+	//parameters->_NWORMS = DEFAULT::WORMS::NWORMS;
+	//parameters->_NPARTICLES = DEFAULT::WORMS::NPARTICLES;
 	parameters->_LISTSETGAP = DEFAULT::WORMS::LISTSETGAP;
 	parameters->_NMAX = DEFAULT::WORMS::NMAX;
 	parameters->_EPSILON = DEFAULT::WORMS::EPSILON;
@@ -127,6 +272,8 @@ void Init(WormsParameters * parameters, bool WCA = false){
 	parameters->_DAMP = DEFAULT::WORMS::DAMP;
 	parameters->_BUFFER = DEFAULT::WORMS::BUFFER;
 	parameters->_LANDSCALE = DEFAULT::WORMS::LANDSCALE;
+	
+	GrabParameters(parameters, argc, argv, WCA);
 	CalculateParameters(parameters, WCA);
 
 	cudaError_t err;
