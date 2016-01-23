@@ -62,11 +62,15 @@
     <ClInclude Include="NWWormsKernel_SetXList.h" />
     <ClInclude Include="NWWormsKernel_UpdateSystem.h" />
     <ClInclude Include="NWWormsParameters.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="XYZPrinter.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="poordraw.cfg" />
     <None Include="run.pbs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="fluid_substrate.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AFB9EADE-CCC6-4839-94C5-9B764B55658B}</ProjectGuid>
