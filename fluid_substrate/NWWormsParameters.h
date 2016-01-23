@@ -114,130 +114,130 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		std::string val;
 		if (arg == "-xdim"){
 			if (i + 1 < argc){
-				std::string val = argv[1 + i++];
-				parameters->_XDIM = std::stoi(val);
+				//std::string val = argv[1 + i++];
+				parameters->_XDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-ydim"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_YDIM = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_YDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-zdim"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_ZDIM = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_ZDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-np"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_NP = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_NP = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-listsetgap"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_LISTSETGAP = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_LISTSETGAP = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-nmax"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_NMAX = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_NMAX = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-epsilon"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_EPSILON = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-sigma"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_SIGMA = std::stof(val);
+				///val = std::string(argv[1 + i++]);
+				parameters->_SIGMA = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-drive"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_DRIVE = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k1"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_K1 = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_K1 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k2"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_K2 = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_K2 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k3"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_EPSILON = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-ka"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_Ka = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_Ka = std::strtof(argv[1 + i++], NULL);
 				printf("\nKa changed: %f", parameters->_Ka);
 			}
 		}
 		else if (arg == "-l1"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_L1 = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_L1 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-l2"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_L2 = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_L2 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-l3"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_L3 = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_L3 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-kbt"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_KBT = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_KBT = std::strtof(argv[1 + i++], NULL);
 				printf("\nKBT changed: %f", parameters->_KBT);
 			}
 		}
 		else if (arg == "-gamma"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_GAMMA = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_GAMMA = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-damp"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_DAMP = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_DAMP = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-buffer"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_BUFFER = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_BUFFER = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-landscale"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_LANDSCALE = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_LANDSCALE = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-wca"){

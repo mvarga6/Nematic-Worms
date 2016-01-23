@@ -65,50 +65,49 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		std::string val;
 		if (arg == "-dt"){
 			if (i + 1 < argc){
-				std::string val = argv[1 + i++];
-				parameters->_DT = std::stof(val);
+				//std::string val = argv[1 + i++];
+				parameters->_DT = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-xbox"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_XBOX = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_XBOX = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-ybox"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_YBOX = std::stof(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_YBOX = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-nsteps"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_NSTEPS = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_NSTEPS = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-nsteps-inner"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_NSTEPS_INNER = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_NSTEPS_INNER = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-framerate"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_FRAMERATE = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_FRAMERATE = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-framesperfile"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				parameters->_FRAMESPERFILE = std::stoi(val);
+				//val = std::string(argv[1 + i++]);
+				parameters->_FRAMESPERFILE = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-o"){
 			if (i + 1 < argc){
-				val = argv[1 + i++];
-				outfile = val;
+				outfile = std::string(argv[1 + i++]);
 			}
 		}
 	}
