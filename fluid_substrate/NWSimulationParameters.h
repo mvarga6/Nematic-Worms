@@ -4,16 +4,12 @@
 
 #include "cuda.h"
 #include "cuda_runtime.h"
-#include <string>
 /* ------------------------------------------------------------------------
 *	Data structure containing the parameters needed to run a simulation.  
 *	Intended to exist inside a simulaltion object, NOT taken by reference
 *	at initialization such as WormsParameters and FluidParameters.
 ----------------------------------------------------------------------------*/
 typedef struct {
-
-	//..  name of simulation to be using in file i/o
-	//std::string key;
 
 	//.. # of time steps
 	int _NSTEPS;
@@ -44,5 +40,33 @@ __constant__ SimulationParameters dev_simParams;
 cudaError_t ParametersToDevice(SimulationParameters &params){
 	return cudaMemcpyToSymbol(dev_simParams, &params, sizeof(SimulationParameters));
 }
+/*--------------------------------------------------------------------------
+*	Default values for all parameter values in SimulationParameters.
+--------------------------------------------------------------------------*/
+namespace DEFAULT {
+	namespace SIM {
+		static const int NSTEPS = 100000;
+		static const int NSTEPS_INNER = 10;
+		static const int FRAMERATE = 1000;
+		static const int FRAMESPERFILE = 100;
+		static const float DT = 0.01f;
+		static const float XBOX = 100.0f;
+		static const float YBOX = 100.0f;
+	}
+}
+//--------------------------------------------------------------------------
+void Init(SimulationParameters * parameters){
+	parameters->_DT = DEFAULT::SIM::DT;
+	parameters->_XBOX = DEFAULT::SIM::XBOX;
+	parameters->_YBOX = DEFAULT::SIM::YBOX;
+	parameters->_NSTEPS = DEFAULT::SIM::NSTEPS;
+	parameters->_NSTEPS_INNER = DEFAULT::SIM::NSTEPS_INNER;
+	parameters->_FRAMERATE = DEFAULT::SIM::FRAMERATE;
+	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
 
+	cudaError_t err;
+	err = ParametersToDevice(*parameters);
+	std::cout << "Simulation parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err) << std::endl;
+}
+//--------------------------------------------------------------------------
 #endif

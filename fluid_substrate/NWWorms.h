@@ -167,20 +167,10 @@ private:
 // ------------------------------------------------------------------------------------------
 Worms::Worms(int clockingRate = -1) : 
 r(NULL), dev_r(NULL), dev_v(NULL), dev_f(NULL), 
-dev_f_old(NULL), dev_thphi(NULL), clock_rate(clockingRate)
-/*X(NULL), Y(NULL), Z(NULL),Vx(NULL), Vy(NULL), dev_theta(NULL),
-rng(NULL), parameters(NULL), envirn(NULL),
-dev_X(NULL), dev_Y(NULL), dev_Z(NULL),
-dev_Vx(NULL), dev_Vy(NULL), dev_Vz(NULL),
-dev_Fx(NULL), dev_Fy(NULL), dev_Fz(NULL),
-dev_Fx_old(NULL), dev_Fy_old(NULL), dev_Fz_old(NULL)*/{
+dev_f_old(NULL), dev_thphi(NULL), clock_rate(clockingRate) {
 	DEBUG_MESSAGE("Constructor");
 	//.. do necessities
 	srand(time(NULL));
-	/*Threads_Per_Block = TPB;
-	Blocks_Per_Kernel = BPK;
-	this->nparticles_int_alloc = wormsParameters._NPARTICLES * sizeof(int);
-	this->nparticles_float_alloc = wormsParameters._NPARTICLES * sizeof(float);*/
 }
 //-------------------------------------------------------------------------------------------
 Worms::~Worms(){
@@ -648,17 +638,12 @@ void Worms::AddConstantForce(int dim, float force){
 // -------------------------------------------------------------------------------------------
 void Worms::AllocateHostMemory(){
 	DEBUG_MESSAGE("AllocateHostMemory");
-	//this->X = new float[this->parameters->_NPARTICLES];
-	//this->Y = new float[this->parameters->_NPARTICLES];
-	//this->Z = new float[this->parameters->_NPARTICLES];
-	//this->Vx = new float[this->parameters->_NPARTICLES];
-	//this->Vy = new float[this->parameters->_NPARTICLES];
 	this->r = new float[3*this->parameters->_NPARTICLES];
 }
 //-------------------------------------------------------------------------------------------
 void Worms::FreeHostMemory(){
 	DEBUG_MESSAGE("FreeHostMemory");
-	delete[] this->r; // , this->Vx, this->Vy;
+	delete[] this->r;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::AllocateGPUMemory(){
@@ -1037,6 +1022,4 @@ void Worms::FigureBlockThreadStructure(int tpb){
 		this->nparticles_int_alloc);
 }
 //-------------------------------------------------------------------------------------------
-
-
 #endif

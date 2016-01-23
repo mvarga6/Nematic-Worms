@@ -52,56 +52,52 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
-	this->params->_XDIM = 5;
-	this->params->_YDIM = 40;
-	this->params->_ZDIM = 2;
-	this->params->_NP = 20;
-	this->params->_NWORMS = params->_XDIM * params->_YDIM * params->_ZDIM;
-	this->params->_NPARTICLES = params->_NP * params->_NWORMS;
-	this->params->_LISTSETGAP = 50;
-	this->params->_NMAX = 128;
-	this->params->_EPSILON = 0.25f;
-	this->params->_SIGMA = 1.0f;
-	this->params->_DRIVE = 1.0f;
-	this->params->_K1 = 57.146f;
-	this->params->_K2 = 10.0f * params->_K1;
-	this->params->_K3 = 2.0f * params->_K2 / 3.0f;
-	this->params->_Ka = 5.0f;
-	this->params->_L1 = 0.80000f;
-	this->params->_L2 = 1.60000f;
-	this->params->_L3 = 2.40000f;
-	this->params->_KBT = 0.05f;
-	this->params->_GAMMA = 2.0f;
-	this->params->_DAMP = 3.0f;
-	this->params->_SIGMA6 = powf(params->_SIGMA, 6.0f);
-	this->params->_2SIGMA6 = params->_SIGMA6 * 2.0f;
-	this->params->_LJ_AMP = 24.0f * params->_EPSILON * params->_SIGMA6;
-	this->params->_RMIN = _216 * params->_SIGMA;
-	this->params->_R2MIN = params->_RMIN * params->_RMIN;
-	this->params->_RCUT = 2.5f * params->_SIGMA; // params->_RMIN; //
-	this->params->_R2CUT = params->_RCUT * params->_RCUT;
-	this->params->_BUFFER = 0.20f;
-	this->params->_LANDSCALE = 1.0f;
+	Init(this->params);
+	//this->params->_XDIM = 5;
+	//this->params->_YDIM = 40;
+	//this->params->_ZDIM = 2;
+	//this->params->_NP = 20;
+	//this->params->_NWORMS = params->_XDIM * params->_YDIM * params->_ZDIM;
+	//this->params->_NPARTICLES = params->_NP * params->_NWORMS;
+	//this->params->_LISTSETGAP = 50;
+	//this->params->_NMAX = 128;
+	//this->params->_EPSILON = 0.25f;
+	//this->params->_SIGMA = 1.0f;
+	//this->params->_DRIVE = 1.0f;
+	//this->params->_K1 = 57.146f;
+	//this->params->_K2 = 10.0f * params->_K1;
+	//this->params->_K3 = 2.0f * params->_K2 / 3.0f;
+	//this->params->_Ka = 5.0f;
+	//this->params->_L1 = 0.80000f;
+	//this->params->_L2 = 1.60000f;
+	//this->params->_L3 = 2.40000f;
+	//this->params->_KBT = 0.05f;
+	//this->params->_GAMMA = 2.0f;
+	//this->params->_DAMP = 3.0f;
+	//this->params->_SIGMA6 = powf(params->_SIGMA, 6.0f);
+	//this->params->_2SIGMA6 = params->_SIGMA6 * 2.0f;
+	//this->params->_LJ_AMP = 24.0f * params->_EPSILON * params->_SIGMA6;
+	//this->params->_RMIN = _216 * params->_SIGMA;
+	//this->params->_R2MIN = params->_RMIN * params->_RMIN;
+	//this->params->_RCUT = 2.5f * params->_SIGMA; // params->_RMIN; //
+	//this->params->_R2CUT = params->_RCUT * params->_RCUT;
+	//this->params->_BUFFER = 0.20f;
+	//this->params->_LANDSCALE = 1.0f;
 
 	//.. setup simulation parameters
 	this->simparams = new SimulationParameters();
-	this->simparams->_DT = 0.01f;
+	Init(this->simparams);
+	/*this->simparams->_DT = 0.01f;
 	this->simparams->_FRAMERATE = 2500;
 	this->simparams->_FRAMESPERFILE = 200;
 	this->simparams->_NSTEPS = 100000;
 	this->simparams->_NSTEPS_INNER = 10;
 	this->simparams->_XBOX = 100.0f;
-	this->simparams->_YBOX = 80.0f;
+	this->simparams->_YBOX = 80.0f;*/
 	this->time = 0.0f;
 
-	//.. parameters to device
-	cudaError_t err;
-	err = ParametersToDevice(*params);
-	std::cout << "Worms parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err) << std::endl;
-	err = ParametersToDevice(*simparams);
-	std::cout << "Simulation parameters cudaMemcpyToSymbol returned:\t" << cudaGetErrorString(err) << std::endl;
-
-	CheckParametersOnDevice <<< 1, 1 >>>();
+	//.. show parameters on device
+	CheckParametersOnDevice << < 1, 1 >> >();
 	ErrorHandler(cudaDeviceSynchronize());
 
 	//.. setup random number generator
@@ -109,6 +105,9 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. define the worms
 	this->worms = new Worms();
+
+	//.. initial worms object
+	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
 
 	//.. outputfile
 	this->outputfile = std::string(argv[1]);
@@ -127,9 +126,10 @@ NWSimulation::~NWSimulation(){
 }
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
-	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
-	this->DisplayErrors();
 	
+	//.. check for errors before starting
+	this->DisplayErrors();
+
 	//.. start timer clock
 	this->timer = clock();
 
