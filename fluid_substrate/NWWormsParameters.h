@@ -5,6 +5,8 @@
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "NWConstants.h"
+#include <string>
+#include <cstdlib>
 /* ------------------------------------------------------------------------
 *	Data structure containing the parameters of a Worms object.  Intended
 *	to exist at same scope level and Worms object because Worms takes a

@@ -4,6 +4,8 @@
 
 #include "cuda.h"
 #include "cuda_runtime.h"
+#include <string>
+#include <cstdlib>
 /* ------------------------------------------------------------------------
 *	Data structure containing the parameters needed to run a simulation.  
 *	Intended to exist inside a simulaltion object, NOT taken by reference
