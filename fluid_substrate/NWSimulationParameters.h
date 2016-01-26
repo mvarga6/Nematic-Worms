@@ -87,6 +87,7 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 				parameters->_NSTEPS = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
+		// Change
 		else if (arg == "-nsteps-inner"){
 			if (i + 1 < argc){
 				//val = std::string(argv[1 + i++]);
