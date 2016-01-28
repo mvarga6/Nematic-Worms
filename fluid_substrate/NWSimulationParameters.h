@@ -48,7 +48,7 @@ cudaError_t ParametersToDevice(SimulationParameters &params){
 namespace DEFAULT {
 	namespace SIM {
 		static const int NSTEPS = 100000;
-		static const int NSTEPS_INNER = 10;
+		static const int NSTEPS_INNER = 12;
 		static const int FRAMERATE = 1000;
 		static const int FRAMESPERFILE = 100;
 		static const float DT = 0.01f;
