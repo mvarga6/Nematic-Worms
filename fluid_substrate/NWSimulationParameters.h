@@ -54,6 +54,7 @@ namespace DEFAULT {
 		static const float DT = 0.01f;
 		static const float XBOX = 100.0f;
 		static const float YBOX = 100.0f;
+		static const std::string FILENAME = "output.xyz";
 	}
 }
 //--------------------------------------------------------------------------
@@ -124,6 +125,7 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_NSTEPS_INNER = DEFAULT::SIM::NSTEPS_INNER;
 	parameters->_FRAMERATE = DEFAULT::SIM::FRAMERATE;
 	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
+	outfile = DEFAULT::SIM::FILENAME;
 
 	//.. get assign cmdline parameters
 	GrabParameters(parameters, argc, argv, outfile);
