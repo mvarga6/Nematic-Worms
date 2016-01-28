@@ -18,22 +18,6 @@ class ForceXchanger;
 // -----------------------------------------------------------------------------------------
 class Worms {	
 
-	//.. on gpu device
-	//float * dev_X;
-	//float * dev_Y;
-	//float * dev_Z;
-	//float * dev_Vx;
-	//float * dev_Vy;
-	//float * dev_Vz;
-	//float * dev_Fx;
-	//float * dev_Fy;
-	//float * dev_Fz;
-	//float * dev_Fx_old;
-	//float * dev_Fy_old;
-	//float * dev_Fz_old;
-	//float * dev_theta;
-	//float * dev_phi;
-
 	//.. new data structure
 	float * dev_r;
 	float * dev_v;
@@ -99,9 +83,6 @@ class Worms {
 
 public:
 	//.. on host (so print on host is easier)
-	//float * X;
-	//float * Y;
-	//float * Z;
 	float * r;
 	//float * Vx;
 	//float * Vy;
