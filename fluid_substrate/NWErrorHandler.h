@@ -12,10 +12,10 @@ void ErrorHandler(cudaError_t Status)
 	{
 		fprintf(stderr, "\nfail msg:  '%s'\n", cudaGetErrorString(Status));
 		//fprintf(stderr, "\npress any key to clear memory...");
-		std::cin.get();
+		//std::cin.get();
 		//ShutDownGPUDevice();
 		//CleanUpHost();
-		//abort();
+		abort();
 	}
 }
 
