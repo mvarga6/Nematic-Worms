@@ -56,7 +56,7 @@ namespace nw {
 				//.. decide what to do with version number
 				if (isBetween(version, 1.0f, 2.0f)){
 					printf("\n%s is undefined for version: %i", 
-						__FUNCTIONW__, 
+						"nw::util::xyz::readParameterLine", 
 						(int)version);
 				}
 				// -------------------------------------------------
@@ -96,7 +96,7 @@ namespace nw {
 				// --------------------------------------------------
 				else {
 					printf("\n%s is undefined for version: %i", 
-						__FUNCTIONW__, 
+						"nw::util::xyz::readParameterLine",
 						(int)version);
 				}
 
@@ -115,7 +115,7 @@ namespace nw {
 
 				if (isBetween(version, 1.0f, 2.0f)){
 					printf("\n%s is undefined for version: %i",
-						__FUNCTIONW__,
+						"nw::util::xyz::makeParameterLine",
 						(int)version);
 					sscom << "-1.0: " << "\n";
 				}
@@ -148,7 +148,7 @@ namespace nw {
 				// --------------------------------------------------
 				else {
 					printf("\n%s is undefined for version: %i",
-						__FUNCTIONW__,
+						"nw::util::xyz::makeParameterLine",
 						(int)version);
 					sscom << "-1.0: " << "\n";
 				}
