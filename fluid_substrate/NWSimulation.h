@@ -49,7 +49,7 @@ private:
 NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. clear everything on GPU
-	cudaDeviceReset();
+	//cudaDeviceReset();
 
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
