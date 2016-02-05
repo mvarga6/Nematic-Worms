@@ -49,7 +49,8 @@ namespace nw {
 
 				//---------------------------------------
 				//.. setup reading stream and tmp storage
-				std::stringstream ssvals = std::stringstream(comment.substr(pos, comment.size()));
+				std::stringstream ssvals; 
+				ssvals << comment.substr(pos, comment.size());
 				std::vector<float> fvals;
 
 				// ------------------------------------------------
