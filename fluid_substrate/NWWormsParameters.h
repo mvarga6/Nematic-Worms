@@ -97,7 +97,7 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f);
 	parameters->_2SIGMA6 = 2.0f * parameters->_SIGMA6;
 	parameters->_LJ_AMP = 24.0f * parameters->_EPSILON * parameters->_SIGMA6;
-	parameters->_RMIN = nw::_216 * parameters->_SIGMA;
+	parameters->_RMIN = nw::constants::_216 * parameters->_SIGMA;
 	parameters->_R2MIN = parameters->_RMIN * parameters->_RMIN;
 	if (WCA)
 		parameters->_RCUT = parameters->_RMIN;

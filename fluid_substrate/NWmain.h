@@ -28,6 +28,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <assert.h>
+// ---------------------------
+// The Current version of sim
+// --------------------------
+#define __NW_VERSION__ 2.1
 
 // Host Function Prototypes
 __host__ int ProcessCommandLine(int argc, char *argv[]);

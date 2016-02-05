@@ -9,6 +9,7 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 #include "NWKernels.h"
+#include "NWXYZIO.h"
 // --------------------------------------------
 ////////	CLASS DEFINING A SIMULATION ///////
 // --------------------------------------------
@@ -142,14 +143,24 @@ void NWSimulation::XYZPrint(int itime){
 
 	int nBlownUp = 0;
 	this->fxyz << N + 4 << std::endl;
-	this->fxyz << "Comment line" << std::endl;
+	/*this->fxyz << "Comment line" << std::endl;
+	this->fxyz << __NW_VERSION__ << ": " 
+		<< this->params->_NP << " "
+		<< this->params->_Ka << " "
+		<< this->params->_KBT << " "
+		<< this->params->_DRIVE << " "
+		<< this->params->_EPSILON << " "
+		<< this->params->_RCUT << " "
+		<< this->simparams->_DT << " "
+		<< this->simparams->_FRAMERATE
+		<< std::endl;*/
+	this->fxyz << nw::util::xyz::makeParameterLine(this->params, this->simparams, __NW_VERSION__);
 	for (int i = 0; i < params->_NPARTICLES; i++){
 		int w = i / params->_NP;
 		int t = w % ntypes;
 		float x = worms->r[i], y = worms->r[i + N], z = worms->r[i + 2 * N];
 		if (abs(z) > 100.0f) nBlownUp++;
-		this->fxyz << ptypes[t] << " " 
-				   << x << " " << y << " " << z << std::endl;
+		this->fxyz << ptypes[t] << " " << x << " " << y << " " << z << std::endl;
 	}
 	this->fxyz << "E " << 0 << " " << 0 << " 0 " << std::endl;
 	this->fxyz << "E " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;
@@ -158,7 +169,7 @@ void NWSimulation::XYZPrint(int itime){
 
 	//.. report blown up particles
 	if (nBlownUp > 0) printf("\n%i particles blown up", nBlownUp);
-	if (nBlownUp == params->_NPARTICLES) abort();
+	if (nBlownUp >= _LOSS_TOLERANCE) abort();
 
 	//.. clocking
 	clock_t now = clock();

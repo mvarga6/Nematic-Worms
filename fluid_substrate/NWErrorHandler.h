@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define _LOSS_TOLERANCE 100
+
 void ErrorHandler(cudaError_t Status)
 {
 	if (cudaSuccess != Status)
