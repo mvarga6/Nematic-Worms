@@ -32,7 +32,7 @@
 // The Current version of sim
 // --------------------------
 #define __NW_VERSION__ 2.1
-#define __DEBUG__
+//#define __DEBUG__
 // Host Function Prototypes
 __host__ int ProcessCommandLine(int argc, char *argv[]);
 __host__ int OpenDataFiles(void);

@@ -1001,6 +1001,8 @@ void Worms::ZeroGPU_Pitched(){
 		-1,
 		this->nparticles_int_alloc,
 		this->heightNMAX));
+
+	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroClocks(){

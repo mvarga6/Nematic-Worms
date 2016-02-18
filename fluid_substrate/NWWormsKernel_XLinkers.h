@@ -36,7 +36,7 @@ __global__ void XLinkerUpdateKernel(float *r,
 				}
 			}
 		}
-		// FIX SO LOWER NUMBER NEIGHBORS ARENT PICKED FIRST !!!!
+		// FIX SO LOWER NUMBER NEIGHBORS AREN'T PICKED FIRST !!!!
 		else { // add certain percentage 
 			if (xlink[id] == -1) { // if unlinked
 				if (randNum[id] < change_percent) { // if attempting adding 
@@ -45,8 +45,8 @@ __global__ void XLinkerUpdateKernel(float *r,
 					rid[1] = r[id + rshift];
 					rid[2] = r[id + 2 * rshift];
 					dr[0] = dr[1] = dr[2] = 0.0f;
-					for (int i = 0; i < dev_Params._NMAX; i++){ // find someone to link with
-						int nid = nlist[id + i * nlshift]; // neighbor id
+					for (int n = 0; n < dev_Params._NMAX; n++){ // find someone to link with
+						int nid = nlist[id + n * nlshift]; // neighbor id
 						if (nid == -1) break; // end of neighbors
 						_r[0] = r[nid];
 						_r[1] = r[nid + rshift];
@@ -88,8 +88,8 @@ __global__ void XLinkerForceKernel(float *f,
 			}
 			float _r = sqrt(CalculateRR_3d(rid, rnab, dr)); // distance
 			float _f = -k * (_r - xlink_eq) / _r; // magnitude of force
-			//for (int d = 0; d < 3; d++) // for all dimensions
-				//f[pid + d*fshift] -= _f * dr[d]; // apply force component
+			for (int d = 0; d < 3; d++) // for all dimensions
+				f[pid + d*fshift] -= _f * dr[d]; // apply force component
 		}
 	}
 } // --------------------------------------------------------------------------------------
