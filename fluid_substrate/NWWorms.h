@@ -334,9 +334,10 @@ void Worms::LandscapeForces(){
 void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	DEBUG_MESSAGE("XLinkerForces");
 	int currentNumber;
-	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, currentNumber);
+	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	cudaMemcpyFromSymbol(&currentNumber, "xcount", sizeof(int), 0, cudaMemcpyDeviceToHost);
 
 	const float currentDensity = float(currentNumber) / float(parameters->_NPARTICLES);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
