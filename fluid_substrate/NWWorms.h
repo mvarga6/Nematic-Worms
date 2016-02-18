@@ -85,6 +85,7 @@ class Worms {
 public:
 	//.. on host (so print on host is easier)
 	float * r;
+	char * c;
 
 	//.. construct with block-thread structure
 	//Worms(int BPK, int TPB, GRNG &RNG, WormsParameters &wormsParameters);
@@ -109,6 +110,7 @@ public:
 	void DataHostToDevice();
 	void ResetNeighborsList();
 	void ResetNeighborsList(int itime);
+	void ColorXLinked(); // pulls dev_xlink onto host and makes char list
 	void ClearAll();
 	void ZeroForce();
 
@@ -158,18 +160,18 @@ Worms::~Worms(){
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ClearAll(){
-	this->FreeGPUMemory();
+
+	//.. host
 	this->FreeHostMemory();
-	//this->X = this->Y = this->Z = NULL;
-	//this->Vx = this->Vy = NULL;
-	//this->dev_X = this->dev_Y = this->dev_Z = NULL;
-	//this->dev_Vx = this->dev_Vy = this->dev_Vz = NULL;
-	//this->dev_Fx = this->dev_Fy = this->dev_Fz = NULL;
-	//this->dev_Fx_old = this->dev_Fy_old = this->dev_Fz_old = NULL;
-	//this->dev_theta = NULL;
 	this->r = NULL;
+	this->c = NULL;
+
+	//.. device
+	this->FreeGPUMemory();
 	this->dev_r = this->dev_v = NULL;
 	this->dev_f = this->dev_f_old = NULL;
+	this->dev_xcount = NULL;
+	this->dev_xlink = NULL;
 	this->dev_thphi = NULL;
 	this->rng = NULL;
 	this->parameters = NULL;
@@ -333,19 +335,20 @@ void Worms::LandscapeForces(){
 //-------------------------------------------------------------------------------------------
 void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	DEBUG_MESSAGE("XLinkerForces");
+
 	//.. count linkages
 	int currentNumber;
 	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, this->dev_xcount);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-	DEBUG_MESSAGE("XLinkerForces_counted");
+	
 	//.. calculate current density
 	CheckSuccess(cudaMemcpy(&currentNumber, this->dev_xcount, sizeof(int), cudaMemcpyDeviceToHost));
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	const float currentDensity = float(currentNumber) / float(parameters->_NPARTICLES);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
-	DEBUG_MESSAGE("XLinkerForces_memcpyed");
+	
 	//.. adjust linkages to target percentage
 	int N = this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
@@ -360,7 +363,7 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-	DEBUG_MESSAGE("XLinkerForces_updated");
+	
 	//.. apply forces from linkages to particle 1
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -372,7 +375,7 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-	DEBUG_MESSAGE("XLinkerForces_forces1");
+	
 	//.. apply forces from linkages to particles 2
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -671,17 +674,30 @@ void Worms::AddConstantForce(int dim, float force){
 		);
 	ErrorHandler(cudaDeviceSynchronize());
 }
-// -------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+void Worms::ColorXLinked(){
+	const int N = this->parameters->_NPARTICLES;
+	int * xlink = new int[N]; // create host copy of dev_xlink
+	CheckSuccess(cudaMemcpy(xlink, this->dev_xlink, this->nparticles_int_alloc, cudaMemcpyDeviceToHost));
+	for (int i = 0; i < N; i++){ // find linked particles
+		if (xlink[i] == -1) this->c[i] = 'A'; // type A if not linked
+		else this->c[i] = 'B'; // type B if linked
+	}
+	delete[] xlink; // delete local copy
+}
+// ------------------------------------------------------------------------------------------
 //	PRIVATE METHODS
-// -------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------
 void Worms::AllocateHostMemory(){
 	DEBUG_MESSAGE("AllocateHostMemory");
 	this->r = new float[3*this->parameters->_NPARTICLES];
+	this->c = new char[this->parameters->_NPARTICLES];
 }
 //-------------------------------------------------------------------------------------------
 void Worms::FreeHostMemory(){
 	DEBUG_MESSAGE("FreeHostMemory");
 	delete[] this->r;
+	delete[] this->c;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::AllocateGPUMemory(){

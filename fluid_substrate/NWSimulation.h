@@ -136,6 +136,7 @@ void NWSimulation::XYZPrint(int itime){
 
 	//.. pull data from GPU
 	this->worms->DataDeviceToHost();
+	this->worms->ColorXLinked();
 
 	//.. print to ntypes
 	static const int ntypes = 4;
@@ -144,24 +145,14 @@ void NWSimulation::XYZPrint(int itime){
 
 	int nBlownUp = 0;
 	this->fxyz << N + 4 << std::endl;
-	/*this->fxyz << "Comment line" << std::endl;
-	this->fxyz << __NW_VERSION__ << ": " 
-		<< this->params->_NP << " "
-		<< this->params->_Ka << " "
-		<< this->params->_KBT << " "
-		<< this->params->_DRIVE << " "
-		<< this->params->_EPSILON << " "
-		<< this->params->_RCUT << " "
-		<< this->simparams->_DT << " "
-		<< this->simparams->_FRAMERATE
-		<< std::endl;*/
 	this->fxyz << nw::util::xyz::makeParameterLine(this->params, this->simparams, __NW_VERSION__);
 	for (int i = 0; i < params->_NPARTICLES; i++){
-		int w = i / params->_NP;
-		int t = w % ntypes;
+		//int w = i / params->_NP;
+		//int t = w % ntypes;
 		float x = worms->r[i], y = worms->r[i + N], z = worms->r[i + 2 * N];
+		char c = worms->c[i];
 		if (abs(z) > 100.0f) nBlownUp++;
-		this->fxyz << ptypes[t] << " " << x << " " << y << " " << z << std::endl;
+		this->fxyz << c << " " << x << " " << y << " " << z << std::endl;
 	}
 	this->fxyz << "E " << 0 << " " << 0 << " 0 " << std::endl;
 	this->fxyz << "E " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;
