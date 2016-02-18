@@ -22,11 +22,6 @@ __global__ void InterForceKernel(float *f,
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-		//.. pitched memory index shifts
-		//int fshift = (int)(fpitch / sizeof(float));
-		//int vshift = (int)(vpitch / sizeof(float));
-		//int rshift = (int)(rpitch / sizeof(float));
-
 #ifdef __PRINT_SHIFTS__
 		if (id == __PRINT_INDEX__) 
 			printf("\nf,v,r shifts: %i ,\t%i ,\t%i", fshift, vshift, rshift);
@@ -70,7 +65,7 @@ __global__ void InterForceKernel(float *f,
 				printf("\nrnab = { %f, %f, %f }", rnab[0], rnab[1], rnab[2]);
 #endif
 
-			_r = sqrtf(CalculateRR_3d(rid, rnab, dr));
+			_r = sqrt(CalculateRR_3d(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - dev_Params._L1)) / _r;
 			for (int d = 0; d < 3; d++)
 				fid[d] -= _f * dr[d];

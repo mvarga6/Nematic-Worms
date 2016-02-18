@@ -52,6 +52,7 @@
     <ClInclude Include="NWSimulationParameters.h" />
     <ClInclude Include="NWWorms.h" />
     <ClInclude Include="NWWormsKernels.h" />
+    <ClInclude Include="NWWormsKernel_BondBending.h" />
     <ClInclude Include="NWWormsKernel_CalculateTheta.h" />
     <ClInclude Include="NWWormsKernel_DriveForce.h" />
     <ClInclude Include="NWWormsKernel_InternalForce.h" />
@@ -61,6 +62,7 @@
     <ClInclude Include="NWWormsKernel_SetNList.h" />
     <ClInclude Include="NWWormsKernel_SetXList.h" />
     <ClInclude Include="NWWormsKernel_UpdateSystem.h" />
+    <ClInclude Include="NWWormsKernel_XLinkers.h" />
     <ClInclude Include="NWWormsParameters.h" />
     <ClInclude Include="NWXYZIO.h" />
     <ClInclude Include="resource.h" />

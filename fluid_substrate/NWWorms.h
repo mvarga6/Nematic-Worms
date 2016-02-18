@@ -27,6 +27,7 @@ class Worms {
 
 	//.. neighbors list within worms
 	int * dev_nlist;
+	int * dev_xlink;
 
 	//.. for pitched memory
 	bool pitched_memory;
@@ -84,9 +85,6 @@ class Worms {
 public:
 	//.. on host (so print on host is easier)
 	float * r;
-	//float * Vx;
-	//float * Vy;
-	//float * Vz;
 
 	//.. construct with block-thread structure
 	//Worms(int BPK, int TPB, GRNG &RNG, WormsParameters &wormsParameters);
@@ -103,6 +101,7 @@ public:
 	void AutoDriveForces();
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
+	void XLinkerForces(const float& crossLinkDensity);
 	void SlowUpdate();
 	void QuickUpdate(float increaseRatio);
 	void CalculateThetaPhi();
@@ -330,6 +329,51 @@ void Worms::LandscapeForces(){
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Land_clock += std::clock() - b4;
+}
+//-------------------------------------------------------------------------------------------
+void Worms::XLinkerForces(const float& crossLinkDensityTarget){
+	DEBUG_MESSAGE("XLinkerForces");
+	int currentNumber;
+	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, currentNumber);
+	ErrorHandler(cudaDeviceSynchronize());
+	ErrorHandler(cudaGetLastError());
+
+	const float currentDensity = float(currentNumber) / float(parameters->_NPARTICLES);
+	const float offsetDensity = crossLinkDensityTarget - currentDensity;
+	int N = this->parameters->_NPARTICLES;
+	float * rng_ptr = this->rng->Get(N);
+	float linkCutoff = this->parameters->_RMIN;
+	XLinkerUpdateKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_r, this->rshift,
+		this->dev_xlink,
+		this->dev_nlist, this->nlshift,
+		rng_ptr,
+		offsetDensity, linkCutff
+	);
+	ErrorHandler(cudaDeviceSynchronize());
+	ErrorHandler(cudaGetLastError());
+
+	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_f, this->fshift,
+		this->dev_r, this->rshift,
+		this->dev_xlink, true,
+		this->parameters->_K1,
+		this->parameters->_RMIN
+	);
+	ErrorHandler(cudaDeviceSynchronize());
+	ErrorHandler(cudaGetLastError());
+	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_f, this->fshift,
+		this->dev_r, this->rshift,
+		this->dev_xlink, false,
+		this->parameters->_K1,
+		this->parameters->_RMIN
+	);
+	ErrorHandler(cudaDeviceSynchronize());
+	ErrorHandler(cudaGetLastError());
 }
 //-------------------------------------------------------------------------------------------
 void Worms::SlowUpdate(){
@@ -649,6 +693,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_f_old, 3 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_nlist, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_thphi, 2 * this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
 
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("Allocated");
@@ -656,22 +701,7 @@ void Worms::AllocateGPUMemory(){
 //-------------------------------------------------------------------------------------------
 void Worms::AllocateGPUMemory_Pitched(){
 	DEBUG_MESSAGE("AllocateGPUMemory_Pitched");
-	/*CheckSuccess(cudaMalloc((void**)&(this->dev_X), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Y), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Z), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Vx), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Vy), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Vz), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Fx), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Fy), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Fz), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Fx_old), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Fy_old), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_Fz_old), this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_theta, this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_phi, this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&(this->dev_nlist), this->parameters->_NMAX * this->nparticles_int_alloc));*/
-	
+
 	printf("\nUsing pitched memory:\t");
 
 	this->height3 = 3;
@@ -708,6 +738,8 @@ void Worms::AllocateGPUMemory_Pitched(){
 								&this->tppitch,
 								widthN,
 								this->height2));
+
+	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
 
 	//.. calculate and assign shifts
 	this->fshift = this->fpitch / sizeof(float);
@@ -911,26 +943,13 @@ void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_f_old, 0, 3 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_thphi, 0, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("\nMemory zeroed");
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroGPU_Pitched(){
 	DEBUG_MESSAGE("ZeroGPU_Pitched");
-	/*CheckSuccess(cudaMemset((void**)this->dev_X, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Y, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Z, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Vx, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Vy, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Vz, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Fx, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Fy, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Fz, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Fx_old, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Fy_old, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_Fz_old, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_theta, 0, this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_phi, 0, this->nparticles_float_alloc));*/
 
 	size_t widthN = this->nparticles_float_alloc;
 

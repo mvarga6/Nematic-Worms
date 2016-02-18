@@ -107,6 +107,7 @@ void NWSimulation::Run(){
 			this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
+			this->worms->XLinkerForces(0.1f);
 			this->worms->LJForces();
 			this->worms->QuickUpdate((float)this->simparams->_NSTEPS_INNER);
 		}

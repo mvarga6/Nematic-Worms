@@ -67,7 +67,7 @@ public:
 	GRNG(int maxCallSize, float distributionMean, float standardDeviation);
 	~GRNG();
 
-	float* Get(unsigned count); // old
+	float* Get(unsigned count, bool uniform);
 	float* Generate(unsigned count);
 	float* GenerateAll();
 	void DisplayErrors();
@@ -100,13 +100,16 @@ GRNG::~GRNG(){
 	CheckStatus(curandDestroyGenerator(*this->generator));
 }
 //-------------------------------------------------------------------------------------------
-float* GRNG::Get(unsigned count){
+float* GRNG::Get(unsigned count, bool uniform = false){
 	size_t call_size = count * sizeof(float);
 	if (call_size > this->alloc_size){
 		printf("\n\tWarning:\ttoo large of call to RNG!\n");
 		count = this->alloc_size / sizeof(float);
 	}
-	CheckStatus(curandGenerateNormal(*this->generator, this->dev_n, count, this->mean, this->stddev));
+	if (uniform)
+		CheckStatus(curandGenerateUniform(*this->generator, this->dev_n, count));
+	else
+		CheckStatus(curandGenerateNormal(*this->generator, this->dev_n, count, this->mean, this->stddev));
 	CheckSuccess(cudaDeviceSynchronize());
 	return this->dev_n;
 }
