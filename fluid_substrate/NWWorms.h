@@ -1,7 +1,6 @@
 
 #ifndef __WORMS_H__
 #define __WORMS_H__
-
 #include "curand_kernel.h"
 #include "NWmain.h"
 #include "NWWormsKernels.h"
