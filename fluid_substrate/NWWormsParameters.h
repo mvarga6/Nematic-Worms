@@ -43,6 +43,9 @@ typedef struct {
 	float _RMIN, _R2MIN;
 	float _RCUT, _R2CUT;
 
+	//.. cross-linker density
+	float _XLINKERDENSITY;
+
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
 
@@ -83,11 +86,12 @@ namespace DEFAULT {
 		static const float	L1 = 0.8f;
 		static const float	L2 = 1.6f;
 		static const float	L3 = 2.4f;
-		static const float	KBT = 0.05f;
+		static const float	KBT = 0.25f;
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
 		static const float	BUFFER = 0.5f;
 		static const float	LANDSCALE = 1.0f;
+		static const float	XLINKERDENSITY = 0.0f;
 	}
 }
 //----------------------------------------------------------------------------
@@ -114,134 +118,120 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		std::string val;
 		if (arg == "-xdim"){
 			if (i + 1 < argc){
-				//std::string val = argv[1 + i++];
 				parameters->_XDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-ydim"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_YDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-zdim"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_ZDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-np"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_NP = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-listsetgap"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_LISTSETGAP = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-nmax"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_NMAX = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-epsilon"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-sigma"){
 			if (i + 1 < argc){
-				///val = std::string(argv[1 + i++]);
 				parameters->_SIGMA = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-drive"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k1"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_K1 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k2"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_K2 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k3"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-ka"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_Ka = std::strtof(argv[1 + i++], NULL);
 				printf("\nKa changed: %f", parameters->_Ka);
 			}
 		}
 		else if (arg == "-l1"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_L1 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-l2"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_L2 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-l3"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_L3 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-kbt"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_KBT = std::strtof(argv[1 + i++], NULL);
 				printf("\nKBT changed: %f", parameters->_KBT);
 			}
 		}
 		else if (arg == "-gamma"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_GAMMA = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-damp"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_DAMP = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-buffer"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_BUFFER = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-landscale"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_LANDSCALE = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-xlink"){
+			if (i + 1 < argc){
+				parameters->_XLINKERDENSITY = std::strtof(argv[1 + i++], NULL);
+				printf("\nxlink changed: %f", parameters->_XLINKERDENSITY);
 			}
 		}
 		else if (arg == "-wca"){
 			wca = true;
+			printf("\nUsing Weeks-Chandler-Anderson Potential");
 		}
 	}
 }
@@ -252,8 +242,6 @@ void Init(WormsParameters * parameters, int argc, char *argv[], bool WCA = false
 	parameters->_YDIM = DEFAULT::WORMS::YDIM;
 	parameters->_ZDIM = DEFAULT::WORMS::ZDIM;
 	parameters->_NP = DEFAULT::WORMS::NP;
-	//parameters->_NWORMS = DEFAULT::WORMS::NWORMS;
-	//parameters->_NPARTICLES = DEFAULT::WORMS::NPARTICLES;
 	parameters->_LISTSETGAP = DEFAULT::WORMS::LISTSETGAP;
 	parameters->_NMAX = DEFAULT::WORMS::NMAX;
 	parameters->_EPSILON = DEFAULT::WORMS::EPSILON;
@@ -271,6 +259,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[], bool WCA = false
 	parameters->_DAMP = DEFAULT::WORMS::DAMP;
 	parameters->_BUFFER = DEFAULT::WORMS::BUFFER;
 	parameters->_LANDSCALE = DEFAULT::WORMS::LANDSCALE;
+	parameters->_XLINKERDENSITY = DEFAULT::WORMS::XLINKERDENSITY;
 	
 	GrabParameters(parameters, argc, argv, WCA);
 	CalculateParameters(parameters, WCA);

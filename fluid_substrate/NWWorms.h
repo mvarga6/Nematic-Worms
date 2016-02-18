@@ -102,7 +102,7 @@ public:
 	void AutoDriveForces();
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
-	void XLinkerForces(const float& crossLinkDensity);
+	void XLinkerForces();
 	void SlowUpdate();
 	void QuickUpdate(float increaseRatio);
 	void CalculateThetaPhi();
@@ -333,8 +333,14 @@ void Worms::LandscapeForces(){
 	this->Land_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::XLinkerForces(const float& crossLinkDensityTarget){
+void Worms::XLinkerForces(){
 	DEBUG_MESSAGE("XLinkerForces");
+
+	//.. grab needed parameters
+	const float crossLinkDensityTarget = this->parameters->_XLINKERDENSITY;
+	const int N = this->parameters->_NPARTICLES;
+	const float xlinker_k = this->parameters->_K1;
+	const float xlinker_range = this->parameters->_RMIN;
 
 	//.. count linkages
 	int currentNumber;
@@ -346,11 +352,10 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	CheckSuccess(cudaMemcpy(&currentNumber, this->dev_xcount, sizeof(int), cudaMemcpyDeviceToHost));
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-	const float currentDensity = float(currentNumber) / float(parameters->_NPARTICLES);
+	const float currentDensity = float(currentNumber) / float(N);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
 	
 	//.. adjust linkages to target percentage
-	int N = this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
 	float linkCutoff = this->parameters->_RMIN;
 	XLinkerUpdateKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -370,20 +375,18 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 		this->dev_f, this->fshift,
 		this->dev_r, this->rshift,
 		this->dev_xlink, true,
-		this->parameters->_K1,
-		this->parameters->_RMIN
+		xlinker_k, xlinker_range
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	
 	//.. apply forces from linkages to particles 2
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	(
+		(
 		this->dev_f, this->fshift,
 		this->dev_r, this->rshift,
 		this->dev_xlink, false,
-		this->parameters->_K1,
-		this->parameters->_RMIN
+		xlinker_k, xlinker_range
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
