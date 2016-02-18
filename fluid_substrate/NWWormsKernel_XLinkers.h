@@ -90,7 +90,7 @@ __global__ void XLinkerForceKernel(float *f,
 		//	float _f = -k * (_r - xlink_eq) / _r; // magnitude of force
 		//	for (int d = 0; d < 3; d++) // for all dimensions
 		//		f[pid + d*fshift] -= _f * dr[d]; // apply force component
-		}
+		//}
 	}
 } // --------------------------------------------------------------------------------------
 #endif
