@@ -338,14 +338,14 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, this->dev_xcount);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-
+	DEBUG_MESSAGE("XLinkerForces_counted");
 	//.. calculate current density
 	CheckSuccess(cudaMemcpy(&currentNumber, this->dev_xcount, sizeof(int), cudaMemcpyDeviceToHost));
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	const float currentDensity = float(currentNumber) / float(parameters->_NPARTICLES);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
-	
+	DEBUG_MESSAGE("XLinkerForces_memcpyed");
 	//.. adjust linkages to target percentage
 	int N = this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
@@ -360,7 +360,7 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-
+	DEBUG_MESSAGE("XLinkerForces_updated");
 	//.. apply forces from linkages to particle 1
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -372,7 +372,7 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-
+	DEBUG_MESSAGE("XLinkerForces_forces1");
 	//.. apply forces from linkages to particles 2
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -384,6 +384,7 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+	DEBUG_MESSAGE("XLinkerForces_forces2");
 }
 //-------------------------------------------------------------------------------------------
 void Worms::SlowUpdate(){
