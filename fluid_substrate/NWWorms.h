@@ -28,6 +28,7 @@ class Worms {
 	//.. neighbors list within worms
 	int * dev_nlist;
 	int * dev_xlink;
+	int * dev_xcount;
 
 	//.. for pitched memory
 	bool pitched_memory;
@@ -333,14 +334,20 @@ void Worms::LandscapeForces(){
 //-------------------------------------------------------------------------------------------
 void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	DEBUG_MESSAGE("XLinkerForces");
+	//.. count linkages
 	int currentNumber;
-	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink);
+	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, this->dev_xcount);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-	cudaMemcpyFromSymbol(&currentNumber, "xcount", sizeof(int), 0, cudaMemcpyDeviceToHost);
 
+	//.. calculate current density
+	CheckSuccess(cudaMemcpy(&currentNumber, this->dev_xcount, sizeof(int), cudaMemcpyDeviceToHost));
+	ErrorHandler(cudaDeviceSynchronize());
+	ErrorHandler(cudaGetLastError());
 	const float currentDensity = float(currentNumber) / float(parameters->_NPARTICLES);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
+	
+	//.. adjust linkages to target percentage
 	int N = this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
 	float linkCutoff = this->parameters->_RMIN;
@@ -355,6 +362,7 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 
+	//.. apply forces from linkages to particle 1
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift,
@@ -365,6 +373,8 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
+
+	//.. apply forces from linkages to particles 2
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift,
@@ -695,6 +705,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_nlist, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_thphi, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("Allocated");
@@ -741,6 +752,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 								this->height2));
 
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	//.. calculate and assign shifts
 	this->fshift = this->fpitch / sizeof(float);
