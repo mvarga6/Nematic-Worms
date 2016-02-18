@@ -349,7 +349,7 @@ void Worms::XLinkerForces(const float& crossLinkDensityTarget){
 		this->dev_xlink,
 		this->dev_nlist, this->nlshift,
 		rng_ptr,
-		offsetDensity, linkCutff
+		offsetDensity, linkCutoff
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
