@@ -378,7 +378,7 @@ void Worms::XLinkerForces(){
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	
-	return; // just for debugging the matching making
+	//return; // just for debugging the matching making
 
 	//.. apply forces from linkages to linker particle
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
