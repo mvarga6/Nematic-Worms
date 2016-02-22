@@ -344,6 +344,13 @@ void Worms::XLinkerForces(){
 	const float crossLinkDensityTarget = this->parameters->_XLINKERDENSITY;
 	const int N = this->parameters->_NPARTICLES;
 
+	//.. break a 10% percentage of cross links
+	float * uni_rn = this->rng->Get(N, true);
+	XLinkerBreakKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_xlink, uni_rn, crossLinkDensityTarget / 10.0f
+	);
+
 	//.. count linkages
 	int currentNumber;
 	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, this->dev_xcount);
@@ -356,7 +363,8 @@ void Worms::XLinkerForces(){
 	ErrorHandler(cudaGetLastError());
 	const float currentDensity = float(currentNumber) / float(N);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
-	
+	printf("\nOffset density = %f", offsetDensity);
+
 	//.. adjust linkages to target percentage
 	float * rng_ptr = this->rng->Get(N, true);
 	float linkCutoff = this->parameters->_Lx;
@@ -371,6 +379,8 @@ void Worms::XLinkerForces(){
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	
+	return; // just for debugging the matching making
+
 	//.. apply forces from linkages to linker particle
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(

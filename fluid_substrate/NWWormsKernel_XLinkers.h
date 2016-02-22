@@ -16,6 +16,20 @@ __global__ void XLinkerCountKernel(int *xlink, int *xcount){
 }
 
 // -----------------------------------------------------------------------------------------
+// Randomly attempt to break some bonds
+__global__ void XLinkerBreakKernel(int *xlink, float* randNum, float percentLoss)
+{
+	int id = threadIdx.x + blockDim.x * blockIdx.x;
+	if (id < dev_Params._NPARTICLES){
+		if (xlink[id] != -1){ // if linked
+			if (randNum[id] < percentLoss){
+				xlink[id] = -1;
+			}
+		}
+	}
+}
+
+// -----------------------------------------------------------------------------------------
 //	Update the cross linkers based on intended percentages
 __global__ void XLinkerUpdateKernel(float *r,
 							  int rshift,
