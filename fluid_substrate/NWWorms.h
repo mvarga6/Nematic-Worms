@@ -345,11 +345,11 @@ void Worms::XLinkerForces(){
 	const int N = this->parameters->_NPARTICLES;
 
 	//.. break a 10% percentage of cross links
-	/*float * uni_rn = this->rng->Get(N, true);
+	float * uni_rn = this->rng->Get(N, true);
 	XLinkerBreakKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
-		this->dev_xlink, uni_rn, crossLinkDensityTarget / 10.0f
-	);*/
+		this->dev_xlink, uni_rn, 0.001f
+	);
 
 	//.. count linkages
 	int currentNumber;
