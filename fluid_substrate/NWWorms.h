@@ -102,7 +102,7 @@ public:
 	void AutoDriveForces();
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
-	void XLinkerForces();
+	void XLinkerForces(int itime, int xstart);
 	void SlowUpdate();
 	void QuickUpdate();
 	void CalculateThetaPhi();
@@ -333,7 +333,7 @@ void Worms::LandscapeForces(){
 	this->Land_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::XLinkerForces(){
+void Worms::XLinkerForces(int itime, int xstart = 0){
 	DEBUG_MESSAGE("XLinkerForces");
 
 	//.. only process if needed
