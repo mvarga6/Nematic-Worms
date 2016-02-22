@@ -336,6 +336,10 @@ void Worms::LandscapeForces(){
 void Worms::XLinkerForces(){
 	DEBUG_MESSAGE("XLinkerForces");
 
+	//.. only process if needed
+	if (this->parameters->_XLINKERDENSITY <= 0.0f) return;
+	if (this->parameters->_XLINKERDENSITY > 1.0f) return;
+
 	//.. grab needed parameters
 	const float crossLinkDensityTarget = this->parameters->_XLINKERDENSITY;
 	const int N = this->parameters->_NPARTICLES;
