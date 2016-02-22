@@ -337,6 +337,7 @@ void Worms::XLinkerForces(int itime, int xstart = 0){
 	DEBUG_MESSAGE("XLinkerForces");
 
 	//.. only process if needed
+	if (itime < xstart) return;
 	if (this->parameters->_XLINKERDENSITY <= 0.0f) return;
 	if (this->parameters->_XLINKERDENSITY > 1.0f) return;
 
