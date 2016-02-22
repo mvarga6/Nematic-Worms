@@ -101,7 +101,7 @@ __global__ void XLinkerForceKernel(float *f,
 			float _r = sqrt(CalculateRR_3d(rid, rnab, dr)); // distance
 			float _f = -k * (_r - dev_Params._Lx) / _r; // magnitude of force
 			for (int d = 0; d < 3; d++) // for all dimensions
-				f[pid + d*fshift] -= _f * dr[d]; // apply force component
+				f[pid + d*fshift] += _f * dr[d]; // apply force component
 		}
 	}
 } // --------------------------------------------------------------------------------------
