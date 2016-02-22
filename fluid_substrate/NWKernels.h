@@ -36,6 +36,7 @@ __global__ void CheckParametersOnDevice(){
 	printf("RMIN = %f\nR2MIN = %f\n", dev_Params._RMIN, dev_Params._R2MIN);
 	printf("RCUT = %f\nR2CUT = %f\n", dev_Params._RCUT, dev_Params._R2CUT);
 	printf("BUFFER = %f\n", dev_Params._BUFFER);
+	printf("LANDSCALE = %f\nXLINKERDENSITY = %f\n", dev_Params._LANDSCALE, dev_Params._XLINKERDENSITY);
 #endif
 
 #ifdef __FLUID_PARAMETERS_H__

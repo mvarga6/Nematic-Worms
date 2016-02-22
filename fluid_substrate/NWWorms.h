@@ -104,7 +104,7 @@ public:
 	void AddConstantForce(int dim, float force);
 	void XLinkerForces();
 	void SlowUpdate();
-	void QuickUpdate(float increaseRatio);
+	void QuickUpdate();
 	void CalculateThetaPhi();
 	void DataDeviceToHost();
 	void DataHostToDevice();
@@ -339,8 +339,6 @@ void Worms::XLinkerForces(){
 	//.. grab needed parameters
 	const float crossLinkDensityTarget = this->parameters->_XLINKERDENSITY;
 	const int N = this->parameters->_NPARTICLES;
-	const float xlinker_k = this->parameters->_K1;
-	const float xlinker_range = this->parameters->_RMIN;
 
 	//.. count linkages
 	int currentNumber;
@@ -356,8 +354,8 @@ void Worms::XLinkerForces(){
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
 	
 	//.. adjust linkages to target percentage
-	float * rng_ptr = this->rng->Get(N);
-	float linkCutoff = this->parameters->_RMIN;
+	float * rng_ptr = this->rng->Get(N, true);
+	float linkCutoff = this->parameters->_Lx;
 	XLinkerUpdateKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_r, this->rshift,
@@ -369,24 +367,22 @@ void Worms::XLinkerForces(){
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	
-	//.. apply forces from linkages to particle 1
+	//.. apply forces from linkages to linker particle
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift,
 		this->dev_r, this->rshift,
-		this->dev_xlink, true,
-		xlinker_k, xlinker_range
+		this->dev_xlink, true
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	
-	//.. apply forces from linkages to particles 2
+	//.. apply forces from linkages to linked particle 2
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 		(
 		this->dev_f, this->fshift,
 		this->dev_r, this->rshift,
-		this->dev_xlink, false,
-		xlinker_k, xlinker_range
+		this->dev_xlink, false
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
@@ -394,7 +390,7 @@ void Worms::XLinkerForces(){
 }
 //-------------------------------------------------------------------------------------------
 void Worms::SlowUpdate(){
-	DEBUG_MESSAGE("Update");
+	DEBUG_MESSAGE("SlowUpdate");
 
 	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -419,8 +415,8 @@ void Worms::SlowUpdate(){
 	this->Update_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::QuickUpdate(float increaseRatio = 10.0f){
-	DEBUG_MESSAGE("Update");
+void Worms::QuickUpdate(){
+	DEBUG_MESSAGE("QuickUpdate");
 
 	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -429,7 +425,9 @@ void Worms::QuickUpdate(float increaseRatio = 10.0f){
 	this->dev_v, this->vpitch,
 	this->dev_r, this->rpitch
 	);*/
+
 	std::clock_t b4 = std::clock();
+	const float increaseRatio = (float)this->envirn->_NSTEPS_INNER;
 	dim3 gridStruct(this->Blocks_Per_Kernel, 3);
 	dim3 blockStruct(this->Threads_Per_Block);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>

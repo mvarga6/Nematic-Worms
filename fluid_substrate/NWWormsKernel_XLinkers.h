@@ -66,15 +66,13 @@ __global__ void XLinkerForceKernel(float *f,
 								   float *r,
 								   int rshift,
 								   int *xlink,
-								   bool f_on_self,
-								   float xlink_scalor,
-								   float xlink_eq) 
+								   bool f_on_self) 
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 		int xid = xlink[id]; // cross linked to
 		if (xid != -1){ // if linked to someone
-			float k = xlink_scalor;
+			float k = dev_Params._Kx;
 			int pid;
 			if (f_on_self) {
 				pid = id; // apply force to self
@@ -87,7 +85,7 @@ __global__ void XLinkerForceKernel(float *f,
 				rnab[d] = r[xid + d*rshift]; // assign values for xid
 			}
 			float _r = sqrt(CalculateRR_3d(rid, rnab, dr)); // distance
-			float _f = -k * (_r - xlink_eq) / _r; // magnitude of force
+			float _f = -k * (_r - dev_Params._Lx) / _r; // magnitude of force
 			for (int d = 0; d < 3; d++) // for all dimensions
 				f[pid + d*fshift] -= _f * dr[d]; // apply force component
 		}

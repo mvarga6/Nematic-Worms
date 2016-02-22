@@ -90,6 +90,11 @@ NWSimulation::~NWSimulation(){
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	
+	//.. grab needed parameters
+	const int	nsteps		 = this->simparams->_NSTEPS;
+	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
+	const float dt			 = this->simparams->_DT;
+
 	//.. check for errors before starting
 	this->DisplayErrors();
 
@@ -97,19 +102,19 @@ void NWSimulation::Run(){
 	this->timer = clock();
 
 	//.. MAIN SIMULATION LOOP
-	for (int itime = 0; itime < this->simparams->_NSTEPS; itime++){
+	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. setup neighbors for iteration
 		this->worms->ResetNeighborsList(itime);
 
 		//.. inner loop for high frequency potentials
-		for (int jtime = 0; jtime < this->simparams->_NSTEPS_INNER; jtime++){
+		for (int jtime = 0; jtime < nsteps_inner; jtime++){
 			this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
 			this->worms->XLinkerForces();
 			this->worms->LJForces();
-			this->worms->QuickUpdate((float)this->simparams->_NSTEPS_INNER);
+			this->worms->QuickUpdate();
 		}
 
 		//.. finish time set with slow potential forces
@@ -121,7 +126,7 @@ void NWSimulation::Run(){
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
 
-		this->time += this->simparams->_DT;
+		this->time += dt;
 	}
 	this->fxyz.close();
 }

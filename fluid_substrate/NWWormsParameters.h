@@ -43,8 +43,8 @@ typedef struct {
 	float _RMIN, _R2MIN;
 	float _RCUT, _R2CUT;
 
-	//.. cross-linker density
-	float _XLINKERDENSITY;
+	//.. cross-linker density, spring constant, and distance
+	float _XLINKERDENSITY, _Kx, _Lx;
 
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
@@ -92,6 +92,8 @@ namespace DEFAULT {
 		static const float	BUFFER = 0.5f;
 		static const float	LANDSCALE = 1.0f;
 		static const float	XLINKERDENSITY = 0.0f;
+		static const float	Kx = 10.0f;
+		static const float  Lx = L2;
 	}
 }
 //----------------------------------------------------------------------------
@@ -229,6 +231,18 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 				printf("\nxlink changed: %f", parameters->_XLINKERDENSITY);
 			}
 		}
+		else if (arg == "-kx"){
+			if (i + 1 < argc){
+				parameters->_Kx = std::strtof(argv[1 + i++], NULL);
+				printf("\nkx changed: %f", parameters->_Kx);
+			}
+		}
+		else if (arg == "-lx"){
+			if (i + 1 < argc){
+				parameters->_Lx = std::strtof(argv[1 + i++], NULL);
+				printf("\nlx changed: %f", parameters->_Lx);
+			}
+		}
 		else if (arg == "-wca"){
 			wca = true;
 			printf("\nUsing Weeks-Chandler-Anderson Potential");
@@ -260,6 +274,8 @@ void Init(WormsParameters * parameters, int argc, char *argv[], bool WCA = false
 	parameters->_BUFFER = DEFAULT::WORMS::BUFFER;
 	parameters->_LANDSCALE = DEFAULT::WORMS::LANDSCALE;
 	parameters->_XLINKERDENSITY = DEFAULT::WORMS::XLINKERDENSITY;
+	parameters->_Kx = DEFAULT::WORMS::Kx;
+	parameters->_Lx = DEFAULT::WORMS::Lx;
 	
 	GrabParameters(parameters, argc, argv, WCA);
 	CalculateParameters(parameters, WCA);
