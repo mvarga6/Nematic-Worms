@@ -363,7 +363,6 @@ void Worms::XLinkerForces(){
 	ErrorHandler(cudaGetLastError());
 	const float currentDensity = float(currentNumber) / float(N);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
-	printf("\nOffset density = %f", offsetDensity);
 
 	//.. adjust linkages to target percentage
 	float * rng_ptr = this->rng->Get(N, true);
