@@ -10,8 +10,10 @@
 //	Count the current number of cross-links (launch one)
 __global__ void XLinkerCountKernel(int *xlink, int *xcount){
 	int new_count = 0;
-	for (int i = 0; i < dev_Params._NPARTICLES; i++)
+	for (int i = 0; i < dev_Params._NPARTICLES; i++){
 		if (xlink[i] != -1) new_count++;
+		printf("\t%i", xlink[i]);
+	}
 	(*xcount) = new_count;
 }
 
