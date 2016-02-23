@@ -102,7 +102,7 @@ void NWSimulation::Run(){
 	else xdensity = this->params->_XLINKERDENSITY;
 
 	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
-	xramp = (this->_XLINKERDENSITY - xdensity) / float(nsteps - xstart);
+	xramp = (this->params->_XLINKERDENSITY - xdensity) / float(nsteps - xstart);
 
 	//.. check for errors before starting
 	this->DisplayErrors();
