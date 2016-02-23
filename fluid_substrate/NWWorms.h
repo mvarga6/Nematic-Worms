@@ -102,7 +102,7 @@ public:
 	void AutoDriveForces(int itime, int istart);
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
-	void XLinkerForces(int itime, int xstart);
+	void XLinkerForces(int itime, float xtargetPercent);
 	void SlowUpdate();
 	void QuickUpdate();
 	void CalculateThetaPhi();
@@ -334,16 +334,16 @@ void Worms::LandscapeForces(){
 	this->Land_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::XLinkerForces(int itime, int xstart = 0){
+void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 	DEBUG_MESSAGE("XLinkerForces");
 
 	//.. only process if needed
-	if (itime < xstart) return;
-	if (this->parameters->_XLINKERDENSITY <= 0.0f) return;
-	if (this->parameters->_XLINKERDENSITY > 1.0f) return;
+	if (itime < this->parameters->_XSTART) return;
+	if (xtargetPercent <= 0.0f) return;
+	if (xtargetPercent > 1.0f) return;
 
 	//.. grab needed parameters
-	const float crossLinkDensityTarget = this->parameters->_XLINKERDENSITY;
+	const float crossLinkDensityTarget = xtargetPercent;
 	const int N = this->parameters->_NPARTICLES;
 
 	//.. break a 10% percentage of cross links

@@ -94,7 +94,15 @@ void NWSimulation::Run(){
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
-	const int	eq_period	 = nsteps / 5;
+	const int	xstart		 = this->params->_XSTART;
+	
+	//.. setup cross-linker ramping
+	float xdensity, xramp;
+	if (this->params->_XRAMP) xdensity = 0.0f;
+	else xdensity = this->params->_XLINKERDENSITY;
+
+	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
+	xramp = (this->_XLINKERDENSITY - xdensity) / float(nsteps - xstart);
 
 	//.. check for errors before starting
 	this->DisplayErrors();
@@ -113,20 +121,22 @@ void NWSimulation::Run(){
 			this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
-			this->worms->XLinkerForces(itime, eq_period);
+			this->worms->XLinkerForces(itime, xdensity);
 			this->worms->LJForces();
 			this->worms->QuickUpdate();
 		}
 
 		//.. finish time set with slow potential forces
 		this->worms->ZeroForce();
-		this->worms->AutoDriveForces(itime, eq_period);
+		this->worms->AutoDriveForces(itime);
 		this->worms->LandscapeForces();
 		this->worms->SlowUpdate();
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
 
+		//.. adjust tickers
+		if (itime > xstart) xdensity += xramp; // no effect if not ramping
 		this->time += dt;
 	}
 	this->fxyz.close();

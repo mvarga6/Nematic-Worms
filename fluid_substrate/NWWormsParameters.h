@@ -45,6 +45,8 @@ typedef struct {
 
 	//.. cross-linker density, spring constant, and distance
 	float _XLINKERDENSITY, _Kx, _Lx;
+	int _XSTART;
+	bool _XRAMP;
 
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
@@ -94,6 +96,8 @@ namespace DEFAULT {
 		static const float	XLINKERDENSITY = 0.0f;
 		static const float	Kx = 10.0f;
 		static const float  Lx = L2;
+		static const int	XSTART = 0;
+		static const bool	XRAMP = false;
 	}
 }
 //----------------------------------------------------------------------------
@@ -105,14 +109,17 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 	parameters->_LJ_AMP = 24.0f * parameters->_EPSILON * parameters->_SIGMA6;
 	parameters->_RMIN = nw::constants::_216 * parameters->_SIGMA;
 	parameters->_R2MIN = parameters->_RMIN * parameters->_RMIN;
-	if (WCA)
+	if (WCA) // set Lennard Jones style
 		parameters->_RCUT = parameters->_RMIN;
 	else
 		parameters->_RCUT = 2.5f * parameters->_SIGMA;
 	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT;
+	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f;
+	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f;
+	
 }
 //----------------------------------------------------------------------------
-void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &wca){
+void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &wca, bool &xramp){
 
 	//.. cycle through arguments
 	for (int i = 1; i < argc; i++){
@@ -237,6 +244,12 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 				printf("\nkx changed: %f", parameters->_Kx);
 			}
 		}
+		else if (arg == "-xstart"){
+			if (i + 1 < argc){
+				parameters->_XSTART = std::strtof(argv[1 + i++], NULL);
+				printf("\nkx changed: %f", parameters->_XSTART);
+			}
+		}
 		else if (arg == "-lx"){
 			if (i + 1 < argc){
 				parameters->_Lx = std::strtof(argv[1 + i++], NULL);
@@ -245,13 +258,18 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		}
 		else if (arg == "-wca"){
 			wca = true;
-			printf("\nUsing Weeks-Chandler-Anderson Potential");
+			printf("\nUsing Weeks-Chandler-Anderson potential");
+		}
+		else if (arg == "-xramp"){
+			parameters->_XRAMP = true;
+			printf("\nRamping cross-linker denisty from 0 -> [xlink]");
 		}
 	}
 }
 //--------------------------------------------------------------------------
 //.. initialization function
-void Init(WormsParameters * parameters, int argc, char *argv[], bool WCA = false){
+void Init(WormsParameters * parameters, int argc, char *argv[]){
+	bool WCA = false, XRAMP = false; // flags
 	parameters->_XDIM = DEFAULT::WORMS::XDIM;
 	parameters->_YDIM = DEFAULT::WORMS::YDIM;
 	parameters->_ZDIM = DEFAULT::WORMS::ZDIM;
@@ -276,8 +294,9 @@ void Init(WormsParameters * parameters, int argc, char *argv[], bool WCA = false
 	parameters->_XLINKERDENSITY = DEFAULT::WORMS::XLINKERDENSITY;
 	parameters->_Kx = DEFAULT::WORMS::Kx;
 	parameters->_Lx = DEFAULT::WORMS::Lx;
+	parameters->_XSTART = DEFAULT::WORMS::XSTART;
 	
-	GrabParameters(parameters, argc, argv, WCA);
+	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);
 
 	cudaError_t err;
