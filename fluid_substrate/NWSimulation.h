@@ -94,6 +94,7 @@ void NWSimulation::Run(){
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
+	const int	eq_period	 = nsteps / 5;
 
 	//.. check for errors before starting
 	this->DisplayErrors();
@@ -112,14 +113,14 @@ void NWSimulation::Run(){
 			this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
-			this->worms->XLinkerForces(itime, nsteps/10);
+			this->worms->XLinkerForces(itime, eq_period);
 			this->worms->LJForces();
 			this->worms->QuickUpdate();
 		}
 
 		//.. finish time set with slow potential forces
 		this->worms->ZeroForce();
-		this->worms->AutoDriveForces();
+		this->worms->AutoDriveForces(itime, eq_period);
 		this->worms->LandscapeForces();
 		this->worms->SlowUpdate();
 		this->XYZPrint(itime);

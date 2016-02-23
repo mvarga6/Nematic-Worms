@@ -99,7 +99,7 @@ public:
 	void BendingForces();
 	void NoiseForces();
 	void LJForces();
-	void AutoDriveForces();
+	void AutoDriveForces(int itime, int istart);
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
 	void XLinkerForces(int itime, int xstart);
@@ -305,8 +305,9 @@ void Worms::LJForces(){
 	this->LJ_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::AutoDriveForces(){
+void Worms::AutoDriveForces(int itime, int istart = 0){
 	DEBUG_MESSAGE("AutoDriveForces");
+	if (itime < istart) return;
 	this->CalculateThetaPhi();
 	std::clock_t b4 = std::clock();
 	DriveForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
