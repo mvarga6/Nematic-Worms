@@ -350,7 +350,7 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 	float * uni_rn = this->rng->Get(N, true);
 	XLinkerBreakKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
-		this->dev_xlink, uni_rn, 0.001f
+		this->dev_xlink, uni_rn, 0.0001f
 	);
 
 	//.. count linkages
