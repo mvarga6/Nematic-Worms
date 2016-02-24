@@ -94,15 +94,19 @@ void NWSimulation::Run(){
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
+	const float xtarget		 = this->params->_XLINKERDENSITY;
 	const int	xstart		 = this->params->_XSTART;
+		  int	xhold		 = this->params->_XHOLD;
 	
 	//.. setup cross-linker ramping
 	float xdensity, xramp;
-	if (this->params->_XRAMP) xdensity = 0.0f;
-	else xdensity = this->params->_XLINKERDENSITY;
+	if (this->params->_XRAMP) xdensity = 0.0f; // if ramping, init to zero
+	else xdensity = xtarget; // if not, init to target
+	if (xhold < 0) xhold = nsteps; // default to end of simulation, 
+	//	else already set properly
 
 	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
-	xramp = (this->params->_XLINKERDENSITY - xdensity) / float(nsteps - xstart);
+	xramp = (xtarget - xdensity) / float(xhold - xstart);
 
 	//.. check for errors before starting
 	this->DisplayErrors();
@@ -136,7 +140,8 @@ void NWSimulation::Run(){
 		this->DisplayErrors();
 
 		//.. adjust tickers
-		if (itime > xstart) xdensity += xramp; // no effect if not ramping
+		if (itime > xstart && itime < xhold) // in ramping range 
+			xdensity += xramp; // no effect if not ramping
 		this->time += dt;
 	}
 	this->fxyz.close();

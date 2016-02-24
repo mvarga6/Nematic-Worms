@@ -45,7 +45,7 @@ typedef struct {
 
 	//.. cross-linker density, spring constant, and distance
 	float _XLINKERDENSITY, _Kx, _Lx;
-	int _XSTART;
+	int _XSTART, _XHOLD;
 	bool _XRAMP;
 
 	//.. buffer length when setting neighbors lists
@@ -97,6 +97,7 @@ namespace DEFAULT {
 		static const float	Kx = 10.0f;
 		static const float  Lx = L2;
 		static const int	XSTART = 0;
+		static const int	XHOLD = -1; // needs to default to end
 		static const bool	XRAMP = false;
 	}
 }
@@ -247,7 +248,13 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-xstart"){
 			if (i + 1 < argc){
 				parameters->_XSTART = std::strtof(argv[1 + i++], NULL);
-				printf("\nkx changed: %f", parameters->_XSTART);
+				printf("\nxstart changed: %i", parameters->_XSTART);
+			}
+		}
+		else if (arg == "-xhold"){
+			if (i + 1 < argc){
+				parameters->_XHOLD = std::strtof(argv[1 + i++], NULL);
+				printf("\nxhold changed: %f", parameters->_XHOLD);
 			}
 		}
 		else if (arg == "-lx"){
@@ -295,6 +302,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_Kx = DEFAULT::WORMS::Kx;
 	parameters->_Lx = DEFAULT::WORMS::Lx;
 	parameters->_XSTART = DEFAULT::WORMS::XSTART;
+	parameters->_XHOLD = DEFAULT::WORMS::XHOLD;
 	
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);
