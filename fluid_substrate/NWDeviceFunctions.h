@@ -44,6 +44,12 @@ __device__ float CalculateRR_3d(const float _rid[3], const float _rnab[3], float
 __device__ float CalculateLJ_3d(const float _rr){
 	return dev_Params._LJ_AMP*((dev_Params._2SIGMA6 / (_rr*_rr*_rr*_rr*_rr*_rr*_rr)) - (1.00000f / (_rr*_rr*_rr*_rr)));
 }
+//-----------------------------------------------------------------------------------
+__device__ float CalculateLJ_3d(const float _rr, const float sig, const float eps){
+	const float _2sig6 = pow(sig, 6.0f);
+	const float _lj_amp = 12.0f * eps * _2sig6;
+	return _lj_amp*((_2sig6 / (_rr*_rr*_rr*_rr*_rr*_rr*_rr)) - (1.00000f / (_rr*_rr*_rr*_rr)));
+}
 // ----------------------------------------------------------------------------------
 __device__ float dot(const float v1[3], const float v2[3]){
 	float result = 0.0f;

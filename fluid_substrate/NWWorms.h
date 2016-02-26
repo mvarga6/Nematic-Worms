@@ -853,7 +853,7 @@ void Worms::DistributeWormsOnHost(){
 			{
 				x0[iw] = 0.001 + float(i)*xbox / float(xdim);
 				y0[iw] = 0.001 + float(j)*ybox / float(ydim);
-				z0[iw] = float(k) * parameters->_RCUT;
+				z0[iw] = float(k) * parameters->_RCUT + 20.0f;
 				iw++;
 			}
 		}
