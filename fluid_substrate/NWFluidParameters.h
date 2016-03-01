@@ -35,6 +35,9 @@ typedef struct {
 	//.. buffer length setting neighbors lists
 	float _BUFFER;
 
+	//.. scales interaction w/ landscape
+	float _LANDSCALE;
+
 } FluidParameters;
 /* ------------------------------------------------------------------------
 *	This is the actual symbol that the parameters will be saved to
@@ -60,5 +63,24 @@ cudaError_t ParametersToDevice(FluidParameters &params, bool attractivePotential
 
 	return cudaMemcpyToSymbol(dev_flParams, &params, sizeof(FluidParameters));
 }
-
+/*------------------------------------------------------------------------
+*	Default values for all parameter values in WormsParameters.
+--------------------------------------------------------------------------*/
+namespace DEFAULT {
+	namespace FLUID {
+		static const int	XDIM		= 80;
+		static const int	YDIM		= 80;
+		static const int	NPARTICLES	= XDIM * YDIM;
+		static const int	LISTSETGAP	= 50;
+		static const int	NMAX		= 128;
+		static const float	EPSILON		= 1.0f;
+		static const float	SIGMA		= 1.0f;
+		static const float	KBT			= 0.05f;
+		static const float	GAMMA		= 2.0f;
+		static const float	DAMP		= 3.0f;
+		static const float	BUFFER		= 0.25f;
+		static const float	LANDSCALE	= 1.0f;
+	}
+}
+//--------------------------------------------------------------------------
 #endif

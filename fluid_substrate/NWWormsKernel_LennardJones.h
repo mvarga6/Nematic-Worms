@@ -1,54 +1,105 @@
 
 #ifndef __WORMS_KERNEL__LENNARD_JONES_H__
 #define __WORMS_KERNEL__LENNARD_JONES_H__
-
+//-------------------------------------------------------------------------------------------------
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
-
-__global__ void LennardJonesNListKernel(float *fx, float *fy, float *x, float *y, int *nlist)
+//------------------------------------------------------------------------------------------------
+__global__ void LennardJonesNListKernel(float *f,
+										int fshift,
+										float *r,
+										int rshift,
+										int *nlist,
+										int nshift )
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
 	{
-		int listid = id * dev_Params._NMAX;
-		float fxid = 0.0;
-		float fyid = 0.0;
+		//int fshift = fpitch / sizeof(float);
+		//int rshift = rpitch / sizeof(float);
+		//int nshift = nlpitch / sizeof(int);
+
+		int ix = id;
+		int iy = id + rshift;
+		int iz = id + 2 * rshift;
+
+		float fid[3], rid[3], dr[3], _r[3];
+		float _f, _rr;
+		fid[0] = 0.0f; fid[1] = 0.0f; fid[2] = 0.0f;
+		rid[0] = r[ix];
+		rid[1] = r[iy];
+		rid[2] = r[iz];
 
 		//.. loop through neighbors
 		for (int i = 0; i < dev_Params._NMAX; i++)
 		{
 			//.. neighbor id
-			int nid = nlist[listid + i];
+			int nid = nlist[id + i * nshift];
 
 			//.. if no more players
 			if (nid == -1) break;
 
-			float dx = x[nid] - x[id];
-			float dy = y[nid] - y[id];
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
-			float rr = dx * dx + dy * dy;
+			_r[0] = r[nid];
+			_r[1] = r[nid + rshift];
+			_r[2] = r[nid + 2 * rshift];
+
+			_rr = CalculateRR_3d(rid, _r, dr);
+			//float dx = x[nid] - x[id];
+			//float dy = y[nid] - y[id];
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
+			//float rr = dx * dx + dy * dy;
+
+			//printf("nnid = %i\trr = %f", nid, _rr);
 
 			//.. stop if too far
-			if (rr > dev_Params._R2CUT) continue;
+			if (_rr > dev_Params._R2CUT) continue;
 
 			//.. calculate LJ force
-			float ff = dev_Params._LJ_AMP*((dev_Params._2SIGMA6 / (rr*rr*rr*rr*rr*rr*rr)) - (1.00000f / (rr*rr*rr*rr)));
-			fxid -= ff * dx;
-			fyid -= ff * dy;
+			_f = CalculateLJ_3d(_rr);
+
+			//.. apply forces to directions
+			for (int d = 0; d < 3; d++)
+				fid[d] -= _f * dr[d];
 		}
 
 		//.. assign tmp to memory
-		fx[id] += fxid;
-		fy[id] += fyid;
+		f[id] += fid[0];
+		f[id + fshift] += fid[1];
+		f[id + 2*fshift] += fid[2];
 
 #ifdef __PRINT_FORCES__
-		if (id == 0)	
-			printf("\n\tLJ Kernel:\n\tfx = %f,\tfy = %f\n", fx[id], fy[id]);
+		if (id == __PRINT_INDEX__)
+			printf("\n\tLJ Kernel:\n\tf = { %f, %f, %f }", f[id], f[id + fshift], f[id + 2*fshift]);
 #endif
 	}
 }
+//---------------------------------------------------------------------------------------------------
+__global__ void FastLennardJonesNListKernel(float *f, int fshift,
+											float *r, int rshift,
+											int *nlist, int nlshift){
+	int pid = threadIdx.x + blockDim.x * blockIdx.x; // particle index
+	int nab = threadIdx.y + blockDim.y * blockIdx.y; // neighbor count
+	if ((pid < dev_Params._NPARTICLES) && (nab < dev_Params._NMAX)){
+		int nid = nlist[pid + nab * nlshift];
+		if (nid != -1){
+			float rid[3], rnab[3], _f, rr, dr[3];
+			rid[0] = r[pid];
+			rid[1] = r[pid + rshift];
+			rid[2] = r[pid + 2 * rshift];
+			rnab[0] = r[nid];
+			rnab[1] = r[nid + rshift];
+			rnab[2] = r[nid + 2 * rshift];
+			rr = CalculateRR_3d(rid, rnab, dr);
+			if (rr < dev_Params._R2CUT){
+				_f = CalculateLJ_3d(rr);
+				for (int d = 0; d < 3; d++)
+					f[pid + d * fshift] -= _f * dr[d];
+			}
+		}
+	}
 
+}
 #endif

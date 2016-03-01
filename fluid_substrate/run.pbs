@@ -8,7 +8,7 @@
 cd $PBS_O_WORKDIR
 mkdir $PBS_JOBID
 
-module load cuda/5.5
+module load cuda
 
 nvcc main.cu -o Sim
 cp Sim $PBS_JOBID
@@ -17,7 +17,7 @@ rm Sim
 
 cd $TMPDIR
 
-module load cuda/5.5
+module load cuda
 ./Sim
 
 cd $PBS_O_WORKDIR

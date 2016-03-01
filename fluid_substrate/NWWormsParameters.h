@@ -4,7 +4,9 @@
 
 #include "cuda.h"
 #include "cuda_runtime.h"
-
+#include "NWConstants.h"
+#include <string>
+#include <cstdlib>
 /* ------------------------------------------------------------------------
 *	Data structure containing the parameters of a Worms object.  Intended
 *	to exist at same scope level and Worms object because Worms takes a
@@ -13,10 +15,13 @@
 typedef struct {
 
 	//.. default setup config
-	int _XDIM, _YDIM;
+	int _XDIM, _YDIM, _ZDIM;
 
-	//.. Particles per worm, # of worms, total particle #
+	//.. particles per worm, # of worms, total particle #
 	int _NP, _NWORMS, _NPARTICLES;
+
+	//.. scales the landscape forces
+	float _LANDSCALE;
 
 	//.. time steps between reseting neighbors lists, maximum # of neighbors
 	int _LISTSETGAP, _NMAX;
@@ -25,7 +30,7 @@ typedef struct {
 	float _EPSILON, _SIGMA, _DRIVE;
 
 	//.. spring constants in worms
-	float _K1, _K2, _K3;
+	float _K1, _K2, _K3, _Ka;
 
 	//.. spring equilibrium lengths
 	float _L1, _L2, _L3;
@@ -37,6 +42,11 @@ typedef struct {
 	float _SIGMA6, _2SIGMA6, _LJ_AMP;
 	float _RMIN, _R2MIN;
 	float _RCUT, _R2CUT;
+
+	//.. cross-linker density, spring constant, and distance
+	float _XLINKERDENSITY, _Kx, _Lx;
+	int _XSTART, _XHOLD;
+	bool _XRAMP;
 
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
@@ -65,247 +75,251 @@ cudaError_t ParametersToDevice(WormsParameters &params, bool attractivePotential
 	//params._LJ_AMP = 24.0f * params._EPSILON * params._SIGMA6;
 	return cudaMemcpyToSymbol(dev_Params, &params, sizeof(WormsParameters));
 }
-
-/*
-*	Namespace holding all available parameters for class Worms 
-*	stored in constant memory on the gpu device.
-*/
-/*namespace wp{
-	__constant__ int _XDIM;
-	__constant__ int _YDIM;
-	__constant__ int _NP;
-	__constant__ int _NWORMS;
-	__constant__ int _NPARTICLES;
-	__constant__ int _NMAX;
-	__constant__ float _EPSILON;
-	__constant__ float _SIGMA;
-	__constant__ float _DRIVE;
-	__constant__ float _K1;
-	__constant__ float _K2;
-	__constant__ float _K3;
-	__constant__ float _L1;
-	__constant__ float _L2;
-	__constant__ float _L3;
-	__constant__ float _KBT;
-	__constant__ float _GAMMA;
-	__constant__ float _DAMP;
-	__constant__ float _SIGMA6;
-	__constant__ float _2SIGMA6;
-	__constant__ float _LJ_AMP;
-	__constant__ float _RMIN;
-	__constant__ float _R2MIN;
-	__constant__ float _RCUT;
-	__constant__ float _R2CUT;
-	__constant__ float _BUFFER;
+/*------------------------------------------------------------------------
+*	Default values for all parameter values in WormsParameters.
+--------------------------------------------------------------------------*/
+namespace DEFAULT {
+	namespace WORMS {
+		static const int	XDIM = 5;
+		static const int	YDIM = 40;
+		static const int	ZDIM = 2;
+		static const int	NP = 10;
+		static const int	NWORMS = XDIM * YDIM * ZDIM;
+		static const int	NPARTICLES = NP * NWORMS;
+		static const int	LISTSETGAP = 50;
+		static const int	NMAX = 128;
+		static const float	EPSILON = 0.2f;
+		static const float	SIGMA = 1.0f;
+		static const float	DRIVE = 1.0f;
+		static const float	K1 = 57.146f;
+		static const float	K2 = 10.0f * K1;
+		static const float	K3 = 2.0f * K2 / 3.0f;
+		static const float	Ka = 5.0f;
+		static const float	L1 = 0.8f;
+		static const float	L2 = 1.6f;
+		static const float	L3 = 2.4f;
+		static const float	KBT = 0.25f;
+		static const float	GAMMA = 2.0f;
+		static const float	DAMP = 3.0f;
+		static const float	BUFFER = 0.5f;
+		static const float	LANDSCALE = 1.0f;
+		static const float	XLINKERDENSITY = 0.0f;
+		static const float	Kx = 10.0f;
+		static const float  Lx = L2;
+		static const int	XSTART = 0;
+		static const int	XHOLD = -1; // needs to default to end
+		static const bool	XRAMP = false;
+	}
 }
-
-class WormsParameters {
-
-	//.. contains errors
-	std::vector<cudaError_t> errorState;
-
-	//.. all the parameters
-	int cm_XDIM;
-	int cm_YDIM;
-	int cm_NP;
-	int cm_NWORMS;	
-	int cm_NPARTICLES;
-	int cm_LISTSETGAP;	
-	int cm_NMAX;
-	float cm_EPSILON;
-	float cm_SIGMA;
-	float cm_DRIVE;
-	float cm_K1;
-	float cm_K2;
-	float cm_K3;
-	float cm_L1;
-	float cm_L2;
-	float cm_L3;
-	float cm_KBT;
-	float cm_GAMMA;
-	float cm_DAMP;
-	float cm_SIGMA6;
-	float cm_2SIGMA6;
-	float cm_LJ_AMP;
-	float cm_RMIN;
-	float cm_R2MIN;
-	float cm_RCUT;
-	float cm_R2CUT;
-	float cm_BUFFER;
-
-	//.. for access from worms
-	friend class Worms;
-
-public:
-	WormsParameters();
-	~WormsParameters();
-
-	bool LoadFromFile(std::string &filename);
-	void SaveToFile(std::string &filename);
-	void SymbolsToDevice();
+//----------------------------------------------------------------------------
+void CalculateParameters(WormsParameters * parameters, bool WCA = false){
+	parameters->_NWORMS = parameters->_XDIM * parameters->_YDIM * parameters->_ZDIM;
+	parameters->_NPARTICLES = parameters->_NP * parameters->_NWORMS;
+	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f);
+	parameters->_2SIGMA6 = 2.0f * parameters->_SIGMA6;
+	parameters->_LJ_AMP = 24.0f * parameters->_EPSILON * parameters->_SIGMA6;
+	parameters->_RMIN = nw::constants::_216 * parameters->_SIGMA;
+	parameters->_R2MIN = parameters->_RMIN * parameters->_RMIN;
+	if (WCA) // set Lennard Jones style
+		parameters->_RCUT = parameters->_RMIN;
+	else
+		parameters->_RCUT = 2.5f * parameters->_SIGMA;
+	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT;
+	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f;
+	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f;
 	
-	int nparticles(){ return cm_NPARTICLES; }
-	int nworms(){ return cm_NWORMS; }
-	int np(){ return cm_NP; }
-	float l1(){ return cm_L1; }
-	float rmin(){ return cm_RMIN; }
-
-	void SetParamGroupA(
-		const int &numPerWorm,
-		const int &numWorms,
-		const int &initXdim,
-		const int &initYdim);
-
-	void SetParamGroupB(
-		const float &K1,
-		const float &K2,
-		const float &K3,
-		const float &L1,
-		const float &L2,
-		const float &L3);
-
-	void SetParamGroupC(
-		const float &kbt,
-		const float &epsilon,
-		const float &sigma,
-		const float &gamma,
-		const float &damping,
-		const float &rcut);
-
-	void SetParamGroupD(
-		const int &listSetGap,
-		const int &maxNeighbors,
-		const float &neighborSearchBuffer);
-
-private:
-
-	void checkSuccess(cudaError_t err);
-	void calculateSymbols();
-
-};
-// -------------------------------------------------------------------------
-//	PUBLIC METHODS
-// -------------------------------------------------------------------------
-WormsParameters::WormsParameters(){
-
 }
+//----------------------------------------------------------------------------
+void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &wca, bool &xramp){
 
-WormsParameters::~WormsParameters(){
-
+	//.. cycle through arguments
+	for (int i = 1; i < argc; i++){
+		std::string arg = argv[i];
+		std::string val;
+		if (arg == "-xdim"){
+			if (i + 1 < argc){
+				parameters->_XDIM = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-ydim"){
+			if (i + 1 < argc){
+				parameters->_YDIM = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-zdim"){
+			if (i + 1 < argc){
+				parameters->_ZDIM = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-np"){
+			if (i + 1 < argc){
+				parameters->_NP = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-listsetgap"){
+			if (i + 1 < argc){
+				parameters->_LISTSETGAP = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-nmax"){
+			if (i + 1 < argc){
+				parameters->_NMAX = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-epsilon"){
+			if (i + 1 < argc){
+				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-sigma"){
+			if (i + 1 < argc){
+				parameters->_SIGMA = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-drive"){
+			if (i + 1 < argc){
+				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-k1"){
+			if (i + 1 < argc){
+				parameters->_K1 = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-k2"){
+			if (i + 1 < argc){
+				parameters->_K2 = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-k3"){
+			if (i + 1 < argc){
+				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-ka"){
+			if (i + 1 < argc){
+				parameters->_Ka = std::strtof(argv[1 + i++], NULL);
+				printf("\nKa changed: %f", parameters->_Ka);
+			}
+		}
+		else if (arg == "-l1"){
+			if (i + 1 < argc){
+				parameters->_L1 = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-l2"){
+			if (i + 1 < argc){
+				parameters->_L2 = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-l3"){
+			if (i + 1 < argc){
+				parameters->_L3 = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-kbt"){
+			if (i + 1 < argc){
+				parameters->_KBT = std::strtof(argv[1 + i++], NULL);
+				printf("\nKBT changed: %f", parameters->_KBT);
+			}
+		}
+		else if (arg == "-gamma"){
+			if (i + 1 < argc){
+				parameters->_GAMMA = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-damp"){
+			if (i + 1 < argc){
+				parameters->_DAMP = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-buffer"){
+			if (i + 1 < argc){
+				parameters->_BUFFER = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-landscale"){
+			if (i + 1 < argc){
+				parameters->_LANDSCALE = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-xlink"){
+			if (i + 1 < argc){
+				parameters->_XLINKERDENSITY = std::strtof(argv[1 + i++], NULL);
+				printf("\nxlink changed: %f", parameters->_XLINKERDENSITY);
+			}
+		}
+		else if (arg == "-kx"){
+			if (i + 1 < argc){
+				parameters->_Kx = std::strtof(argv[1 + i++], NULL);
+				printf("\nkx changed: %f", parameters->_Kx);
+			}
+		}
+		else if (arg == "-xstart"){
+			if (i + 1 < argc){
+				parameters->_XSTART = std::strtof(argv[1 + i++], NULL);
+				printf("\nxstart changed: %i", parameters->_XSTART);
+			}
+		}
+		else if (arg == "-xhold"){
+			if (i + 1 < argc){
+				parameters->_XHOLD = std::strtof(argv[1 + i++], NULL);
+				printf("\nxhold changed: %f", parameters->_XHOLD);
+			}
+		}
+		else if (arg == "-lx"){
+			if (i + 1 < argc){
+				parameters->_Lx = std::strtof(argv[1 + i++], NULL);
+				printf("\nlx changed: %f", parameters->_Lx);
+			}
+		}
+		else if (arg == "-wca"){
+			wca = true;
+			printf("\nUsing Weeks-Chandler-Anderson potential");
+		}
+		else if (arg == "-xramp"){
+			parameters->_XRAMP = true;
+			printf("\nRamping cross-linker denisty from 0 -> [xlink]");
+		}
+	}
 }
+//--------------------------------------------------------------------------
+//.. initialization function
+void Init(WormsParameters * parameters, int argc, char *argv[]){
+	bool WCA = false, XRAMP = false; // flags
+	parameters->_XDIM = DEFAULT::WORMS::XDIM;
+	parameters->_YDIM = DEFAULT::WORMS::YDIM;
+	parameters->_ZDIM = DEFAULT::WORMS::ZDIM;
+	parameters->_NP = DEFAULT::WORMS::NP;
+	parameters->_LISTSETGAP = DEFAULT::WORMS::LISTSETGAP;
+	parameters->_NMAX = DEFAULT::WORMS::NMAX;
+	parameters->_EPSILON = DEFAULT::WORMS::EPSILON;
+	parameters->_SIGMA = DEFAULT::WORMS::SIGMA;
+	parameters->_DRIVE = DEFAULT::WORMS::DRIVE;
+	parameters->_K1 = DEFAULT::WORMS::K1;
+	parameters->_K2 = DEFAULT::WORMS::K2;
+	parameters->_K3 = DEFAULT::WORMS::K3;
+	parameters->_Ka = DEFAULT::WORMS::Ka;
+	parameters->_L1 = DEFAULT::WORMS::L1;
+	parameters->_L2 = DEFAULT::WORMS::L2;
+	parameters->_L3 = DEFAULT::WORMS::L3;
+	parameters->_KBT = DEFAULT::WORMS::KBT;
+	parameters->_GAMMA = DEFAULT::WORMS::GAMMA;
+	parameters->_DAMP = DEFAULT::WORMS::DAMP;
+	parameters->_BUFFER = DEFAULT::WORMS::BUFFER;
+	parameters->_LANDSCALE = DEFAULT::WORMS::LANDSCALE;
+	parameters->_XLINKERDENSITY = DEFAULT::WORMS::XLINKERDENSITY;
+	parameters->_Kx = DEFAULT::WORMS::Kx;
+	parameters->_Lx = DEFAULT::WORMS::Lx;
+	parameters->_XSTART = DEFAULT::WORMS::XSTART;
+	parameters->_XHOLD = DEFAULT::WORMS::XHOLD;
+	
+	GrabParameters(parameters, argc, argv, WCA, XRAMP);
+	CalculateParameters(parameters, WCA);
 
-bool WormsParameters::LoadFromFile(std::string &filename){
-	return true;
+	cudaError_t err;
+	err = ParametersToDevice(*parameters);
+	std::cout << "\nWorms parameters cudaMemcpyToSymbol returned:\t" << cudaGetErrorString(err);
 }
-
-void WormsParameters::SaveToFile(std::string &filename){
-
-}
-
-void WormsParameters::SymbolsToDevice(){
-
-	//.. recalculate symbol values
-	this->calculateSymbols();
-
-	//.. integer symbols
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_NP, &cm_NP, sizeof(int)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_NWORMS, &cm_NWORMS, sizeof(int)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_XDIM, &cm_XDIM, sizeof(int)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_YDIM, &cm_YDIM, sizeof(int)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_NPARTICLES, &cm_NPARTICLES, sizeof(int)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_NMAX, &cm_NMAX, sizeof(int)));
-
-	//.. float symbols
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_EPSILON, &cm_EPSILON, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_SIGMA, &cm_SIGMA, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_DRIVE, &cm_DRIVE, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_K1, &cm_K1, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_K2, &cm_K2, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_K3, &cm_K3, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_L1, &cm_L2, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_L2, &cm_L2, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_L3, &cm_L3, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_KBT, &cm_KBT, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_GAMMA, &cm_GAMMA, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_DAMP, &cm_DAMP, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_SIGMA6, &cm_SIGMA6, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_2SIGMA6, &cm_2SIGMA6, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_LJ_AMP, &cm_LJ_AMP, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_RMIN, &cm_RMIN, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_R2MIN, &cm_R2MIN, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_RCUT, &cm_RCUT, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_R2CUT, &cm_R2CUT, sizeof(float)));
-	checkSuccess(cudaMemcpyToSymbol((void*)&wp::_BUFFER, &cm_BUFFER, sizeof(float)));
-}
-
-void WormsParameters::SetParamGroupA(
-	const int &numPerWorm,
-	const int &numWorms,
-	const int &initXdim,
-	const int &initYdim){
-	this->cm_NP = numPerWorm;
-	this->cm_NWORMS = numWorms;
-	this->cm_XDIM = initXdim;
-	this->cm_YDIM = initYdim;
-	this->calculateSymbols();
-}
-
-void WormsParameters::SetParamGroupB(
-	const float &K1,
-	const float &K2,
-	const float &K3,
-	const float &L1,
-	const float &L2,
-	const float &L3){
-	this->cm_K1 = K1;
-	this->cm_K2 = K2;
-	this->cm_K3 = K3;
-	this->cm_L1 = L1;
-	this->cm_L2 = L2;
-	this->cm_L3 = L3;
-}
-
-void WormsParameters::SetParamGroupC(
-	const float &kbt,
-	const float &epsilon,
-	const float &sigma,
-	const float &gamma,
-	const float &dampingCoef,
-	const float &rcut){
-	this->cm_KBT = kbt;
-	this->cm_EPSILON = epsilon;
-	this->cm_SIGMA = sigma;
-	this->cm_GAMMA = gamma;
-	this->cm_DAMP = dampingCoef;
-	this->cm_RCUT = rcut;
-	this->calculateSymbols();
-}
-
-void WormsParameters::SetParamGroupD(
-	const int &listSetGap,
-	const int &maxNeighbors,
-	const float &neighborSearchBuffer){
-	this->cm_LISTSETGAP = listSetGap;
-	this->cm_NMAX = maxNeighbors;
-	this->cm_BUFFER = neighborSearchBuffer;
-}
-
-	// -------------------------------------------------------------------------
-	//	PRIVATE METHODS
-	// -------------------------------------------------------------------------
-
-void WormsParameters::checkSuccess(cudaError_t err){
-	if (err != cudaSuccess) this->errorState.push_back(err);
-}
-
-void WormsParameters::calculateSymbols(){
-	this->cm_NPARTICLES = this->cm_NP * this->cm_NWORMS;
-	this->cm_SIGMA6 = powf(this->cm_SIGMA, 6);
-	this->cm_2SIGMA6 = 2.0f * this->cm_SIGMA6;
-	this->cm_LJ_AMP = 24.0f * this->cm_EPSILON * this->cm_SIGMA6;
-	this->cm_RMIN = _216 * this->cm_SIGMA;
-	this->cm_R2MIN = this->cm_RMIN * this->cm_RMIN;
-	this->cm_R2CUT = this->cm_RCUT * this->cm_RCUT;
-}*/
-
+//--------------------------------------------------------------------------
 #endif
