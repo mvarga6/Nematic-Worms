@@ -53,9 +53,10 @@ __global__ void LennardJonesNListKernel(float *f,
 		}
 
 		//.. assign tmp to memory
-		f[id] += fid[0];
-		f[id + fshift] += fid[1];
-		f[id + 2*fshift] += fid[2];
+		for_D_ f[id + d*fshift] += fid[d];
+		//f[id] += fid[0];
+		//f[id + fshift] += fid[1];
+		//f[id + 2*fshift] += fid[2];
 
 #ifdef __PRINT_FORCES__
 		if (id == __PRINT_INDEX__)
