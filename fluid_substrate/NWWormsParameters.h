@@ -15,7 +15,7 @@
 typedef struct {
 
 	//.. default setup config
-	int _XDIM, _YDIM;
+	int _XDIM, _YDIM, _ZDIM;
 
 	//.. particles per worm, # of worms, total particle #
 	int _NP, _NWORMS, _NPARTICLES;
@@ -72,6 +72,7 @@ namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
 		static const int	YDIM = 40;
+		static const int	ZDIM = 1;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
@@ -102,6 +103,7 @@ namespace DEFAULT {
 }
 //----------------------------------------------------------------------------
 void CalculateParameters(WormsParameters * parameters, bool WCA = false){
+	if (_D_ == 2) parameters->_ZDIM = 1; // ensure one layer if 2d
 	parameters->_NWORMS = parameters->_XDIM * parameters->_YDIM * parameters->_ZDIM;
 	parameters->_NPARTICLES = parameters->_NP * parameters->_NWORMS;
 	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f);
@@ -133,6 +135,11 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-ydim"){
 			if (i + 1 < argc){
 				parameters->_YDIM = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-zdim"){
+			if (i + 1 < argc){
+				parameters->_ZDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-np"){
@@ -273,6 +280,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	bool WCA = false, XRAMP = false; // flags
 	parameters->_XDIM = DEFAULT::WORMS::XDIM;
 	parameters->_YDIM = DEFAULT::WORMS::YDIM;
+	parameters->_ZDIM = DEFAULT::WORMS::ZDIM;
 	parameters->_NP = DEFAULT::WORMS::NP;
 	parameters->_LISTSETGAP = DEFAULT::WORMS::LISTSETGAP;
 	parameters->_NMAX = DEFAULT::WORMS::NMAX;

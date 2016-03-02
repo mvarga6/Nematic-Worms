@@ -814,30 +814,37 @@ void Worms::FreeGPUMemory(){
 void Worms::DistributeWormsOnHost(){
 
 	//.. grab parameters
-	int nworms = this->parameters->_NWORMS;
-	int nparts = this->parameters->_NPARTICLES;
-	int np = this->parameters->_NP;
-	int xdim = this->parameters->_XDIM;
-	int ydim = this->parameters->_YDIM;
-	//int zdim = this->parameters->_ZDIM;
-	float l1 = this->parameters->_L1;
-	float xbox = this->envirn->_XBOX;
-	float ybox = this->envirn->_YBOX;
-
-	float *x0 = new float[nworms];
-	float *y0 = new float[nworms];
+	const int nworms = this->parameters->_NWORMS;
+	const int nparts = this->parameters->_NPARTICLES;
+	const int np = this->parameters->_NP;
+	const int xdim = this->parameters->_XDIM;
+	const int ydim = this->parameters->_YDIM;
+	const int zdim = this->parameters->_ZDIM;
+	const float l1 = this->parameters->_L1;
+	const float xbox = this->envirn->_XBOX;
+	const float ybox = this->envirn->_YBOX;
+	const float spacing[3] = {
+		xbox / float(xdim),
+		ybox / float(ydim),
+		parameters->_RCUT
+	};
+	float * r0 = new float[_D_*nworms];
+	//float *x0 = new float[nworms];
+	//float *y0 = new float[nworms];
 	//float *z0 = new float[nworms];
 	int iw = 0;
-	//for (int k = 0; k < zdim; k++){
-	for (int i = 0; i < xdim; i++){
-		for (int j = 0; j < ydim; j++){
-			x0[iw] = 0.001 + float(i)*xbox / float(xdim);
-			y0[iw] = 0.001 + float(j)*ybox / float(ydim);
-			//z0[iw] = float(k) * parameters->_RCUT + 20.0f;
-			iw++;
+	for (int k = 0; k < zdim; k++){
+		for (int i = 0; i < xdim; i++){
+			for (int j = 0; j < ydim; j++){
+				const float idx[3] = { i, j, k }; // always 3d
+				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
+				//r0[iw] = 0.001 + float(i)*;
+				//r0[iw] = 0.001 + float(j)*;
+				//z0[iw] = float(k) *;
+				iw++;
+			}
 		}
 	}
-	//}
 
 	// Distribute bodies
 	const float s[3] = { l1, 0, 0 }; // always 3d
@@ -851,18 +858,21 @@ void Worms::DistributeWormsOnHost(){
 		const int w = i / np;
 		const int p = i % np;
 		float _r[_D_];
-		_r[0] = x0[w] + p * l1 + rn[0];
-		_r[1] = y0[w] + rn[1];
+		for_D_ _r[d] = r0[w + d*nworms] + p * s[d];
+		//_r[0] = x0[w] + p * l1 + rn[0];
+		//_r[1] = y0[w] + rn[1];
 		//float z = z0[w];
 		MovementBC(_r[0], xbox);
 		MovementBC(_r[1], ybox);
-		this->r[i + 0*nparts] = _r[0];
-		this->r[i + 1*nparts] = _r[1];
+		for_D_ r[i + d*nparts] = _r[d];
+		//this->r[i + 0*nparts] = _r[0];
+		//this->r[i + 1*nparts] = _r[1];
 		//this->r[i + 2*nparts] = z + rz;
 	}
 
-	delete[] x0;
-	delete[] y0;
+	delete[] r0;
+	//delete[] x0;
+	//delete[] y0;
 	//delete[] z0;
 }
 //-------------------------------------------------------------------------------------------
