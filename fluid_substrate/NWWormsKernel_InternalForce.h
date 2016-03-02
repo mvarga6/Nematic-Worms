@@ -56,8 +56,7 @@ __global__ void InterForceKernel(float *f,
 		if (p < (dev_Params._NP - 1))
 		{
 			int pp1 = id + 1;
-			float rnab[_D_];
-			float dr[_D_];
+			float rnab[_D_], dr[_D_];
 			float _r, _f;
 			for_D_ rnab[d] = r[pp1 + d*rshift];
 			//rnab[0] = r[pp1 + 0 * rshift];
