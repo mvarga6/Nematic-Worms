@@ -15,7 +15,7 @@ __device__ void DevicePBC(float &dR, float L)
 }
 //-----------------------------------------------------------------------------------
 __device__ void AdjDistPBC(float _dR[_D_], float _box[_D_]){
-	for_D_ DevicePBC(_[d], _box[d]);
+	for_D_ DevicePBC(_dR[d], _box[d]);
 }
 //-----------------------------------------------------------------------------------
 __device__ void DeviceMovementPBC(float &R, float L)
