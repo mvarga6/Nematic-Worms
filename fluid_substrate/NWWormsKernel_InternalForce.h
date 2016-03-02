@@ -1,5 +1,6 @@
 #ifndef __WORMS_KERNEL__INTERNAL_FORCE_H__
 #define __WORMS_KERNEL__INTERNAL_FORCE_H__
+// 2D
 // ------------------------------------------------------------------------------------------
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
@@ -31,17 +32,19 @@ __global__ void InterForceKernel(float *f,
 		int w = id / dev_Params._NP;
 
 		//.. local memory
-		float rid[3], fid[3], vid[3]; // , dr[3], rnab[3];
-		//float _r, _f;
+		float rid[_D_], fid[_D_], vid[_D_];
 
 		//.. init local as needed
-		for (int i = 0; i < 3; i++){
-			rid[i] = r[id + i * rshift];
-			//rnab[i] = 0.0f;
-			//dr[i] = 0.0f;
-			fid[i] = 0.0f;
-			vid[i] = v[id + i * vshift];
+		for_D_{
+			rid[d] = r[id + d*rshift];
+			fid[d] = 0.0f;
+			vid[d] = v[id + d*vshift];
 		}
+		//for (int i = 0; i < 3; i++){
+		//	rid[i] = r[id + i * rshift];
+		//	fid[i] = 0.0f;
+		//	vid[i] = v[id + i * vshift];
+		//}
 
 #ifdef __PRINT_POS_1__
 		if (id == __PRINT_INDEX__) 
@@ -53,59 +56,37 @@ __global__ void InterForceKernel(float *f,
 		if (p < (dev_Params._NP - 1))
 		{
 			int pp1 = id + 1;
-			float rnab[3];
-			float dr[3];
+			float rnab[_D_];
+			float dr[_D_];
 			float _r, _f;
-			rnab[0] = r[pp1 + 0 * rshift];
-			rnab[1] = r[pp1 + 1 * rshift];
-			rnab[2] = r[pp1 + 2 * rshift];
+			for_D_ rnab[d] = r[pp1 + d*rshift];
+			//rnab[0] = r[pp1 + 0 * rshift];
+			//rnab[1] = r[pp1 + 1 * rshift];
+			//rnab[2] = r[pp1 + 2 * rshift];
 
 #ifdef __PRINT_POS_2__
 			if (id == __PRINT_INDEX__) 
 				printf("\nrnab = { %f, %f, %f }", rnab[0], rnab[1], rnab[2]);
 #endif
 
-			_r = sqrt(CalculateRR_3d(rid, rnab, dr));
+			_r = sqrt(CalculateRR(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - dev_Params._L1)) / _r;
-			for (int d = 0; d < 3; d++)
-				fid[d] -= _f * dr[d];
-			//float dx = x[pp1] - xid;
-			//float dy = y[pp1] - yid;
-			//DevicePBC(dx, dev_simParams._XBOX);
-			//DevicePBC(dy, dev_simParams._YBOX);
-			//float rr = dx*dx + dy*dy;
-			//float _r = sqrtf(rr);
-			//float ffx = ff * dx;
-			//float ffy = ff * dy;
-			//fxid -= ffx;
-			//fyid -= ffy;
+			for_D_ fid[d] -= _f * dr[d];
 		}
 
 		//.. 1st neighbor spring forces behind
 		if (p > 0)
 		{
 			int pm1 = id - 1;
-			float rnab[3];
-			float dr[3];
+			float rnab[_D_], dr[_D_];
 			float _r, _f;
-			rnab[0] = r[pm1 + 0 * rshift];
-			rnab[1] = r[pm1 + 1 * rshift];
-			rnab[2] = r[pm1 + 2 * rshift];
-			_r = sqrt(CalculateRR_3d(rid, rnab, dr));
+			for_D_ rnab[d] = r[pm1 + d*rshift];
+			//rnab[0] = r[pm1 + 0 * rshift];
+			//rnab[1] = r[pm1 + 1 * rshift];
+			//rnab[2] = r[pm1 + 2 * rshift];
+			_r = sqrt(CalculateRR(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - dev_Params._L1)) / _r;
-			for (int d = 0; d < 3; d++)
-				fid[d] -= _f * dr[d];
-			//float dx = x[pm1] - xid;
-			//float dy = y[pm1] - yid;
-			//DevicePBC(dx, dev_simParams._XBOX);
-			//DevicePBC(dy, dev_simParams._YBOX);
-			//float rr = dx*dx + dy*dy;
-			//float _r = sqrtf(rr);
-			//float ff = -dev_Params._K1 * (_r - dev_Params._L1) / _r;
-			//float ffx = ff * dx;
-			//float ffy = ff * dy;
-			//fxid -= ffx;
-			//fyid -= ffy;
+			for_D_ fid[d] -= _f * dr[d];
 		}
 
 		//.. 2nd neighbor spring forces ahead
@@ -320,20 +301,19 @@ __global__ void InterForceKernel(float *f,
 			//.. everything but 1st neighbors
 			if (sep <= 1) continue;
 
-			float rnab[3];
-			float dr[3];
+			float rnab[3], dr[3];
 			float rr, _f;
-			rnab[0] = r[id2];
-			rnab[1] = r[id2 + rshift];
-			rnab[2] = r[id2 + 2 * rshift];
-			rr = CalculateRR_3d(rid, rnab, dr);
+			for_D_ rnab[d] = r[id2 + d*rshift];
+			//rnab[0] = r[id2];
+			//rnab[1] = r[id2 + rshift];
+			//rnab[2] = r[id2 + 2 * rshift];
+			rr = CalculateRR(rid, rnab, dr);
 
 			//.. repulsive only
 			if (rr > dev_Params._R2MIN) continue;
 
-			_f = CalculateLJ_3d(rr);
-			for (int d = 0; d < 3; d++)
-				fid[d] -= _f * dr[d];
+			_f = CalculateLJ(rr);
+			for_D_ fid[d] -= _f * dr[d];
  
 			//if (abs(id2 - id) >= 5)
 			//{
@@ -353,21 +333,16 @@ __global__ void InterForceKernel(float *f,
 		}
 
 		//.. viscous drag
-		for (int d = 0; d < 3; d++)
-			fid[d] -= dev_Params._GAMMA * vid[d];
+		for_D_ fid[d] -= dev_Params._GAMMA * vid[d];
 
 		//.. thermal fluctuations
-		for (int d = 0; d < 3; d++)
-			fid[d] += noiseScaler * randNum[id + d*dev_Params._NPARTICLES];
-
-		//fxid += scalor * randNum[id];
-		//fyid += scalor * randNum[id + dev_Params._NPARTICLES];
-		//printf("tid = %i:\tR = { %f, %f }\n", id, randNum[id], randNum[id + dev_Params._NPARTICLES]);
+		for_D_ fid[d] += noiseScaler * randNum[id + d*dev_Params._NPARTICLES];
 
 		//.. assign temp fxid and fyid to memory
-		f[id + 0 * fshift] += fid[0];
-		f[id + 1 * fshift] += fid[1];
-		f[id + 2 * fshift] += fid[2];
+		for_D_ f[id + d*fshift] += fid[d];
+		//f[id + 0 * fshift] += fid[0];
+		//f[id + 1 * fshift] += fid[1];
+		//f[id + 2 * fshift] += fid[2];
 
 
 #ifdef __PRINT_FORCES__

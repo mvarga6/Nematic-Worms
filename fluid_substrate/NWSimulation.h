@@ -1,5 +1,6 @@
 #ifndef __SIMULATION_H__
 #define __SIMULATION_H__
+// 2D
 // -----------------------------------------
 ////////	NEMATIC WORMS PROJECT	////////
 // -----------------------------------------
@@ -64,7 +65,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	ErrorHandler(cudaDeviceSynchronize());
 
 	//.. setup random number generator
-	this->rng = new GRNG(3 * params->_NPARTICLES, 0.0f, 1.0f);
+	this->rng = new GRNG(_D_ * params->_NPARTICLES, 0.0f, 1.0f);
 
 	//.. define the worms
 	this->worms = new Worms();
@@ -157,23 +158,26 @@ void NWSimulation::XYZPrint(int itime){
 
 	//.. pull data from GPU
 	this->worms->DataDeviceToHost();
-	this->worms->ColorXLinked();
+	//this->worms->ColorXLinked();
 
 	//.. print to ntypes
-	static const int ntypes = 4;
-	static const char ptypes[ntypes] = { 'A', 'B', 'C', 'D' };
-	static const int N = params->_NPARTICLES;
+	const int ntypes = 4;
+	const char ptypes[ntypes] = { 'A', 'B', 'C', 'D' };
+	const int N = params->_NPARTICLES;
 
 	int nBlownUp = 0;
 	this->fxyz << N + 4 << std::endl;
 	this->fxyz << nw::util::xyz::makeParameterLine(this->params, this->simparams, __NW_VERSION__);
 	for (int i = 0; i < params->_NPARTICLES; i++){
-		//int w = i / params->_NP;
-		//int t = w % ntypes;
-		float x = worms->r[i], y = worms->r[i + N], z = worms->r[i + 2 * N];
-		char c = worms->c[i];
-		if (abs(z) > 100.0f) nBlownUp++;
-		this->fxyz << c << " " << x << " " << y << " " << z << std::endl;
+		const int w = i / params->_NP;
+		const int t = w % ntypes;
+		float _r[3] = { 0, 0, 0 }; // always 3d
+		for_D_ _r[d] = worms->r[i + d*N];
+		//float x = worms->r[i], y = worms->r[i + N], z = 0.0f;
+		//char c = worms->c[i];
+		char c = ptypes[t];
+		//if (abs(z) > 100.0f) nBlownUp++;
+		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
 	}
 	this->fxyz << "E " << 0 << " " << 0 << " 0 " << std::endl;
 	this->fxyz << "E " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;

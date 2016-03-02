@@ -6,7 +6,9 @@
 
 #ifndef __MAIN_HEADERS__
 #define __MAIN_HEADERS__
-
+// Dimensions of simulation space
+#define _D_ 2
+#define for_D_ for(int d = 0; d < _D_; d++)
 // CUDA Library
 #include "cuda.h"
 #include "cuda_runtime.h"

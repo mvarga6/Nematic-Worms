@@ -1,7 +1,7 @@
 
 #ifndef __WORMS_KERNEL__SET_X_LIST_H__
 #define __WORMS_KERNEL__SET_X_LIST_H__
-
+// 2D only
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
 #include "NWSimulationParameters.h"

@@ -10,7 +10,7 @@
 #include "NWSimulationParameters.h"
 #include "NWBoundaryFunctions.h"
 #include "NWErrorHandler.h"
-
+// 2D
 class ForceXchanger;
 // -----------------------------------------------------------------------------------------
 //	This class defines a set of active flexible worms.
@@ -241,7 +241,7 @@ void Worms::InternalForces(){
 	DEBUG_MESSAGE("InternalForces");
 	std::clock_t b4 = std::clock();
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
-	int N = 3 * this->parameters->_NPARTICLES;
+	int N = _D_ * this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
 	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -268,9 +268,9 @@ void Worms::BendingForces(){
 void Worms::NoiseForces(){
 	DEBUG_MESSAGE("NoiseForces");
 	std::clock_t b4 = std::clock();
-	dim3 gridStruct(this->Blocks_Per_Kernel, 3);
+	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
 	dim3 blockStruct(this->Threads_Per_Block);
-	int N = 3 * this->parameters->_NPARTICLES;
+	int N = _D_ * this->parameters->_NPARTICLES;
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
 	NoiseKernel <<< gridStruct, blockStruct >>>
 	(
@@ -379,8 +379,6 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
-	
-	//return; // just for debugging the matching making
 
 	//.. apply forces from linkages to linker particle
 	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -415,7 +413,7 @@ void Worms::SlowUpdate(){
 		this->dev_r, this->rpitch
 	);*/
 	std::clock_t b4 = std::clock();
-	dim3 gridStruct(this->Blocks_Per_Kernel, 3);
+	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
 	dim3 blockStruct(this->Threads_Per_Block);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>
 	(
@@ -443,7 +441,7 @@ void Worms::QuickUpdate(){
 
 	std::clock_t b4 = std::clock();
 	const float increaseRatio = (float)this->envirn->_NSTEPS_INNER;
-	dim3 gridStruct(this->Blocks_Per_Kernel, 3);
+	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
 	dim3 blockStruct(this->Threads_Per_Block);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>
 	(
@@ -478,9 +476,7 @@ void Worms::CalculateThetaPhi(){
 //-------------------------------------------------------------------------------------------
 void Worms::DataDeviceToHost(){
 	DEBUG_MESSAGE("DataDeviceToHost");
-	//CheckSuccess(cudaMemcpy(this->X, this->dev_X, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
-	//CheckSuccess(cudaMemcpy(this->Y, this->dev_Y, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
-	//CheckSuccess(cudaMemcpy(this->Z, this->dev_Z, this->nparticles_float_alloc, cudaMemcpyDeviceToHost));
+
 	std::clock_t b4 = std::clock();
 	/*CheckSuccess(cudaMemcpy2D(this->r,
 		this->nparticles_float_alloc,
@@ -496,7 +492,7 @@ void Worms::DataDeviceToHost(){
 	else {
 		CheckSuccess(cudaMemcpy(this->r, 
 			this->dev_r, 
-			3 * this->nparticles_float_alloc, 
+			_D_ * this->nparticles_float_alloc,
 			cudaMemcpyDeviceToHost));
 		ErrorHandler(cudaDeviceSynchronize());
 		ErrorHandler(cudaGetLastError());
@@ -506,16 +502,11 @@ void Worms::DataDeviceToHost(){
 //-------------------------------------------------------------------------------------------
 void Worms::DataHostToDevice(){
 	DEBUG_MESSAGE("DataHostToDevice");
-	//CheckSuccess(cudaMemcpy(this->dev_X, this->X, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
-	//CheckSuccess(cudaMemcpy(this->dev_Y, this->Y, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
-	//CheckSuccess(cudaMemcpy(this->dev_Z, this->Z, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
-	//CheckSuccess(cudaMemcpy(this->dev_Vx, this->Vx, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
-	//CheckSuccess(cudaMemcpy(this->dev_Vy, this->Vy, this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 
 	if (this->pitched_memory)
 		this->DataHostToDevice_Pitched();
 	else {
-		CheckSuccess(cudaMemcpy(this->dev_r, this->r, 3 * this->nparticles_float_alloc, cudaMemcpyHostToDevice));
+		CheckSuccess(cudaMemcpy(this->dev_r, this->r, _D_ * this->nparticles_float_alloc, cudaMemcpyHostToDevice));
 		ErrorHandler(cudaDeviceSynchronize());
 		//ErrorHandler(cudaGetLastError());
 	}
@@ -671,10 +662,10 @@ void Worms::ZeroForce(){
 			this->fpitch,
 			0,
 			this->parameters->_NPARTICLES*sizeof(float),
-			this->height3));
+			_D_));
 	}
 	else {
-		CheckSuccess(cudaMemset(this->dev_f, 0, 3 * this->nparticles_float_alloc));
+		CheckSuccess(cudaMemset(this->dev_f, 0, _D_ * this->nparticles_float_alloc));
 	}
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
@@ -684,10 +675,10 @@ void Worms::AddConstantForce(int dim, float force){
 	DEBUG_MESSAGE("AddConstantForce");
 
 	AddForce <<<  this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-		(
+	(
 		this->dev_f, this->fpitch,
 		dim, force
-		);
+	);
 	ErrorHandler(cudaDeviceSynchronize());
 }
 //-------------------------------------------------------------------------------------------
@@ -706,7 +697,7 @@ void Worms::ColorXLinked(){
 // ------------------------------------------------------------------------------------------
 void Worms::AllocateHostMemory(){
 	DEBUG_MESSAGE("AllocateHostMemory");
-	this->r = new float[3*this->parameters->_NPARTICLES];
+	this->r = new float[_D_*this->parameters->_NPARTICLES];
 	this->c = new char[this->parameters->_NPARTICLES];
 }
 //-------------------------------------------------------------------------------------------
@@ -730,10 +721,10 @@ void Worms::AllocateGPUMemory(){
 	this->nlshift = this->parameters->_NPARTICLES;
 
 	//.. allocate linear memory
-	CheckSuccess(cudaMalloc((void**)&this->dev_r, 3 * this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_v, 3 * this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_f, 3 * this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_f_old, 3 * this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_r, _D_ * this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_v, _D_ * this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_f, _D_ * this->nparticles_float_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_f_old, _D_ * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_nlist, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_thphi, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
@@ -748,7 +739,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 
 	printf("\nUsing pitched memory:\t");
 
-	this->height3 = 3;
+	this->height3 = _D_;
 	this->height2 = 2;
 	this->heightNMAX = this->parameters->_NMAX;
 	size_t widthN = this->nparticles_float_alloc;
@@ -756,22 +747,22 @@ void Worms::AllocateGPUMemory_Pitched(){
 	CheckSuccess(cudaMallocPitch(&this->dev_r, 
 								&this->rpitch, 
 								widthN,
-								this->height3));
+								_D_));
 
 	CheckSuccess(cudaMallocPitch(&this->dev_v,
 								&this->vpitch,
 								widthN,
-								this->height3));
+								_D_));
 
 	CheckSuccess(cudaMallocPitch(&this->dev_f,
 								&this->fpitch,
 								widthN,
-								this->height3));
+								_D_));
 
 	CheckSuccess(cudaMallocPitch(&this->dev_f_old,
 								&this->fopitch,
 								widthN,
-								this->height3));
+								_D_));
 
 	CheckSuccess(cudaMallocPitch(&this->dev_nlist,
 								&this->nlpitch,
@@ -818,15 +809,6 @@ void Worms::AllocateGPUMemory_Pitched(){
 void Worms::FreeGPUMemory(){
 	DEBUG_MESSAGE("FreeGPUMemory");
 	cudaDeviceReset();
-	/*CheckSuccess(cudaFree(this->dev_X));
-	CheckSuccess(cudaFree(this->dev_Y));
-	CheckSuccess(cudaFree(this->dev_Vx));
-	CheckSuccess(cudaFree(this->dev_Vy));
-	CheckSuccess(cudaFree(this->dev_Fx));
-	CheckSuccess(cudaFree(this->dev_Fy));
-	CheckSuccess(cudaFree(this->dev_Fx_old));
-	CheckSuccess(cudaFree(this->dev_Fy_old));
-	CheckSuccess(cudaFree(this->dev_nlist));*/
 }
 //-------------------------------------------------------------------------------------------
 void Worms::DistributeWormsOnHost(){
@@ -837,62 +819,64 @@ void Worms::DistributeWormsOnHost(){
 	int np = this->parameters->_NP;
 	int xdim = this->parameters->_XDIM;
 	int ydim = this->parameters->_YDIM;
-	int zdim = this->parameters->_ZDIM;
+	//int zdim = this->parameters->_ZDIM;
 	float l1 = this->parameters->_L1;
 	float xbox = this->envirn->_XBOX;
 	float ybox = this->envirn->_YBOX;
 
 	float *x0 = new float[nworms];
 	float *y0 = new float[nworms];
-	float *z0 = new float[nworms];
+	//float *z0 = new float[nworms];
 	int iw = 0;
-	for (int k = 0; k < zdim; k++){
-		for (int i = 0; i < xdim; i++)
-		{
-			for (int j = 0; j < ydim; j++)
-			{
-				x0[iw] = 0.001 + float(i)*xbox / float(xdim);
-				y0[iw] = 0.001 + float(j)*ybox / float(ydim);
-				z0[iw] = float(k) * parameters->_RCUT + 20.0f;
-				iw++;
-			}
+	//for (int k = 0; k < zdim; k++){
+	for (int i = 0; i < xdim; i++){
+		for (int j = 0; j < ydim; j++){
+			x0[iw] = 0.001 + float(i)*xbox / float(xdim);
+			y0[iw] = 0.001 + float(j)*ybox / float(ydim);
+			//z0[iw] = float(k) * parameters->_RCUT + 20.0f;
+			iw++;
 		}
 	}
+	//}
 
 	// Distribute bodies
+	const float s[3] = { l1, 0, 0 }; // always 3d
 	for (int i = 0; i < nparts; i++)
 	{
-		float rx = 0.25f*float(rand()) / float(RAND_MAX);
-		float ry = 0.25f*float(rand()) / float(RAND_MAX);
-		float rz = 0.25f*float(rand()) / float(RAND_MAX);
-		int w = i / np;
-		int p = i % np;
-		float x = x0[w] + p * l1;
-		float y = y0[w];
-		float z = z0[w];
-		MovementBC(x, xbox);
-		MovementBC(y, ybox);
-		this->r[i + 0*nparts] = x + rx;
-		this->r[i + 1*nparts] = y + ry;
-		this->r[i + 2*nparts] = z + rz;
+		float rn[_D_];
+		for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
+		//float rx = 0.25f*float(rand()) / float(RAND_MAX);
+		//float ry = 0.25f*float(rand()) / float(RAND_MAX);
+		//float rz = 0.25f*float(rand()) / float(RAND_MAX);
+		const int w = i / np;
+		const int p = i % np;
+		float _r[_D_];
+		_r[0] = x0[w] + p * l1 + rn[0];
+		_r[1] = y0[w] + rn[1];
+		//float z = z0[w];
+		MovementBC(_r[0], xbox);
+		MovementBC(_r[1], ybox);
+		this->r[i + 0*nparts] = _r[0];
+		this->r[i + 1*nparts] = _r[1];
+		//this->r[i + 2*nparts] = z + rz;
 	}
 
 	delete[] x0;
 	delete[] y0;
-	delete[] z0;
+	//delete[] z0;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::AdjustDistribute(float target_percent){
 
 	//.. grab parameters
-	int np = this->parameters->_NP;
-	int nworms = this->parameters->_NWORMS;
-	int N = np * nworms;
+	const int np = this->parameters->_NP;
+	const int nworms = this->parameters->_NWORMS;
+	const int N = np * nworms;
 
 	//.. flip orientation for target_percent of worms
-	float * savex = new float[np]; 
-	float * savey = new float[np];
-	float * savez = new float[np]; 
+	float * save = new float[_D_ * np]; 
+	//float * save = new float[np];
+	//float * save = new float[np]; 
 
 	for (int w = 0; w < nworms; w++)
 	{
@@ -903,18 +887,20 @@ void Worms::AdjustDistribute(float target_percent){
 			for (int i = 0; i < np; i++)
 			{
 				int id = w*np + i;
-				savex[i] = this->r[id];
-				savey[i] = this->r[id + N];
-				savez[i] = this->r[id + 2 * N];
+				for_D_ save[i + d*np] = this->r[id + d*this->rshift];
+				//savex[i] = this->r[id];
+				//savey[i] = this->r[id + N];
+				//savez[i] = this->r[id + 2 * N];
 			}
 
 			//.. replace reversed particles
 			for (int j = 0; j < np; j++)
 			{
 				int id = w*np + j;
-				this->r[id] = savex[(np - 1 - j)];
-				this->r[id + N] = savey[(np - 1 - j)];
-				this->r[id + 2 * N] = savez[(np - 1) - j];
+				for_D_ this->r[id + d*this->rshift] = save[(np - 1 - j) + d*np];
+				//this->r[id] = savex[(np - 1 - j)];
+				//this->r[id + N] = savey[(np - 1 - j)];
+				//this->r[id + 2 * N] = savez[(np - 1) - j];
 			}
 		}
 	}
@@ -951,7 +937,7 @@ void Worms::PlaceWormExplicit(int wormId, float headX, float headY, float wormAn
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroHost(){
-	for (int i = 0; i < 3 *this->parameters->_NPARTICLES; i++)
+	for (int i = 0; i < _D_ *this->parameters->_NPARTICLES; i++)
 		this->r[i] = 0.0f;
 }
 //-------------------------------------------------------------------------------------------
@@ -961,7 +947,7 @@ void Worms::DataDeviceToHost_Pitched(){
 		this->dev_r,
 		this->rpitch,
 		this->nparticles_float_alloc,
-		this->height3,
+		_D_,
 		cudaMemcpyDeviceToHost));
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
@@ -973,7 +959,7 @@ void Worms::DataHostToDevice_Pitched(){
 		this->r,
 		this->nparticles_float_alloc,
 		this->nparticles_float_alloc,
-		this->height3,
+		_D_,
 		cudaMemcpyHostToDevice));
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
@@ -982,10 +968,10 @@ void Worms::DataHostToDevice_Pitched(){
 void Worms::ZeroGPU(){
 	DEBUG_MESSAGE("ZeroGPU");
 
-	CheckSuccess(cudaMemset((void**)this->dev_r, 0, 3 * this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_v, 0, 3 * this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_f, 0, 3 * this->nparticles_float_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_f_old, 0, 3 * this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_r, 0, _D_ * this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_v, 0, _D_ * this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_f, 0, _D_ * this->nparticles_float_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_f_old, 0, _D_ * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_thphi, 0, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
@@ -1002,25 +988,25 @@ void Worms::ZeroGPU_Pitched(){
 		this->rpitch,
 		0,
 		widthN,
-		this->height3));
+		_D_));
 
 	CheckSuccess(cudaMemset2D(this->dev_v,
 		this->vpitch,
 		0,
 		widthN,
-		this->height3));
+		_D_));
 
 	CheckSuccess(cudaMemset2D(this->dev_f,
 		this->fpitch,
 		0,
 		widthN,
-		this->height3));
+		_D_));
 
 	CheckSuccess(cudaMemset2D(this->dev_f_old,
 		this->fopitch,
 		0,
 		widthN,
-		this->height3));
+		_D_));
 
 	CheckSuccess(cudaMemset2D(this->dev_thphi,
 		this->tppitch,

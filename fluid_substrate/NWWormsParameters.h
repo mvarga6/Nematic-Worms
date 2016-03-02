@@ -1,7 +1,7 @@
 
 #ifndef __WORMS_PARAMETERS_H__
 #define __WORMS_PARAMETERS_H__
-
+// 2D
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "NWConstants.h"
@@ -15,7 +15,7 @@
 typedef struct {
 
 	//.. default setup config
-	int _XDIM, _YDIM, _ZDIM;
+	int _XDIM, _YDIM;
 
 	//.. particles per worm, # of worms, total particle #
 	int _NP, _NWORMS, _NPARTICLES;
@@ -72,7 +72,6 @@ namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
 		static const int	YDIM = 40;
-		static const int	ZDIM = 2;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
@@ -134,11 +133,6 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-ydim"){
 			if (i + 1 < argc){
 				parameters->_YDIM = (int)std::strtof(argv[1 + i++], NULL);
-			}
-		}
-		else if (arg == "-zdim"){
-			if (i + 1 < argc){
-				parameters->_ZDIM = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-np"){
@@ -279,7 +273,6 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	bool WCA = false, XRAMP = false; // flags
 	parameters->_XDIM = DEFAULT::WORMS::XDIM;
 	parameters->_YDIM = DEFAULT::WORMS::YDIM;
-	parameters->_ZDIM = DEFAULT::WORMS::ZDIM;
 	parameters->_NP = DEFAULT::WORMS::NP;
 	parameters->_LISTSETGAP = DEFAULT::WORMS::LISTSETGAP;
 	parameters->_NMAX = DEFAULT::WORMS::NMAX;
