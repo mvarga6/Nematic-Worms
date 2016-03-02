@@ -8,10 +8,10 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 //-----------------------------------------------------------------------------------
-__device__ void DevicePBC(float &pos, float L)
+__device__ void DevicePBC(float &dR, float L)
 {
-	if (pos > L / 2.0f) pos -= L;
-	if (pos < -L / 2.0f) pos += L;
+	if (dR > L / 2.0f) dR -= L;
+	if (dR < -L / 2.0f) dR += L;
 }
 //-----------------------------------------------------------------------------------
 __device__ void DeviceMovementPBC(float &R, float L)
