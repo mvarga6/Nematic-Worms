@@ -172,7 +172,7 @@ void NWSimulation::XYZPrint(int itime){
 		for_D_ _r[d] = worms->r[i + d*N];
 		//float x = worms->r[i], y = worms->r[i + N], z = 0.0f;
 		//char c = worms->c[i];
-		char c = ptypes[t];
+		const char c = ptypes[t];
 		//if (abs(z) > 100.0f) nBlownUp++;
 		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
 	}

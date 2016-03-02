@@ -41,6 +41,8 @@ __global__ void UpdateSystemKernel(float *f,
 		//.. boundary conditions
 		AdjPosPBC(rid, dev_simParams._BOX);
 
+		for_D_ r[id + d*rshift] = rid[d];
+
 		//.. update velocities
 		for_D_ v[id + d*vshift] += dv[d];
 		//DeviceMovementPBC(r[id], dev_simParams._XBOX);
