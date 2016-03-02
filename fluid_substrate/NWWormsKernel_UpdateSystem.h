@@ -7,8 +7,9 @@
 #include "NWParams.h"
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
-
+// -------------------------------------------------------------------------------------
 //.. Update positions and velocities of particles then save forces
+//	 Update list of cell positions for neighbor finding
 __global__ void UpdateSystemKernel(float *f,
 								   int fshift,
 								   float *f_old,
@@ -18,6 +19,7 @@ __global__ void UpdateSystemKernel(float *f,
 								   float *r,
 								   int rshift,
 								   int *cell,
+								   int cshift,
 								   float dt)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
@@ -39,8 +41,9 @@ __global__ void UpdateSystemKernel(float *f,
 		//.. update positions
 		for_D_ rid[d] += dr[d];
 
-		//.. boundary conditions
+		//.. boundary conditions and apply new pos
 		AdjPosPBC(rid, dev_simParams._BOX);
+		for_D_ r[id + d*rshift] = rid[d];
 
 		//.. update velocities
 		for_D_ v[id + d*vshift] += dv[d];
@@ -48,15 +51,19 @@ __global__ void UpdateSystemKernel(float *f,
 		//DeviceMovementPBC(r[id + rshift], dev_simParams._YBOX);
 
 		//.. update cell address
+		for_D_ cell[id + d*cshift] = (int)(rid[d] / dev_Params._DCELL);
 	}
 }
 
 
 // ---------------------------------------------------------------------------------------
+//.. Update positions and velocities of particles then save forces
+//	 Update list of cell positions for neighbor finding
 __global__ void FastUpdateKernel(float *f, int fshift,
 								 float *f_old, int foshift,
 								 float *v, int vshift,
 								 float *r, int rshift,
+								 int *cell, int cshift,
 								 float dt){
 	int tid = threadIdx.x + blockDim.x * blockIdx.x;
 	int bid = blockIdx.y;
@@ -66,6 +73,7 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		const int foid = tid + bid * foshift;
 		const int vid = tid + bid * vshift;
 		const int rid = tid + bid * rshift;
+		const int cid = tid + bid * cshift;
 
 		float dvx = 0.5f * (f[fid] + f_old[foid]) * dt;
 		float dx = v[vid] * dt + 0.5f * f_old[foid] * dt * dt;
@@ -73,9 +81,13 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		r[rid] += dx;
 		v[vid] += dvx;
 
-		//.. for X and Y dimensions
+		//.. for X, Y, and Z dimensions
 		if (bid == 0) DeviceMovementPBC(r[rid], dev_simParams._XBOX);
 		else if (bid == 1) DeviceMovementPBC(r[rid], dev_simParams._YBOX);
+		else if (bid == 2) DeviceMovementPBC(r[rid], dev_simParams._ZBOX);
+		
+		//.. update cell list
+		cell[cid] = (int)(r[rid] / dev_Params._DCELL);
 
 		f[fid] = 0.0f;
 	}
