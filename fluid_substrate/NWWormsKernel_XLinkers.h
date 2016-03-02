@@ -55,18 +55,21 @@ __global__ void XLinkerUpdateKernel(float *r,
 		else { // add certain percentage 
 			if (xlink[id] == -1) { // if unlinked
 				if (randNum[id] < change_percent) { // if attempting adding 
-					float rid[3], dr[3], _r[3], _rr;
-					rid[0] = r[id];
-					rid[1] = r[id + rshift];
-					rid[2] = r[id + 2 * rshift];
-					dr[0] = dr[1] = dr[2] = 0.0f;
+					float rid[_D_], dr[_D_], _r[_D_], _rr;
+					for_D_ rid[d] = r[id + d*rshift];
+					for_D_ dr[d] = 0.0f;
+					//rid[0] = r[id];
+					//rid[1] = r[id + rshift];
+					//rid[2] = r[id + 2 * rshift];
+					//dr[0] = dr[1] = dr[2] = 0.0f;
 					for (int n = 0; n < dev_Params._NMAX; n++){ // find someone to link with
 						int nid = nlist[id + n * nlshift]; // neighbor id
 						if (nid == -1) break; // end of neighbors
-						_r[0] = r[nid];
-						_r[1] = r[nid + rshift];
-						_r[2] = r[nid + 2 * rshift];
-						_rr = CalculateRR_3d(rid, _r, dr); // distane sqrd
+						for_D_ _r[d] = r[nid + d*rshift];
+						//_r[0] = r[nid];
+						//_r[1] = r[nid + rshift];
+						//_r[2] = r[nid + 2 * rshift];
+						_rr = CalculateRR(rid, _r, dr); // distane sqrd
 						if (_rr > linkCutoff*linkCutoff) continue; // if close enough
 						xlink[id] = nid; // assign linkage
 					}
@@ -94,7 +97,7 @@ __global__ void XLinkerForceKernel(float *f,
 				k = -k; // set force direction
 			}
 			else pid = xid; // apply force to particle linked to
-			float rid[3], rnab[3], dr[3]; // local position vectors
+			float rid[2], rnab[2], dr[2]; // local position vectors
 			for (int d = 0; d < 3; d++){ // for all dimensions
 				rid[d] = r[id + d*rshift]; // assign values for id
 				rnab[d] = r[xid + d*rshift]; // assign values for xid

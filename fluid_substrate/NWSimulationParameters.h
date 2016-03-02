@@ -1,7 +1,7 @@
 
 #ifndef __SIMULATION_PARAMETERS_H__
 #define __SIMULATION_PARAMETERS_H__
-
+// 2D
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include <string>
@@ -66,44 +66,36 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		std::string val;
 		if (arg == "-dt"){
 			if (i + 1 < argc){
-				//std::string val = argv[1 + i++];
 				parameters->_DT = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-xbox"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_XBOX = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-ybox"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_YBOX = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-nsteps"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_NSTEPS = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
-		// Change
 		else if (arg == "-nsteps-inner"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_NSTEPS_INNER = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-framerate"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_FRAMERATE = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-framesperfile"){
 			if (i + 1 < argc){
-				//val = std::string(argv[1 + i++]);
 				parameters->_FRAMESPERFILE = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
