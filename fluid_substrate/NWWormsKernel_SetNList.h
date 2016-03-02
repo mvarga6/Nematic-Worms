@@ -16,7 +16,7 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-		const int n1 = id % dev_Params._NP;
+		//const int n1 = id % dev_Params._NP;
 		const int w1 = id / dev_Params._NP;
 		int found = 0;
 
@@ -63,7 +63,7 @@ __global__ void FastSetNeighborListKernel(float *r, int rshift,
 		int w1 = id / np;
 		int w2 = nid / np;
 		if (w1 != w2){
-			float rid[3], rnab[3];
+			//float rid[3], rnab[3];
 			//.. unfinshed
 		}
 
