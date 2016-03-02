@@ -1,6 +1,7 @@
 #ifndef __WORMS_KERNEL__XLINKERS_H__
 #define __WORMS_KERNEL__XLINKERS_H__
 // -----------------------------------------------------------------------------------------
+#include "NWmain.h"
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
 #include "NWWormsParameters.h"
@@ -97,15 +98,14 @@ __global__ void XLinkerForceKernel(float *f,
 				k = -k; // set force direction
 			}
 			else pid = xid; // apply force to particle linked to
-			float rid[2], rnab[2], dr[2]; // local position vectors
-			for (int d = 0; d < 3; d++){ // for all dimensions
+			float rid[_D_], rnab[_D_], dr[_D_]; // local position vectors
+			for_D_ { // for all dimensions
 				rid[d] = r[id + d*rshift]; // assign values for id
 				rnab[d] = r[xid + d*rshift]; // assign values for xid
 			}
-			float _r = sqrt(CalculateRR_3d(rid, rnab, dr)); // distance
+			float _r = sqrt(CalculateRR(rid, rnab, dr)); // distance
 			float _f = -k * (_r - dev_Params._Lx) / _r; // magnitude of force
-			for (int d = 0; d < 3; d++) // for all dimensions
-				f[pid + d*fshift] += _f * dr[d]; // apply force component
+			for_D_ f[pid + d*fshift] += _f * dr[d]; // apply force component
 		}
 	}
 } // --------------------------------------------------------------------------------------
