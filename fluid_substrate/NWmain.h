@@ -3,18 +3,34 @@
 // Mike Varga
 // Liquid Crystal Institute
 // Chemical Physics 2016
-
+// ----------------------------------
 #ifndef __MAIN_HEADERS__
 #define __MAIN_HEADERS__
+// ---------------------------------
 // Dimensions of simulation space
+// and thus requires recompilation
+// when switched from 2 to 3 or
+// vice versa !!!
+// ---------------------------------
 #define _D_ 2
 #define for_D_ for(int d = 0; d < _D_; d++)
+// ---------------------------------
+// The Current version of sim
+// ---------------------------------
+#define __NW_VERSION__ 2.1
+//----------------------------------
+// Uncomment to print debugging
+// information
+//
+// #define __DEBUG__
+// 
+// --------------------------------
 // CUDA Library
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "curand_kernel.h"
-
+// ---------------------------------
 // Other Includes
 #include <stdio.h>
 #include <iostream>
@@ -30,11 +46,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <assert.h>
-// ---------------------------
-// The Current version of sim
-// --------------------------
-#define __NW_VERSION__ 2.1
-//#define __DEBUG__
+
+
 // Host Function Prototypes
 __host__ int ProcessCommandLine(int argc, char *argv[]);
 //__host__ int OpenDataFiles(void);
