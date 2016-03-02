@@ -848,8 +848,8 @@ void Worms::DistributeWormsOnHost(){
 
 	// Distribute bodies
 	const float s[3] = { l1, 0, 0 }; // always 3d
-	for (int i = 0; i < nparts; i++)
-	{
+	for (int i = 0; i < nparts; i++){
+		
 		float rn[_D_];
 		for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
 		//float rx = 0.25f*float(rand()) / float(RAND_MAX);
@@ -888,14 +888,11 @@ void Worms::AdjustDistribute(float target_percent){
 	//float * save = new float[np];
 	//float * save = new float[np]; 
 
-	for (int w = 0; w < nworms; w++)
-	{
+	for (int w = 0; w < nworms; w++){
 		float random = float(rand()) / float(RAND_MAX);
-		if (random <= target_percent)
-		{
+		if (random <= target_percent){
 			//.. store position of particles to be flipped
-			for (int i = 0; i < np; i++)
-			{
+			for (int i = 0; i < np; i++){
 				int id = w*np + i;
 				for_D_ save[i + d*np] = this->r[id + d*N];
 				//savex[i] = this->r[id];
@@ -904,8 +901,7 @@ void Worms::AdjustDistribute(float target_percent){
 			}
 
 			//.. replace reversed particles
-			for (int j = 0; j < np; j++)
-			{
+			for (int j = 0; j < np; j++){
 				int id = w*np + j;
 				for_D_ this->r[id + d*N] = save[(np - 1 - j) + d*np];
 				//this->r[id] = savex[(np - 1 - j)];

@@ -8,16 +8,16 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 //-----------------------------------------------------------------------------------
-__device__ void DevicePBC(float &dx, float L)
+__device__ void DevicePBC(float &pos, float L)
 {
-	if (dx > L / 2.0f) dx -= L;
-	if (dx < -L / 2.0f) dx += L;
+	if (pos > L / 2.0f) pos -= L;
+	if (pos < -L / 2.0f) pos += L;
 }
 //-----------------------------------------------------------------------------------
-__device__ void DeviceMovementPBC(float &x, float L)
+__device__ void DeviceMovementPBC(float &R, float L)
 {
-	if (x > L) x -= L;
-	if (x < 0) x += L;
+	if (R > L) R -= L;
+	if (R < 0) R += L;
 }
 //-----------------------------------------------------------------------------------
 __device__ bool InList(int arg, int* list, int listSize)
