@@ -858,7 +858,7 @@ void Worms::DistributeWormsOnHost(){
 		const int w = i / np;
 		const int p = i % np;
 		float _r[_D_];
-		for_D_ _r[d] = r0[w + d*nworms] + p * s[d];
+		for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
 		//_r[0] = x0[w] + p * l1 + rn[0];
 		//_r[1] = y0[w] + rn[1];
 		//float z = z0[w];
@@ -897,7 +897,7 @@ void Worms::AdjustDistribute(float target_percent){
 			for (int i = 0; i < np; i++)
 			{
 				int id = w*np + i;
-				for_D_ save[i + d*np] = this->r[id + d*this->rshift];
+				for_D_ save[i + d*np] = this->r[id + d*N];
 				//savex[i] = this->r[id];
 				//savey[i] = this->r[id + N];
 				//savez[i] = this->r[id + 2 * N];
@@ -907,7 +907,7 @@ void Worms::AdjustDistribute(float target_percent){
 			for (int j = 0; j < np; j++)
 			{
 				int id = w*np + j;
-				for_D_ this->r[id + d*this->rshift] = save[(np - 1 - j) + d*np];
+				for_D_ this->r[id + d*N] = save[(np - 1 - j) + d*np];
 				//this->r[id] = savex[(np - 1 - j)];
 				//this->r[id + N] = savey[(np - 1 - j)];
 				//this->r[id + 2 * N] = savez[(np - 1) - j];
