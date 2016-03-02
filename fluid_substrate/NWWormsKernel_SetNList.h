@@ -16,7 +16,6 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-		//const int n1 = id % dev_Params._NP;
 		const int w1 = id / dev_Params._NP;
 		int found = 0;
 
@@ -36,18 +35,10 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 
 			//.. add to nlist if within range
 			for_D_ _r[d] = r[p2 + d*rshift];
-			//_r[0] = r[p2]; 
-			//_r[1] = r[p2 + rshift]; 
-			//_r[2] = r[p2 + 2*rshift];
 			_rr = CalculateRR(rid, _r, dr);
-			
-			if ((_rr <= cutoff) && (found < dev_Params._NMAX))
-			{
+			if ((_rr <= cutoff) && (found < dev_Params._NMAX)){
 				int plcid = id + found++ * nlshift;
 				nlist[plcid] = p2;
-
-				//if (found == dev_Params._NMAX)
-				//	printf("\nFilled nlist for particle %i", id);
 			}
 		}
 	}

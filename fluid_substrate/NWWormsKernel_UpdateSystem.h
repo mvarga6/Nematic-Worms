@@ -22,38 +22,29 @@ __global__ void UpdateSystemKernel(float *f,
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
 	{
+		//.. local components
+		float dv[_D_], dr[_D_], rid[_D_];
+		for_D_ rid[d] = r[id + d*rshift];
+
 		//.. change in velocity
-		float dv[_D_], dr[_D_];
 		for_D_ dv[d] = 0.5f * (f[id + d*fshift] + f_old[id + d*foshift]) * dt;
-		//float dvx = 0.5f * (f[id] + f_old[id]) * dt;
-		//float dvy = 0.5f * (f[id + fshift] + f_old[id + foshift]) * dt;
-		//float dvz = 0.5f * (f[id + 2*fshift] + f_old[id + 2*foshift]) * dt;
 
 		//.. change in position
 		for_D_ dr[d] = v[id + d*vshift] * dt + 0.5f * f_old[id + d*foshift] * dt * dt;
-		//float dx = v[id] * dt + 0.5f * f_old[id] * dt * dt;
-		//float dy = v[id + vshift] * dt + 0.5f * f_old[id + foshift] * dt * dt;
-		//float dz = v[id + 2*vshift] * dt + 0.5f * f_old[id + 2*foshift] * dt * dt;
 
 		//.. save forces
 		for_D_ f_old[id + d*foshift] = f[id + d*fshift];
-		//f_old[id] = f[id];
-		//f_old[id + foshift] = f[id + fshift];
-		//f_old[id + 2*foshift] = f[id + 2*foshift];
 
-		//.. update positions and velocities
-		for_D_ r[id + d*rshift] += dr[d];
-		for_D_ v[id + d*vshift] += dv[d];
-		//r[id] += dx;
-		//r[id + rshift] += dy;
-		//r[id + 2*rshift] += dz;
-		//v[id] += dvx;
-		//v[id + vshift] += dvy;
-		//v[id + 2*vshift] += dvz;
+		//.. update positions
+		for_D_ rid[d] += dr[d];
 
 		//.. boundary conditions
-		DeviceMovementPBC(r[id], dev_simParams._XBOX);
-		DeviceMovementPBC(r[id + rshift], dev_simParams._YBOX);
+		AdjPosPBC(rid, dev_simParams._BOX);
+
+		//.. update velocities
+		for_D_ v[id + d*vshift] += dv[d];
+		//DeviceMovementPBC(r[id], dev_simParams._XBOX);
+		//DeviceMovementPBC(r[id + rshift], dev_simParams._YBOX);
 	}
 }
 

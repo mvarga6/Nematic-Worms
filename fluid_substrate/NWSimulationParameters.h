@@ -26,7 +26,8 @@ typedef struct {
 	int _NSTEPS_INNER;
 
 	//..system physical size
-	float _XBOX, _YBOX;
+	float _XBOX, _YBOX, _ZBOX;
+	float _BOX[_D_];
 
 } SimulationParameters;
 /* ------------------------------------------------------------------------
@@ -54,6 +55,7 @@ namespace DEFAULT {
 		static const float DT = 0.01f;
 		static const float XBOX = 100.0f;
 		static const float YBOX = 100.0f;
+		static const float ZBOX = 100.0f;
 		static const std::string FILENAME = "output.xyz";
 	}
 }
@@ -77,6 +79,13 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		else if (arg == "-ybox"){
 			if (i + 1 < argc){
 				parameters->_YBOX = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-zbox"){
+			if (i + 1 < argc){
+				parameters->_ZBOX = (int)std::strtof(argv[1 + i++], NULL);
+				if (_D_ != 3) 
+					printf("\n[ ERROR ] : Can not assign size of 3rd dimension in 2D simulation");
 			}
 		}
 		else if (arg == "-nsteps"){
@@ -113,6 +122,7 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_DT = DEFAULT::SIM::DT;
 	parameters->_XBOX = DEFAULT::SIM::XBOX;
 	parameters->_YBOX = DEFAULT::SIM::YBOX;
+	parameters->_ZBOX = DEFAULT::SIM::ZBOX;
 	parameters->_NSTEPS = DEFAULT::SIM::NSTEPS;
 	parameters->_NSTEPS_INNER = DEFAULT::SIM::NSTEPS_INNER;
 	parameters->_FRAMERATE = DEFAULT::SIM::FRAMERATE;
@@ -121,6 +131,8 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 
 	//.. get assign cmdline parameters
 	GrabParameters(parameters, argc, argv, outfile);
+	const float box[3] = { parameters->_XBOX, parameters->_YBOX, parameters->_ZBOX };
+	for_D_ parameters->_BOX[d] = box[d];
 
 	//.. put on GPU and check for error
 	cudaError_t err;
