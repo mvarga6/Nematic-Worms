@@ -59,17 +59,10 @@ __global__ void XLinkerUpdateKernel(float *r,
 					float rid[_D_], dr[_D_], _r[_D_], _rr;
 					for_D_ rid[d] = r[id + d*rshift];
 					for_D_ dr[d] = 0.0f;
-					//rid[0] = r[id];
-					//rid[1] = r[id + rshift];
-					//rid[2] = r[id + 2 * rshift];
-					//dr[0] = dr[1] = dr[2] = 0.0f;
 					for (int n = 0; n < dev_Params._NMAX; n++){ // find someone to link with
 						int nid = nlist[id + n * nlshift]; // neighbor id
 						if (nid == -1) break; // end of neighbors
 						for_D_ _r[d] = r[nid + d*rshift];
-						//_r[0] = r[nid];
-						//_r[1] = r[nid + rshift];
-						//_r[2] = r[nid + 2 * rshift];
 						_rr = CalculateRR(rid, _r, dr); // distane sqrd
 						if (_rr > linkCutoff*linkCutoff) continue; // if close enough
 						xlink[id] = nid; // assign linkage
@@ -103,8 +96,8 @@ __global__ void XLinkerForceKernel(float *f,
 				rid[d] = r[id + d*rshift]; // assign values for id
 				rnab[d] = r[xid + d*rshift]; // assign values for xid
 			}
-			float _r = sqrt(CalculateRR(rid, rnab, dr)); // distance
-			float _f = -k * (_r - dev_Params._Lx) / _r; // magnitude of force
+			const float _r = sqrt(CalculateRR(rid, rnab, dr)); // distance
+			const float _f = -k * (_r - dev_Params._Lx) / _r; // magnitude of force
 			for_D_ f[pid + d*fshift] += _f * dr[d]; // apply force component
 		}
 	}

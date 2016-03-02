@@ -22,8 +22,9 @@ __global__ void CalculateThetaKernel(float *r,
 			//float dx = r[pp1]			 - r[ix];
 			//float dy = r[pp1 + rshift]	 - r[iy];
 			//float dz = r[pp1 + 2*rshift] - r[iz];
-			DevicePBC(dr[0], dev_simParams._XBOX);
-			DevicePBC(dr[1], dev_simParams._YBOX);
+			AdjDistPBC(dr, dev_simParams._BOX);
+			//DevicePBC(dr[0], dev_simParams._XBOX);
+			//DevicePBC(dr[1], dev_simParams._YBOX);
 			const float rmag = mag(dr);
 			thphi[id] = atan2f(dr[1] / rmag, dr[0] / rmag);
 			thphi[id + tshift] = PI / 2.0f - asinf(dr[2] / rmag);
