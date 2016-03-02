@@ -49,9 +49,6 @@ private:
 //-------------------------------------------------------------------------------------------
 NWSimulation::NWSimulation(int argc, char *argv[]){
 
-	//.. clear everything on GPU
-	//cudaDeviceReset();
-
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
 	Init(this->params, argc, argv);
@@ -126,16 +123,16 @@ void NWSimulation::Run(){
 			this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
-			this->worms->XLinkerForces(itime, xdensity);
+			//this->worms->XLinkerForces(itime, xdensity);
 			this->worms->LJForces();
 			this->worms->QuickUpdate();
 		}
 
 		//.. finish time set with slow potential forces
-		this->worms->ZeroForce();
-		this->worms->AutoDriveForces(itime);
-		this->worms->LandscapeForces();
-		this->worms->SlowUpdate();
+		//this->worms->ZeroForce();
+		//this->worms->AutoDriveForces(itime);
+		//this->worms->LandscapeForces();
+		//this->worms->SlowUpdate();
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
