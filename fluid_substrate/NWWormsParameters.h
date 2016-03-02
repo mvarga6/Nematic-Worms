@@ -27,7 +27,7 @@ typedef struct {
 	int _LISTSETGAP, _NMAX;
 
 	//.. LJ energy and length scale, activity scalor
-	float _EPSILON, _SIGMA, _DRIVE;
+	float _EPSILON, _SIGMA, _DRIVE, _DRIVE_ROT;
 
 	//.. spring constants in worms
 	float _K1, _K2, _K3, _Ka;
@@ -81,6 +81,7 @@ namespace DEFAULT {
 		static const float	EPSILON = 0.2f;
 		static const float	SIGMA = 1.0f;
 		static const float	DRIVE = 1.0f;
+		static const float	DRIVE_ROT = 0.0f;
 		static const float	K1 = 57.146f;
 		static const float	K2 = 10.0f * K1;
 		static const float	K3 = 2.0f * K2 / 3.0f;
@@ -170,6 +171,11 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-drive"){
 			if (i + 1 < argc){
 				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-driverot"){
+			if (i + 1 < argc){
+				parameters->_DRIVE_ROT = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k1"){
@@ -287,6 +293,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_EPSILON = DEFAULT::WORMS::EPSILON;
 	parameters->_SIGMA = DEFAULT::WORMS::SIGMA;
 	parameters->_DRIVE = DEFAULT::WORMS::DRIVE;
+	parameters->_DRIVE_ROT = DEFAULT::WORMS::DRIVE_ROT;
 	parameters->_K1 = DEFAULT::WORMS::K1;
 	parameters->_K2 = DEFAULT::WORMS::K2;
 	parameters->_K3 = DEFAULT::WORMS::K3;

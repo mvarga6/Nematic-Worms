@@ -28,7 +28,7 @@ __global__ void DriveForceKernel(float *f,
 			for_D_ rnab[d] = r[(id + 1) + d*rshift]; // get pos of next in chain
 			umag = sqrt( CalculateRR(rid, rnab, dr) ); // calculate displacement vector and mag
 			for_D_ u[d] = dr[d] / umag; // make unit vector
-			Rotate2D(u, M_PI_2);
+			if (_D_ == 2 ) Rotate2D(u, dev_Params._DRIVE_ROT); // works for 2d only
 			for_D_ f[id + d*fshift] += dev_Params._DRIVE * u[d]; // apply drive along unit vector
 		}
 		//f[id]			 += dev_Params._DRIVE * cosf(thphi[id]) * sinphi;

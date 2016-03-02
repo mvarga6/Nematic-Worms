@@ -824,10 +824,11 @@ void Worms::DistributeWormsOnHost(){
 	const float l1 = this->parameters->_L1;
 	const float xbox = this->envirn->_XBOX;
 	const float ybox = this->envirn->_YBOX;
-	const float spacing[3] = {
-		xbox / float(xdim),
-		ybox / float(ydim),
-		parameters->_RCUT
+	const float zbox = this->envirn->_ZBOX;
+	const float spacing[3] = { // places worms in center of dimension
+		xbox / float(xdim + 1), // i.e. if zdim=1, z0=zbox/2
+		ybox / float(ydim + 1),
+		xbox / float(zdim + 1) //parameters->_RCUT
 	};
 	float * r0 = new float[_D_*nworms];
 	//float *x0 = new float[nworms];
@@ -837,7 +838,7 @@ void Worms::DistributeWormsOnHost(){
 	for (int k = 0; k < zdim; k++){
 		for (int i = 0; i < xdim; i++){
 			for (int j = 0; j < ydim; j++){
-				const float idx[3] = { i, j, k }; // always 3d
+				const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
 				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
 				//r0[iw] = 0.001 + float(i)*;
 				//r0[iw] = 0.001 + float(j)*;
@@ -848,21 +849,13 @@ void Worms::DistributeWormsOnHost(){
 	}
 
 	// Distribute bodies
-	const float s[3] = { l1, 0, 0 }; // always 3d
+	const float s[3] = { l1, 0, 0 }; // always 3d: slope of laying chains from head
 	for (int i = 0; i < nparts; i++){
-		
-		float rn[_D_];
-		for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
-		//float rx = 0.25f*float(rand()) / float(RAND_MAX);
-		//float ry = 0.25f*float(rand()) / float(RAND_MAX);
-		//float rz = 0.25f*float(rand()) / float(RAND_MAX);
 		const int w = i / np;
 		const int p = i % np;
-		float _r[_D_];
+		float rn[_D_], _r[_D_];
+		for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
 		for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
-		//_r[0] = x0[w] + p * l1 + rn[0];
-		//_r[1] = y0[w] + rn[1];
-		//float z = z0[w];
 		MovementBC(_r[0], xbox);
 		MovementBC(_r[1], ybox);
 		for_D_ r[i + d*nparts] = _r[d];
@@ -872,9 +865,6 @@ void Worms::DistributeWormsOnHost(){
 	}
 
 	delete[] r0;
-	//delete[] x0;
-	//delete[] y0;
-	//delete[] z0;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::AdjustDistribute(float target_percent){
