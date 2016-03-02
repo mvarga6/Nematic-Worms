@@ -308,12 +308,13 @@ void Worms::LJForces(){
 void Worms::AutoDriveForces(int itime, int istart = 0){
 	DEBUG_MESSAGE("AutoDriveForces");
 	if (itime < istart) return;
-	this->CalculateThetaPhi();
+	//this->CalculateThetaPhi();
 	std::clock_t b4 = std::clock();
 	DriveForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift, 
-		this->dev_thphi, this->tpshift
+		/*this->dev_thphi, this->tpshift*/
+		this->dev_r, this->rshift
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
