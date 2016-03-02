@@ -27,6 +27,7 @@ class Worms {
 	//.. neighbors list within worms
 	int * dev_nlist;
 	int * dev_xlink;
+	int * dev_cell;
 	int * dev_xcount;
 
 	//.. for pitched memory
@@ -37,6 +38,7 @@ class Worms {
 	size_t fopitch;
 	size_t tppitch;
 	size_t nlpitch;
+	size_t cpitch;
 
 	size_t rshift;
 	size_t vshift;
@@ -44,6 +46,7 @@ class Worms {
 	size_t foshift;
 	size_t tpshift;
 	size_t nlshift;
+	size_t cshift;
 
 	//.. pitch memory heights
 	size_t height3;
@@ -172,6 +175,7 @@ void Worms::ClearAll(){
 	this->dev_f = this->dev_f_old = NULL;
 	this->dev_xcount = NULL;
 	this->dev_xlink = NULL;
+	this->dev_cell = NULL;
 	this->dev_thphi = NULL;
 	this->rng = NULL;
 	this->parameters = NULL;
@@ -729,6 +733,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_nlist, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_thphi, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	ErrorHandler(cudaDeviceSynchronize());
@@ -765,6 +770,11 @@ void Worms::AllocateGPUMemory_Pitched(){
 								widthN,
 								_D_));
 
+	CheckSuccess(cudaMallocPitch(&this->dev_cell,
+								&this->cpitch,
+								this->nparticles_int_alloc,
+								_D_));
+
 	CheckSuccess(cudaMallocPitch(&this->dev_nlist,
 								&this->nlpitch,
 								this->nparticles_int_alloc,
@@ -776,6 +786,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 								this->height2));
 
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
+	//CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	//.. calculate and assign shifts
@@ -785,6 +796,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 	this->rshift = this->rpitch / sizeof(float);
 	this->tpshift = this->tppitch / sizeof(float);
 	this->nlshift = this->nlpitch / sizeof(int);
+	this->cshift = this->cpitch / sizeof(int);
 
 	//.. print to user pitches
 	printf("\nDevice memory pitches:\n----------------------\nf:\t%i\nf_old:\t%i\nv:\t%i\nr:\t%i\nthephi:\t%i\nnlist:\t%i\n",
@@ -972,6 +984,7 @@ void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_thphi, 0, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("\nMemory zeroed");
 }
@@ -1017,7 +1030,14 @@ void Worms::ZeroGPU_Pitched(){
 		this->nparticles_int_alloc,
 		this->heightNMAX));
 
+	CheckSuccess(cudaMemset2D(this->dev_cell,
+		this->cpitch,
+		-1,
+		this->nparticles_int_alloc,
+		_D_));
+
 	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
+	//CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroClocks(){

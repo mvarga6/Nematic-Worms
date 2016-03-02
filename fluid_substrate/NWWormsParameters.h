@@ -51,6 +51,9 @@ typedef struct {
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
 
+	//.. cell size for neighbor finding
+	float _DCELL;
+
 } WormsParameters;
 /* ------------------------------------------------------------------------
 *	This is the actual symbol that the parameters will be saved to 
@@ -100,6 +103,7 @@ namespace DEFAULT {
 		static const int	XSTART = 0;
 		static const int	XHOLD = -1; // needs to default to end
 		static const bool	XRAMP = false;
+		static const float	DCELL = 3.0f;
 	}
 }
 //----------------------------------------------------------------------------
@@ -116,6 +120,7 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 		parameters->_RCUT = parameters->_RMIN;
 	else
 		parameters->_RCUT = 2.5f * parameters->_SIGMA;
+	parameters->_DCELL = parameters->_RCUT + parameters->_BUFFER;
 	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT;
 	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f;
 	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f;
@@ -311,6 +316,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_Lx = DEFAULT::WORMS::Lx;
 	parameters->_XSTART = DEFAULT::WORMS::XSTART;
 	parameters->_XHOLD = DEFAULT::WORMS::XHOLD;
+	parameters->_DCELL = DEFAULT::WORMS::DCELL;
 	
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);

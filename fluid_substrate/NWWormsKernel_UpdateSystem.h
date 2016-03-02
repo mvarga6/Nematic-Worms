@@ -17,6 +17,7 @@ __global__ void UpdateSystemKernel(float *f,
 								   int vshift, 
 								   float *r,
 								   int rshift,
+								   int *cell,
 								   float dt)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
@@ -45,6 +46,8 @@ __global__ void UpdateSystemKernel(float *f,
 		for_D_ v[id + d*vshift] += dv[d];
 		//DeviceMovementPBC(r[id], dev_simParams._XBOX);
 		//DeviceMovementPBC(r[id + rshift], dev_simParams._YBOX);
+
+		//.. update cell address
 	}
 }
 
