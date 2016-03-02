@@ -32,6 +32,7 @@
 #include "curand_kernel.h"
 // ---------------------------------
 // Other Includes
+#define _USE_MATH_DEFINES
 #include <stdio.h>
 #include <iostream>
 #include <fstream>

@@ -65,4 +65,17 @@ __device__ float CalculateLJ(const float _rr, const float sig, const float eps){
 	return _lj_amp*((_2sig6 / (_rr*_rr*_rr*_rr*_rr*_rr*_rr)) - (1.00000f / (_rr*_rr*_rr*_rr)));
 }
 //---------------------------------------------------------------------------------
+__device__ void Rotate2D(float _v[2], const float theta){
+	const float costh = cosf(theta), sinth = sinf(theta);
+	const float R[2][2] = {
+		{ costh, -sinth },
+		{ sinth, costh }
+	};
+	float _nv[2] = { 0, 0 }; 
+	for (int i = 0; i < 2; i++) // for x and y
+		for (int j = 0; j < 2; j++) // sum over j
+		_nv[i] += R[i][j] * _v[j];
+	
+	_v[0] = _nv[0]; _v[1] = _nv[1]; // assign
+}
 #endif

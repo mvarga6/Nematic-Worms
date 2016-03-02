@@ -2,6 +2,7 @@
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__
 
+#define 
 namespace nw {
 	namespace constants {
 		static const float PI = 3.141592654f;
