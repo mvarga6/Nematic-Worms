@@ -69,7 +69,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. initial worms object
 	this->time = 0.0f;
-	this->worms->Init(this->rng, this->params, this->simparams, true, 512);
+	this->worms->Init(this->rng, this->params, this->simparams, !this->simparams->_LMEM, 512);
 
 	//.. outputfile
 	this->fxyz.open(this->outputfile.c_str());
@@ -88,6 +88,9 @@ NWSimulation::~NWSimulation(){
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	
+	//this->XYZPrint(0);
+	//return;
+
 	//.. grab needed parameters
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;

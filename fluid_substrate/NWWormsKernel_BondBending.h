@@ -40,15 +40,11 @@ __global__ void BondBendingForces(float *f,
 				//.. distances
 				r12[d] = r2[d] - r1[d];
 				r23[d] = r3[d] - r2[d];
-				//.. PBC
-				//if (d < 2) {
-				//	DevicePBC(r12[d], BOX[d]);
-				//	DevicePBC(r23[d], BOX[d]);
-				//}
 			}
-			AdjDistPBC(r1, dev_simParams._BOX);
-			AdjDistPBC(r2, dev_simParams._BOX);
-			AdjDistPBC(r3, dev_simParams._BOX);
+
+			//.. boundary conditions
+			AdjDistPBC(r12, dev_simParams._BOX);
+			AdjDistPBC(r23, dev_simParams._BOX);
 
 			//.. calculate terms
 			float dot_r12_r23 = dot(r12, r23);
