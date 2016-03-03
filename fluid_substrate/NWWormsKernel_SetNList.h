@@ -36,12 +36,12 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 			//.. stop if in same worm
 			if (w2 == w1) continue;
 
-			//next = false; // set to do calculate
-			//for_D_ ncid[d] = cell[p2 + d*cshift]; // get neighbor cell indices
-			//for_D_ dcid[d] = abs(cid[d] - dcid[d]); // mag of distance in each dim
-			//for_D_ if (dcid[d] == (ncell[d] - 1)) dcid[d] = 1; // over the boundary fix
-			//for_D_ if (dcid[d] > 1) next = true; // set flag if to far away
-			//if (next) continue; // to next particle
+			next = false; // set to do calculate
+			for_D_ ncid[d] = cell[p2 + d*cshift]; // get neighbor cell indices
+			for_D_ dcid[d] = abs(cid[d] - dcid[d]); // mag of distance in each dim
+			for_D_ if (dcid[d] == (ncell[d] - 1)) dcid[d] = 1; // over the boundary fix
+			for_D_ if (dcid[d] > 1) next = true; // set flag if to far away
+			if (next) continue; // to next particle
 
 			//.. add to nlist if within range
 			for_D_ rnab[d] = r[p2 + d*rshift];
