@@ -82,7 +82,7 @@ namespace DEFAULT {
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
-		static const int	LISTSETGAP = 20;
+		static const int	LISTSETGAP = 10;
 		static const int	NMAX = 128;
 		static const float	EPSILON = 0.2f;
 		static const float	SIGMA = 1.0f;
@@ -98,7 +98,7 @@ namespace DEFAULT {
 		static const float	KBT = 0.25f;
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
-		static const float	BUFFER = 0.5f;
+		static const float	BUFFER = 1.0f;
 		static const float	LANDSCALE = 1.0f;
 		static const float	XLINKERDENSITY = 0.0f;
 		static const float	Kx = 10.0f;
