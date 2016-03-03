@@ -11,9 +11,9 @@
 __global__ void SetNeighborList_N2Kernel(float *r,
 										 int rshift, 
 										 int *nlist,
+										 int nlshift,
 										 int *cell,
-										 int cshift,
-										 int nlshift)
+										 int cshift)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){

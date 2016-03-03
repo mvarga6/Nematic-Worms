@@ -142,8 +142,9 @@ private:
 	void ZeroGPU_Pitched();
 
 	void DistributeWormsOnHost();
-	void PlaceWormExplicit(int wormId, float headX, float headY, float wormAngle);
 	void AdjustDistribute(float target_percent);
+	void PlaceWormExplicit(int wormId, float headX, float headY, float wormAngle);
+	void RandomAdheringDistribute();
 	void CheckSuccess(cudaError_t err);
 	void FigureBlockThreadStructure(int threadsPerBlock);
 };
@@ -426,6 +427,7 @@ void Worms::SlowUpdate(){
 		this->dev_f_old, this->foshift,
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
+		this->dev_cell, this->cshift,
 		this->envirn->_DT
 	);
 	ErrorHandler(cudaDeviceSynchronize());
@@ -454,6 +456,7 @@ void Worms::QuickUpdate(){
 		this->dev_f_old, this->foshift,
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
+		this->dev_cell, this->cshift,
 		this->envirn->_DT / increaseRatio
 	);
 	ErrorHandler(cudaDeviceSynchronize());
@@ -551,7 +554,8 @@ void Worms::ResetNeighborsList(){
 	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_r, this->rshift,
-		this->dev_nlist, this->nlshift
+		this->dev_nlist, this->nlshift,
+		this->dev_cell, this->cshift
 	);
 
 	ErrorHandler(cudaDeviceSynchronize());
@@ -943,6 +947,90 @@ void Worms::PlaceWormExplicit(int wormId, float headX, float headY, float wormAn
 		MovementBC(this->r[id], this->envirn->_XBOX);
 		MovementBC(this->r[id + N], this->envirn->_YBOX);
 	}
+}
+//-------------------------------------------------------------------------------------------
+void Worms::RandomAdheringDistribute(){ // 2D only
+
+	//.. grab parameters
+	const int nworms = this->parameters->_NWORMS;
+	const int nparts = this->parameters->_NPARTICLES;
+	const int np = this->parameters->_NP;
+	const float l1 = this->parameters->_L1;
+	const float xbox = this->envirn->_XBOX;
+	const float ybox = this->envirn->_YBOX;
+	const float zbox = this->envirn->_ZBOX;
+	float * box = this->envirn->_BOX;
+	const float r2min = this->parameters->_R2MIN;
+
+	float r0[_D_], theta, phi, u[3];
+	for (int w = 0; w < nworms; w++){
+
+		float * worm = new float[_D_*np];
+		for_D_ r0[d] = this->envirn->_BOX[d] * (float(rand()) / float(RAND_MAX)); // random pos in box
+		for_D_ worm[0 + d*np] = r0[d]; // assing to current worm
+
+		//.. pick random 2pi angle for theta and pi for phi for 2nd particle
+		theta = 2.0f * M_PI * (float(rand()) / float(RAND_MAX));
+		//phi = M_PI * (float(rand()) / float(RAND_MAX)); // uncomment for 3D
+		// const float sinph = sinf(phi), cosph = cosf(phi);
+		const float sinph = 1.0f, cosph = 0.0f; // for 2D debugging
+
+		//.. connection vector
+		u[0] = l1 * cosf(theta)*sinph;
+		u[1] = l1 * sinf(theta)*sinph;
+		u[2] = l1 * cosph;
+		
+		//.. place second particle dist l1 from 1st
+		for_D_ worm[1 + d*np] = r0[d] + u[d]; // place second particle
+		for_D_ r0[d] = worm[1 + d*np]; // new starting point to 2nd particles
+
+		//.. loop through rest of worm
+		const float maxAngle = M_PI / 10;
+		for (int p = 2; p < np; p++){
+
+			//.. pick angle with [-maxTheta, maxTheta]
+			theta = maxAngle * (2 * (float(rand()) / float(RAND_MAX)) - 1);
+			//phi = M_PI_2 + maxAngle * (2 * (float(rand()) / float(RAND_MAX)) - 1); // uncomment for 3D
+			// const float sinph = sinf(phi), cosph = cosf(phi);
+			const float sinph = 1.0f, cosph = 0.0f; // for 2D debugging
+
+			//.. connection vector
+			u[0] = l1 * cosf(theta)*sinph;
+			u[1] = l1 * sinf(theta)*sinph;
+			u[2] = l1 * cosph;
+
+			for_D_ worm[p + d*np] = r0[d] + u[d];
+			for_D_ r0[d] = worm[p + d*np]; // set next starting point to this worm
+		}
+
+		//.. check if any other worm has over lapping particles (not for first worm)
+		bool okay = true;
+		for (int w2 = 0; w2 < w; w++){ //.. loop through other placed worms
+			for (int p1 = 0; p1 < np; p1++){ // particle in first worm
+				for (int p2 = 0; p2 < np; p2++){ // particle in 2nd worm
+					float dr[_D_], rr = 0.0f;
+					const int id2 = w2*np + p2;
+					for_D_ dr[d] = this->r[id2 + d*nparts] - worm[p1 + d*np];
+					for_D_ PBC(dr[d], box[d]);
+					for_D_ rr += dr[d] * dr[d];
+					if (rr < r2min){ // flag too close
+						okay = false;
+					}
+				}
+			}
+		}
+
+		if (okay) { // set to this->r[]
+			for (int p = 0; p < np; p++){
+				int id = w*np + p;
+				for_D_ this->r[id + d*nparts] = worm[p + d*np];
+				printf("\n%i worms placed", w);
+			}
+		}
+
+		delete[] worm;
+	}
+
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroHost(){
