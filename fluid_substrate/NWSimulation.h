@@ -88,8 +88,8 @@ NWSimulation::~NWSimulation(){
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	
-	this->XYZPrint(0);
-	return;
+	//this->XYZPrint(0);
+	//return;
 
 	//.. grab needed parameters
 	const int	nsteps		 = this->simparams->_NSTEPS;
