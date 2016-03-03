@@ -27,6 +27,7 @@ class Worms {
 	//.. neighbors list within worms
 	int * dev_nlist;
 	int * dev_xlink;
+	int * dev_cell;
 	int * dev_xcount;
 
 	//.. for pitched memory
@@ -37,6 +38,7 @@ class Worms {
 	size_t fopitch;
 	size_t tppitch;
 	size_t nlpitch;
+	size_t cpitch;
 
 	size_t rshift;
 	size_t vshift;
@@ -44,6 +46,7 @@ class Worms {
 	size_t foshift;
 	size_t tpshift;
 	size_t nlshift;
+	size_t cshift;
 
 	//.. pitch memory heights
 	size_t height3;
@@ -139,8 +142,9 @@ private:
 	void ZeroGPU_Pitched();
 
 	void DistributeWormsOnHost();
-	void PlaceWormExplicit(int wormId, float headX, float headY, float wormAngle);
 	void AdjustDistribute(float target_percent);
+	void PlaceWormExplicit(int wormId, float headX, float headY, float wormAngle);
+	void RandomAdheringDistribute();
 	void CheckSuccess(cudaError_t err);
 	void FigureBlockThreadStructure(int threadsPerBlock);
 };
@@ -172,6 +176,7 @@ void Worms::ClearAll(){
 	this->dev_f = this->dev_f_old = NULL;
 	this->dev_xcount = NULL;
 	this->dev_xlink = NULL;
+	this->dev_cell = NULL;
 	this->dev_thphi = NULL;
 	this->rng = NULL;
 	this->parameters = NULL;
@@ -197,17 +202,28 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 				bool usePitchedMemory = false,
 				int threadsPerBlock = 256){
 	DEBUG_MESSAGE("Init");
+	
+	//.. set local state
 	this->pitched_memory = usePitchedMemory;
 	this->rng = gaussianRandomNumberGenerator;
 	this->parameters = wormsParameters;
 	this->envirn = simParameters;
+
+	//.. memory structure and host memory init
 	this->FigureBlockThreadStructure(threadsPerBlock);
 	this->AllocateHostMemory();
 	this->ZeroHost();
 	this->ZeroClocks();
-	this->DistributeWormsOnHost();
-	this->AdjustDistribute(0.5f);
 
+	//.. choose distribute method (on host)
+	if (wormsParameters->_RAD) 
+		this->RandomAdheringDistribute();
+	else{
+		this->DistributeWormsOnHost();
+		this->AdjustDistribute(0.5f);
+	}
+	
+	//.. choose memory allocation methods
 	if (usePitchedMemory){
 		this->AllocateGPUMemory_Pitched();
 		this->ZeroGPU_Pitched();
@@ -217,6 +233,7 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 		this->ZeroGPU();
 	}
 
+	//.. transfer to GPU and prep for run
 	this->DataHostToDevice();
 	this->CalculateThetaPhi();
 	this->ResetNeighborsList();
@@ -422,6 +439,7 @@ void Worms::SlowUpdate(){
 		this->dev_f_old, this->foshift,
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
+		this->dev_cell, this->cshift,
 		this->envirn->_DT
 	);
 	ErrorHandler(cudaDeviceSynchronize());
@@ -450,6 +468,7 @@ void Worms::QuickUpdate(){
 		this->dev_f_old, this->foshift,
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
+		this->dev_cell, this->cshift,
 		this->envirn->_DT / increaseRatio
 	);
 	ErrorHandler(cudaDeviceSynchronize());
@@ -547,7 +566,8 @@ void Worms::ResetNeighborsList(){
 	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_r, this->rshift,
-		this->dev_nlist, this->nlshift
+		this->dev_nlist, this->nlshift,
+		this->dev_cell, this->cshift
 	);
 
 	ErrorHandler(cudaDeviceSynchronize());
@@ -729,6 +749,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_nlist, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_thphi, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
+	CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	ErrorHandler(cudaDeviceSynchronize());
@@ -765,6 +786,11 @@ void Worms::AllocateGPUMemory_Pitched(){
 								widthN,
 								_D_));
 
+	CheckSuccess(cudaMallocPitch(&this->dev_cell,
+								&this->cpitch,
+								this->nparticles_int_alloc,
+								_D_));
+
 	CheckSuccess(cudaMallocPitch(&this->dev_nlist,
 								&this->nlpitch,
 								this->nparticles_int_alloc,
@@ -776,6 +802,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 								this->height2));
 
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
+	//CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	//.. calculate and assign shifts
@@ -785,6 +812,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 	this->rshift = this->rpitch / sizeof(float);
 	this->tpshift = this->tppitch / sizeof(float);
 	this->nlshift = this->nlpitch / sizeof(int);
+	this->cshift = this->cpitch / sizeof(int);
 
 	//.. print to user pitches
 	printf("\nDevice memory pitches:\n----------------------\nf:\t%i\nf_old:\t%i\nv:\t%i\nr:\t%i\nthephi:\t%i\nnlist:\t%i\n",
@@ -933,6 +961,91 @@ void Worms::PlaceWormExplicit(int wormId, float headX, float headY, float wormAn
 	}
 }
 //-------------------------------------------------------------------------------------------
+void Worms::RandomAdheringDistribute(){ // 2D only
+
+	//.. grab parameters
+	printf("\n\nPlacing %i using random adhersion.", this->parameters->_NWORMS);
+	const int nworms = this->parameters->_NWORMS;
+	const int nparts = this->parameters->_NPARTICLES;
+	const int np = this->parameters->_NP;
+	const float l1 = this->parameters->_L1;
+	const float xbox = this->envirn->_XBOX;
+	const float ybox = this->envirn->_YBOX;
+	const float zbox = this->envirn->_ZBOX;
+	float * box = this->envirn->_BOX;
+	const float r2min = this->parameters->_R2MIN;
+
+	float r0[_D_], theta, phi, u[3];
+	for (int w = 0; w < nworms; w++){
+
+		float * worm = new float[_D_*np];
+		for_D_ r0[d] = this->envirn->_BOX[d] * (float(rand()) / float(RAND_MAX)); // random pos in box
+		for_D_ worm[0 + d*np] = r0[d]; // assing to current worm
+
+		//.. pick random 2pi angle for theta and pi for phi for 2nd particle
+		theta = 2.0f * M_PI * (float(rand()) / float(RAND_MAX));
+		//phi = M_PI * (float(rand()) / float(RAND_MAX)); // uncomment for 3D
+		// const float sinph = sinf(phi), cosph = cosf(phi);
+		const float sinph = 1.0f, cosph = 0.0f; // for 2D debugging
+
+		//.. connection vector
+		u[0] = l1 * cosf(theta)*sinph;
+		u[1] = l1 * sinf(theta)*sinph;
+		u[2] = l1 * cosph;
+		
+		//.. place second particle dist l1 from 1st
+		for_D_ worm[1 + d*np] = r0[d] + u[d]; // place second particle
+		for_D_ r0[d] = worm[1 + d*np]; // new starting point to 2nd particles
+
+		//.. loop through rest of worm
+		const float maxAngle = M_PI / 10;
+		for (int p = 2; p < np; p++){
+
+			//.. pick angle with [-maxTheta, maxTheta]
+			theta = maxAngle * (2 * (float(rand()) / float(RAND_MAX)) - 1);
+			//phi = M_PI_2 + maxAngle * (2 * (float(rand()) / float(RAND_MAX)) - 1); // uncomment for 3D
+			// const float sinph = sinf(phi), cosph = cosf(phi);
+			const float sinph = 1.0f, cosph = 0.0f; // for 2D debugging
+
+			//.. connection vector
+			u[0] = l1 * cosf(theta)*sinph;
+			u[1] = l1 * sinf(theta)*sinph;
+			u[2] = l1 * cosph;
+
+			for_D_ worm[p + d*np] = r0[d] + u[d];
+			for_D_ r0[d] = worm[p + d*np]; // set next starting point to this worm
+		}
+
+		//.. check if any other worm has over lapping particles (not for first worm)
+		bool okay = true;
+		for (int w2 = 0; w2 < w; w++){ //.. loop through other placed worms
+			for (int p1 = 0; p1 < np; p1++){ // particle in first worm
+				for (int p2 = 0; p2 < np; p2++){ // particle in 2nd worm
+					float dr[_D_], rr = 0.0f;
+					const int id2 = w2*np + p2;
+					for_D_ dr[d] = this->r[id2 + d*nparts] - worm[p1 + d*np];
+					for_D_ PBC(dr[d], box[d]);
+					for_D_ rr += dr[d] * dr[d];
+					if (rr < r2min){ // flag too close
+						okay = false;
+					}
+				}
+			}
+		}
+
+		if (okay) { // set to this->r[]
+			for (int p = 0; p < np; p++){
+				int id = w*np + p;
+				for_D_ this->r[id + d*nparts] = worm[p + d*np];
+				printf("\n%i worms placed", w);
+			}
+		}
+
+		delete[] worm;
+	}
+
+}
+//-------------------------------------------------------------------------------------------
 void Worms::ZeroHost(){
 	for (int i = 0; i < _D_ *this->parameters->_NPARTICLES; i++)
 		this->r[i] = 0.0f;
@@ -972,6 +1085,7 @@ void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_thphi, 0, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
+	CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("\nMemory zeroed");
 }
@@ -1017,7 +1131,14 @@ void Worms::ZeroGPU_Pitched(){
 		this->nparticles_int_alloc,
 		this->heightNMAX));
 
+	CheckSuccess(cudaMemset2D(this->dev_cell,
+		this->cpitch,
+		-1,
+		this->nparticles_int_alloc,
+		_D_));
+
 	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
+	//CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroClocks(){

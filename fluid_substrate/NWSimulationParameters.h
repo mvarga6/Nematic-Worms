@@ -29,6 +29,9 @@ typedef struct {
 	float _XBOX, _YBOX, _ZBOX;
 	float _BOX[_D_];
 
+	//.. flags for sim prodecures
+	bool _LMEM;
+
 } SimulationParameters;
 /* ------------------------------------------------------------------------
 *	This is the actual symbol that the parameters will be saved to
@@ -57,6 +60,7 @@ namespace DEFAULT {
 		static const float YBOX = 100.0f;
 		static const float ZBOX = 100.0f;
 		static const std::string FILENAME = "output.xyz";
+		static const bool LMEM = false;
 	}
 }
 //--------------------------------------------------------------------------
@@ -113,6 +117,9 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 				outfile = std::string(argv[1 + i++]);
 			}
 		}
+		else if (arg == "-lmem"){
+			parameters->_LMEM = true;
+		}
 	}
 }
 //--------------------------------------------------------------------------
@@ -128,9 +135,12 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_FRAMERATE = DEFAULT::SIM::FRAMERATE;
 	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
 	outfile = DEFAULT::SIM::FILENAME;
+	parameters->_LMEM = DEFAULT::SIM::LMEM;
 
 	//.. get assign cmdline parameters
 	GrabParameters(parameters, argc, argv, outfile);
+
+	//.. calculate parameters
 	const float box[3] = { parameters->_XBOX, parameters->_YBOX, parameters->_ZBOX };
 	for_D_ parameters->_BOX[d] = box[d];
 
