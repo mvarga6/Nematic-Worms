@@ -854,23 +854,17 @@ void Worms::DistributeWormsOnHost(){
 	const float ybox = this->envirn->_YBOX;
 	const float zbox = this->envirn->_ZBOX;
 	const float spacing[3] = { // places worms in center of dimension
-		xbox / float(xdim + 1), // i.e. if zdim=1, z0=zbox/2
-		ybox / float(ydim + 1),
-		zbox / float(zdim + 1) //parameters->_RCUT
+		xbox / float(xdim + 1), // center of xdim
+		ybox / float(ydim + 1), // center of ydim
+		this->parameters->_RCUT	// btm of zdim, rcut apart
 	};
 	float * r0 = new float[_D_*nworms];
-	//float *x0 = new float[nworms];
-	//float *y0 = new float[nworms];
-	//float *z0 = new float[nworms];
 	int iw = 0;
 	for (int k = 0; k < zdim; k++){
 		for (int i = 0; i < xdim; i++){
 			for (int j = 0; j < ydim; j++){
 				const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
 				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
-				//r0[iw] = 0.001 + float(i)*;
-				//r0[iw] = 0.001 + float(j)*;
-				//z0[iw] = float(k) *;
 				iw++;
 			}
 		}
@@ -887,9 +881,6 @@ void Worms::DistributeWormsOnHost(){
 		MovementBC(_r[0], xbox);
 		MovementBC(_r[1], ybox);
 		for_D_ r[i + d*nparts] = _r[d];
-		//this->r[i + 0*nparts] = _r[0];
-		//this->r[i + 1*nparts] = _r[1];
-		//this->r[i + 2*nparts] = z + rz;
 	}
 
 	delete[] r0;
