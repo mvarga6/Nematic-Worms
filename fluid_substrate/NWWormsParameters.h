@@ -43,7 +43,7 @@ typedef struct {
 	float _RMIN, _R2MIN;
 	float _RCUT, _R2CUT;
 
-	//.. cross-linker density, spring constant, and distance
+	//.. cross-linker density, spring constant, distance, and flag
 	float _XLINKERDENSITY, _Kx, _Lx;
 	int _XSTART, _XHOLD;
 	bool _XRAMP;
@@ -53,6 +53,9 @@ typedef struct {
 
 	//.. cell size for neighbor finding
 	float _DCELL;
+
+	//.. flag for random adhering distribute
+	bool _RAD;
 
 } WormsParameters;
 /* ------------------------------------------------------------------------
@@ -104,6 +107,7 @@ namespace DEFAULT {
 		static const int	XHOLD = -1; // needs to default to end
 		static const bool	XRAMP = false;
 		static const float	DCELL = 3.0f;
+		static const bool	RAD = false;
 	}
 }
 //----------------------------------------------------------------------------
@@ -283,6 +287,10 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 			parameters->_XRAMP = true;
 			printf("\nRamping cross-linker denisty from 0 -> [xlink]");
 		}
+		else if (arg == "-rad"){
+			parameters->_RAD = true;
+			printf("\nInitializing worms using Random Adhersion");
+		}
 	}
 }
 //--------------------------------------------------------------------------
@@ -317,6 +325,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_XSTART = DEFAULT::WORMS::XSTART;
 	parameters->_XHOLD = DEFAULT::WORMS::XHOLD;
 	parameters->_DCELL = DEFAULT::WORMS::DCELL;
+	parameters->_RAD = DEFAULT::WORMS::RAD;
 	
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);

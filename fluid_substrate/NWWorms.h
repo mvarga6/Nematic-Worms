@@ -202,17 +202,28 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 				bool usePitchedMemory = false,
 				int threadsPerBlock = 256){
 	DEBUG_MESSAGE("Init");
+	
+	//.. set local state
 	this->pitched_memory = usePitchedMemory;
 	this->rng = gaussianRandomNumberGenerator;
 	this->parameters = wormsParameters;
 	this->envirn = simParameters;
+
+	//.. memory structure and host memory init
 	this->FigureBlockThreadStructure(threadsPerBlock);
 	this->AllocateHostMemory();
 	this->ZeroHost();
 	this->ZeroClocks();
-	this->DistributeWormsOnHost();
-	this->AdjustDistribute(0.5f);
 
+	//.. choose distribute method (on host)
+	if (wormsParameters->_RAD) 
+		this->RandomAdheringDistribute();
+	else{
+		this->DistributeWormsOnHost();
+		this->AdjustDistribute(0.5f);
+	}
+	
+	//.. choose memory allocation methods
 	if (usePitchedMemory){
 		this->AllocateGPUMemory_Pitched();
 		this->ZeroGPU_Pitched();
@@ -222,6 +233,7 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 		this->ZeroGPU();
 	}
 
+	//.. transfer to GPU and prep for run
 	this->DataHostToDevice();
 	this->CalculateThetaPhi();
 	this->ResetNeighborsList();
@@ -952,6 +964,7 @@ void Worms::PlaceWormExplicit(int wormId, float headX, float headY, float wormAn
 void Worms::RandomAdheringDistribute(){ // 2D only
 
 	//.. grab parameters
+	printf("\n\nPlacing %i using random adhersion.", this->parameters->_NWORMS);
 	const int nworms = this->parameters->_NWORMS;
 	const int nparts = this->parameters->_NPARTICLES;
 	const int np = this->parameters->_NP;
