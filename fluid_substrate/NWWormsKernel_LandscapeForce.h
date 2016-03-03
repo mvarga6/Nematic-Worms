@@ -33,27 +33,14 @@ __global__ void WormsLandscapeKernel(float *f,
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-		////.. position of giant attractor
-		//const float eps = 1.0f;
-		//const float sig = 20.0f;
-		//const float X = dev_simParams._XBOX / 2.0f;
-		//const float Y = dev_simParams._YBOX / 2.0f;
-		//const float Z = 0.0f;
-
-		////.. position vectors
-		//float rid[3], float rnab[3], dr[3];
-		//for (int d = 0; d < 3; d++) 
-		//	rid[d] = r[id + d*rshift];
-		//rnab[0] = X; rnab[1] = Y; rnab[2] = Z;
-
-		//.. harmonic potential zeroed around z = 0
-		//f[id + 2 * fshift] -= dev_Params._LANDSCALE * r[id + 2 * rshift];
-
-		//.. attraction to giant attractor at { Lx/2, Ly/2, 0 }
-		/*const float rr = CalculateRR_3d(rid, rnab, dr);
-		const float _f = CalculateLJ_3d(rr, sig, eps);
-		for (int d = 0; d < 3; d++) 
-			f[id + d * fshift] -= _f * dr[d];*/
+		const float eps = 1.0f; // potential depth
+		const float sig = 40.0f; // attractor size
+		float rid[_D_], dr[_D_], R_attr[_D_]; // position vectors
+		for_D_ R_attr[d] = dev_simParams._BOX[d] / 2.0f; // center of dims
+		for_D_ rid[d] = r[id + d*rshift]; // local particle position
+		const float rr = CalculateRR(rid, R_attr, dr); // r^2
+		const float _f = CalculateLJ(rr, sig, eps); // force calc
+		for_D_ f[id + d * fshift] -= _f * dr[d]; // apply forces
 	}
 }
 
