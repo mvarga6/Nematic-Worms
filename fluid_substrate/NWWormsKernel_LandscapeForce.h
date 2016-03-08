@@ -24,7 +24,7 @@
 	}
 
 }*/
-
+// I just updated this function last week
 __global__ void WormsLandscapeKernel(float *f,
 									 int fshift,
 									 float *r,
