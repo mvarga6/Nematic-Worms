@@ -41,7 +41,7 @@ __global__ void WormsLandscapeKernel(float *f,
 	//	const float rr = CalculateRR(rid, R_attr, dr); // r^2
 	//	const float _f = CalculateLJ(rr, sig, eps); // force calc
 	//	for_D_ f[id + d * fshift] -= _f * dr[d]; // apply forces
-	//}
+	}
 }
 
 #endif
