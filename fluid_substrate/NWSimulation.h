@@ -124,7 +124,7 @@ void NWSimulation::Run(){
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
 			this->worms->ZeroForce();
-			this->worms->InternalForces();
+			this->worms->InternalForces(this->time);
 			this->worms->BendingForces();
 			//this->worms->XLinkerForces(itime, xdensity);
 			// update bond lengths
