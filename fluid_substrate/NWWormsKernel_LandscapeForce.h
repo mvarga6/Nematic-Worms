@@ -33,15 +33,15 @@ __global__ void WormsLandscapeKernel(float *f,
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-		const float eps = 20.0f; // potential depth
-		const float sig = 60.0f; // attractor size
-		float rid[_D_], dr[_D_], R_attr[_D_]; // position vectors
-		for_D_ R_attr[d] = dev_simParams._BOX[d] / 2.0f; // center of dims
-		for_D_ rid[d] = r[id + d*rshift]; // local particle position
-		const float rr = CalculateRR(rid, R_attr, dr); // r^2
-		const float _f = CalculateLJ(rr, sig, eps); // force calc
-		for_D_ f[id + d * fshift] -= _f * dr[d]; // apply forces
-	}
+	//	const float eps = 20.0f; // potential depth
+	//	const float sig = 60.0f; // attractor size
+	//	float rid[_D_], dr[_D_], R_attr[_D_]; // position vectors
+	//	for_D_ R_attr[d] = dev_simParams._BOX[d] / 2.0f; // center of dims
+	//	for_D_ rid[d] = r[id + d*rshift]; // local particle position
+	//	const float rr = CalculateRR(rid, R_attr, dr); // r^2
+	//	const float _f = CalculateLJ(rr, sig, eps); // force calc
+	//	for_D_ f[id + d * fshift] -= _f * dr[d]; // apply forces
+	//}
 }
 
 #endif

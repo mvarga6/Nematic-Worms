@@ -127,15 +127,17 @@ void NWSimulation::Run(){
 			this->worms->InternalForces();
 			this->worms->BendingForces();
 			//this->worms->XLinkerForces(itime, xdensity);
+			// update bond lengths
 			this->worms->LJForces();
 			this->worms->QuickUpdate();
+			this->time += (dt / float(nsteps_inner));
 		}
 
 		//.. finish time set with slow potential forces
-		this->worms->ZeroForce();
-		this->worms->AutoDriveForces(itime);
-		this->worms->LandscapeForces();
-		this->worms->SlowUpdate();
+		//this->worms->ZeroForce();
+		//this->worms->AutoDriveForces(itime);
+		//this->worms->LandscapeForces();
+		//this->worms->SlowUpdate();
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
@@ -143,7 +145,7 @@ void NWSimulation::Run(){
 		//.. adjust tickers
 		if (itime > xstart && itime < xhold) // in ramping range 
 			xdensity += xramp; // no effect if not ramping
-		this->time += dt;
+		//this->time += dt;
 	}
 	this->fxyz.close();
 }

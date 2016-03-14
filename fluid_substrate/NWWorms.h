@@ -98,7 +98,7 @@ public:
 	//.. user access to running simulation
 	void Init(GRNG *, WormsParameters *, SimulationParameters *, bool, int);
 	void CustomInit(float *headX, float *headY, float *wormAngle);
-	void InternalForces();
+	void InternalForces(const float &t);
 	void BendingForces();
 	void NoiseForces();
 	void LJForces();
@@ -106,6 +106,7 @@ public:
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
 	void XLinkerForces(int itime, float xtargetPercent);
+	void UpdateBondLengths(float time, float omega, float minBond);
 	void SlowUpdate();
 	void QuickUpdate();
 	void CalculateThetaPhi();
@@ -254,18 +255,21 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 	ErrorHandler(cudaDeviceSynchronize());
 }
 //-------------------------------------------------------------------------------------------
-void Worms::InternalForces(){
+void Worms::InternalForces(const float &t){
 	DEBUG_MESSAGE("InternalForces");
 	std::clock_t b4 = std::clock();
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
 	int N = _D_ * this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
+	const float freq = 10;
+	const float min_L1 = this->parameters->_L1 / 2.0f;
+	const float L1 = (this->parameters->_L1 + min_L1) / 2.0 + ((this->parameters->_L1 - min_L1) / 2.0)*sinf(2*M_PI*freq*t);
 	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift,
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
-		rng_ptr, noise
+		rng_ptr, noise, L1
 	);
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
@@ -418,6 +422,12 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	DEBUG_MESSAGE("XLinkerForces_forces2");
+}
+//-------------------------------------------------------------------------------------------
+void Worms::UpdateBondLengths(float time, float omega, float minBond){
+	const float max_bond = this->parameters->_L1;
+	const float min_bond = minBond;
+	const float amp_bond = max_bond - min_bond;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::SlowUpdate(){

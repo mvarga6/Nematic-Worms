@@ -18,7 +18,8 @@ __global__ void InterForceKernel(float *f,
 								 float *r,
 								 int rshift,
 								 float *randNum,
-								 float noiseScaler)
+								 float noiseScaler,
+								 float L1)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
@@ -69,7 +70,7 @@ __global__ void InterForceKernel(float *f,
 #endif
 
 			_r = sqrt(CalculateRR(rid, rnab, dr));
-			_f = -(dev_Params._K1 * (_r - dev_Params._L1)) / _r;
+			_f = -(dev_Params._K1 * (_r - L1)) / _r;
 			for_D_ fid[d] -= _f * dr[d];
 		}
 
@@ -84,7 +85,7 @@ __global__ void InterForceKernel(float *f,
 			//rnab[1] = r[pm1 + 1 * rshift];
 			//rnab[2] = r[pm1 + 2 * rshift];
 			_r = sqrt(CalculateRR(rid, rnab, dr));
-			_f = -(dev_Params._K1 * (_r - dev_Params._L1)) / _r;
+			_f = -(dev_Params._K1 * (_r - L1)) / _r;
 			for_D_ fid[d] -= _f * dr[d];
 		}
 
@@ -298,7 +299,7 @@ __global__ void InterForceKernel(float *f,
 			int sep = abs(p2 - p);
 			
 			//.. everything but 1st neighbors
-			if (sep <= 1) continue;
+			if (sep <= 2) continue;
 
 			float rnab[3], dr[3];
 			float rr, _f;
