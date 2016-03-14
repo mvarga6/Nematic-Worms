@@ -264,6 +264,7 @@ void Worms::InternalForces(const float &t){
 	const float freq = 100;
 	const float min_L1 = this->parameters->_L1 / 2.0f;
 	const float L1 = (this->parameters->_L1 + min_L1) / 2.0 + ((this->parameters->_L1 - min_L1) / 2.0)*sinf(2*M_PI*freq*t);
+	printf("\t%f", L1);
 	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift,
