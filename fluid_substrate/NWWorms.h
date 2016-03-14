@@ -261,7 +261,7 @@ void Worms::InternalForces(const float &t){
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
 	int N = _D_ * this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
-	const float freq = 10;
+	const float freq = 100;
 	const float min_L1 = this->parameters->_L1 / 2.0f;
 	const float L1 = (this->parameters->_L1 + min_L1) / 2.0 + ((this->parameters->_L1 - min_L1) / 2.0)*sinf(2*M_PI*freq*t);
 	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
