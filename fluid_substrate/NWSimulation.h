@@ -74,7 +74,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	//.. outputfile
 	this->fxyz.open(this->outputfile.c_str());
 	if (!this->fxyz.is_open())
-		printf("\n***\nError opening output file: %s!\n***", this->outputfile.c_str());
+		printf("\n*****************\nError opening output file: %s!\n******************", this->outputfile.c_str());
 	else
 		printf("\nWriting data to outfile: %s", this->outputfile.c_str());
 }
@@ -94,28 +94,80 @@ void NWSimulation::Run(){
 	//.. grab needed parameters
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
+	const int	nsteps_equil = this->simparams->_NSTEPS_EQUIL;
+	const int	nsteps_xlink = this->simparams->_NSTEPS_XLINK;
 	const float dt			 = this->simparams->_DT;
 	const float xtarget		 = this->params->_XLINKERDENSITY;
-	const int	xstart		 = this->params->_XSTART;
-		  int	xhold		 = this->params->_XHOLD;
 	
-	//.. setup cross-linker ramping
-	float xdensity, xramp;
-	if (this->params->_XRAMP) xdensity = 0.0f; // if ramping, init to zero
-	else xdensity = xtarget; // if not, init to target
-	if (xhold < 0) xhold = nsteps; // default to end of simulation, 
-	//	else already set properly
-
-	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
-	xramp = (xtarget - xdensity) / float(xhold - xstart);
-
 	//.. check for errors before starting
 	this->DisplayErrors();
 
 	//.. start timer clock
 	this->timer = clock();
+	//------------------------------------------------------------------
+	//.. approach equilibrium state (before cross-linked)
+	printf("\n\nBeginning 'Approach equilibrium' stage...\t");
+	for (int eqtime = 0; eqtime < nsteps_equil; eqtime++){
 
+		//.. setup neighbors for iteration
+		this->worms->ResetNeighborsList(eqtime);
+
+		//.. inner loop for high frequency potentials
+		for (int jtime = 0; jtime < nsteps_inner; jtime++){
+			this->worms->ZeroForce();
+			this->worms->InternalForces();
+			this->worms->BendingForces();
+			this->worms->LJForces();
+			this->worms->QuickUpdate();
+		}
+
+		//.. add landscape forces
+		this->worms->ZeroForce();
+		this->worms->LandscapeForces();
+		this->worms->SlowUpdate();
+		this->DisplayErrors();
+		this->time += dt;
+	}
+	printf("done");
+
+	//------------------------------------------------------------------
+	//.. setup cross-linker ramping
+	printf("\n\nBeginning 'xlinking' stage...\t");
+	float xdensity, xramp;
+	if (this->params->_XRAMP) xdensity = 0.0f; // if ramping, init to zero
+	else xdensity = xtarget; // if not, init to target
+
+	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
+	xramp = (xtarget - xdensity) / float(nsteps_xlink);
+
+	//.. Cross-linking stage (ramp or not ramp)
+	for (int xtime = 0; xtime < nsteps_xlink; xtime++){
+		//.. setup neighbors for iteration
+		this->worms->ResetNeighborsList(xtime);
+
+		//.. inner loop for high frequency potentials
+		for (int jtime = 0; jtime < nsteps_inner; jtime++){
+			this->worms->ZeroForce();
+			this->worms->InternalForces();
+			this->worms->BendingForces();
+			this->worms->XLinkerForces(xtime, xdensity);
+			this->worms->LJForces();
+			this->worms->QuickUpdate();
+		}
+
+		//.. add landscape forces
+		this->worms->ZeroForce();
+		this->worms->LandscapeForces();
+		this->worms->SlowUpdate();
+		this->DisplayErrors();
+		xdensity += xramp; // no effect if not ramping
+		this->time += dt;
+	}
+	printf("done");
+
+	//-------------------------------------------------------------------
 	//.. MAIN SIMULATION LOOP
+	printf("\n\nMain simulation stage...");
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. setup neighbors for iteration
@@ -139,10 +191,6 @@ void NWSimulation::Run(){
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
-
-		//.. adjust tickers
-		if (itime > xstart && itime < xhold) // in ramping range 
-			xdensity += xramp; // no effect if not ramping
 		this->time += dt;
 	}
 	this->fxyz.close();
