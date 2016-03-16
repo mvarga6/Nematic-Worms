@@ -47,7 +47,7 @@ __global__ void WormsLandscapeKernel(float *f,
 		//rnab[0] = X; rnab[1] = Y; rnab[2] = Z;
 
 		//.. harmonic potential zeroed around z = 0
-		//f[id + 2 * fshift] -= dev_Params._LANDSCALE * r[id + 2 * rshift];
+		f[id + 2 * fshift] -= dev_Params._LANDSCALE * r[id + 2 * rshift];
 
 		//.. attraction to giant attractor at { Lx/2, Ly/2, 0 }
 		/*const float rr = CalculateRR_3d(rid, rnab, dr);
