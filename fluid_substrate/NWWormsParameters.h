@@ -263,13 +263,13 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		}
 		else if (arg == "-xstart"){
 			if (i + 1 < argc){
-				parameters->_XSTART = std::strtof(argv[1 + i++], NULL);
+				parameters->_XSTART = (int)std::strtof(argv[1 + i++], NULL);
 				printf("\nxstart changed: %i", parameters->_XSTART);
 			}
 		}
 		else if (arg == "-xhold"){
 			if (i + 1 < argc){
-				parameters->_XHOLD = std::strtof(argv[1 + i++], NULL);
+				parameters->_XHOLD = (int)std::strtof(argv[1 + i++], NULL);
 				printf("\nxhold changed: %f", parameters->_XHOLD);
 			}
 		}

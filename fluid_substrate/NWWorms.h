@@ -866,7 +866,7 @@ void Worms::DistributeWormsOnHost(){
 	for (int k = 0; k < zdim; k++){
 		for (int i = 0; i < xdim; i++){
 			for (int j = 0; j < ydim; j++){
-				const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
+				const float idx[3] = { float(i + 1), float(j + 1), float(k + 1) }; // always 3d
 				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
 				//r0[iw] = 0.001 + float(i)*;
 				//r0[iw] = 0.001 + float(j)*;
@@ -969,13 +969,13 @@ void Worms::RandomAdheringDistribute(){ // 2D only
 	const int nparts = this->parameters->_NPARTICLES;
 	const int np = this->parameters->_NP;
 	const float l1 = this->parameters->_L1;
-	const float xbox = this->envirn->_XBOX;
-	const float ybox = this->envirn->_YBOX;
-	const float zbox = this->envirn->_ZBOX;
+//	const float xbox = this->envirn->_XBOX;
+//	const float ybox = this->envirn->_YBOX;
+//	const float zbox = this->envirn->_ZBOX;
 	float * box = this->envirn->_BOX;
 	const float r2min = this->parameters->_R2MIN;
 
-	float r0[_D_], theta, phi, u[3];
+	float r0[_D_], theta, /*phi,*/ u[3];
 	for (int w = 0; w < nworms; w++){
 
 		float * worm = new float[_D_*np];
