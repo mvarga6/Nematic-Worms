@@ -8,24 +8,24 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 //-----------------------------------------------------------------------------------
-__device__ void DevicePBC(float &dR, float L)
+__device__ void BC_dr(float &dR, float L)
 {
 	if (dR > L / 2.0f) dR -= L;
 	if (dR < -L / 2.0f) dR += L;
 }
 //-----------------------------------------------------------------------------------
-__device__ void AdjDistPBC(float _dR[_D_], float _box[_D_]){
-	for_D_ DevicePBC(_dR[d], _box[d]);
+__device__ void BC_dr(float _dR[_D_], float _box[_D_]){
+	for_D_ BC_dr(_dR[d], _box[d]);
 }
 //-----------------------------------------------------------------------------------
-__device__ void DeviceMovementPBC(float &R, float L)
+__device__ void BC_r(float &R, float L)
 {
 	if (R > L) R -= L;
 	if (R < 0) R += L;
 }
 //-----------------------------------------------------------------------------------
-__device__ void AdjPosPBC(float _R[_D_], float _box[_D_]){
-	for_D_ DeviceMovementPBC(_R[d], _box[d]);
+__device__ void BC_r(float _R[_D_], float _box[_D_]){
+	for_D_ BC_r(_R[d], _box[d]);
 }
 //-----------------------------------------------------------------------------------
 __device__ bool InList(int arg, int* list, int listSize)
@@ -50,9 +50,7 @@ __device__ float mag(const float v[_D_]){
 __device__ float CalculateRR(const float _rid[_D_], const float _rnab[_D_], float _dr[_D_]){
 	float _r_[_D_];
 	for_D_ _r_[d] = _rnab[d] - _rid[d];
-	AdjDistPBC(_r_, dev_simParams._BOX);
-	//DevicePBC(_r_[0], dev_simParams._XBOX);
-	//DevicePBC(_r_[1], dev_simParams._YBOX);
+	BC_dr(_r_, dev_simParams._BOX);
 	for_D_ _dr[d] = _r_[d];
 	return dot(_r_, _r_);
 }

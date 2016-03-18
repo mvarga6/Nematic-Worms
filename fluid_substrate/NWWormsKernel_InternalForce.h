@@ -6,10 +6,7 @@
 #include "NWParams.h"
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
-//#define __PRINT_FORCES__
-//#define __PRINT_POS_1__
-//#define __PRINT_POS_2__
-//#define __PRINT_INDEX__ 999
+
 // ------------------------------------------------------------------------------------------
 __global__ void InterForceKernel(float *f,
 								 int fshift,
@@ -23,10 +20,6 @@ __global__ void InterForceKernel(float *f,
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
 
-#ifdef __PRINT_SHIFTS__
-		if (id == __PRINT_INDEX__) 
-			printf("\nf,v,r shifts: %i ,\t%i ,\t%i", fshift, vshift, rshift);
-#endif
 		//.. particel number in worm
 		int p = id % dev_Params._NP;
 		int w = id / dev_Params._NP;
@@ -40,18 +33,7 @@ __global__ void InterForceKernel(float *f,
 			fid[d] = 0.0f;
 			vid[d] = v[id + d*vshift];
 		}
-		//for (int i = 0; i < 3; i++){
-		//	rid[i] = r[id + i * rshift];
-		//	fid[i] = 0.0f;
-		//	vid[i] = v[id + i * vshift];
-		//}
-
-#ifdef __PRINT_POS_1__
-		if (id == __PRINT_INDEX__) 
-			printf("\nrid = { %f, %f, %f }", rid[0], rid[1], rid[2]);
-#endif
 			
-		//.. first neighbor forces
 		//.. 1st neighbor spring forces ahead
 		if (p < (dev_Params._NP - 1))
 		{
@@ -59,15 +41,6 @@ __global__ void InterForceKernel(float *f,
 			float rnab[_D_], dr[_D_];
 			float _r, _f;
 			for_D_ rnab[d] = r[pp1 + d*rshift];
-			//rnab[0] = r[pp1 + 0 * rshift];
-			//rnab[1] = r[pp1 + 1 * rshift];
-			//rnab[2] = r[pp1 + 2 * rshift];
-
-#ifdef __PRINT_POS_2__
-			if (id == __PRINT_INDEX__) 
-				printf("\nrnab = { %f, %f, %f }", rnab[0], rnab[1], rnab[2]);
-#endif
-
 			_r = sqrt(CalculateRR(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - dev_Params._L1)) / _r;
 			for_D_ fid[d] -= _f * dr[d];
@@ -80,9 +53,6 @@ __global__ void InterForceKernel(float *f,
 			float rnab[_D_], dr[_D_];
 			float _r, _f;
 			for_D_ rnab[d] = r[pm1 + d*rshift];
-			//rnab[0] = r[pm1 + 0 * rshift];
-			//rnab[1] = r[pm1 + 1 * rshift];
-			//rnab[2] = r[pm1 + 2 * rshift];
 			_r = sqrt(CalculateRR(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - dev_Params._L1)) / _r;
 			for_D_ fid[d] -= _f * dr[d];
@@ -222,113 +192,19 @@ __global__ void InterForceKernel(float *f,
 ////#endif
 //		}
 
-		//.. 4nd neighbor spring forces ahead
-		/*if (p < (_NP - 4))
-		{
-		int pp4 = id + 4;
-		float dx = x[pp4] - xid;
-		float dy = y[pp4] - yid;
-		DevicePBC(dx, _XBOX);
-		DevicePBC(dy, _YBOX);
-		float rr = dx*dx + dy*dy;
-		float _r = sqrtf(rr);
-		float ff = -_K2 * 0.5f * (_r - _L2*2.0f) / _r;
-		float ffx = ff * dx;
-		float ffy = ff * dy;
-		fxid -= ffx;
-		fyid -= ffy;
-		}
-
-		//.. 4nd neighbor spring forces behind
-		if (p > 3)
-		{
-		int pm4 = id - 4;
-		float dx = x[pm4] - xid;
-		float dy = y[pm4] - yid;
-		DevicePBC(dx, _XBOX);
-		DevicePBC(dy, _YBOX);
-		float rr = dx*dx + dy*dy;
-		float _r = sqrtf(rr);
-		float ff = -_K2 * 0.5f * (_r - _L2 * 2.0f) / _r;
-		float ffx = ff * dx;
-		float ffy = ff * dy;
-		fxid -= ffx;
-		fyid -= ffy;
-		}
-
-		//.. 5nd neighbor spring forces ahead
-		if (p < (_NP - 5))
-		{
-		int pp5 = id + 5;
-		float dx = x[pp5] - xid;
-		float dy = y[pp5] - yid;
-		DevicePBC(dx, _XBOX);
-		DevicePBC(dy, _YBOX);
-		float rr = dx*dx + dy*dy;
-		float _r = sqrtf(rr);
-		float ff = -_K2 * 0.4f * (_r - _L1*5.0f) / _r;
-		float ffx = ff * dx;
-		float ffy = ff * dy;
-		fxid -= ffx;
-		fyid -= ffy;
-		}
-
-		//.. 5nd neighbor spring forces behind
-		if (p > 4)
-		{
-		int pm5 = id - 5;
-		float dx = x[pm5] - xid;
-		float dy = y[pm5] - yid;
-		DevicePBC(dx, _XBOX);
-		DevicePBC(dy, _YBOX);
-		float rr = dx*dx + dy*dy;
-		float _r = sqrtf(rr);
-		float ff = -_K2 * 0.4f * (_r - _L1 * 5.0f) / _r;
-		float ffx = ff * dx;
-		float ffy = ff * dy;
-		fxid -= ffx;
-		fyid -= ffy;
-		}*/
-
 		//.. LJ between inter-worm particles
 		for (int id2 = w*dev_Params._NP; id2 < (w + 1)*dev_Params._NP; id2++)
 		{
-
 			int p2 = id2 % dev_Params._NP;
 			int sep = abs(p2 - p);
-			
-			//.. everything but 1st neighbors
-			if (sep <= 1) continue;
-
+			if (sep <= 1) continue; //.. ignore 1st neighbors
 			float rnab[3], dr[3];
 			float rr, _f;
 			for_D_ rnab[d] = r[id2 + d*rshift];
-			//rnab[0] = r[id2];
-			//rnab[1] = r[id2 + rshift];
-			//rnab[2] = r[id2 + 2 * rshift];
 			rr = CalculateRR(rid, rnab, dr);
-
-			//.. repulsive only
-			if (rr > dev_Params._R2MIN) continue;
-
+			if (rr > dev_Params._R2MIN) continue; //.. repulsive only
 			_f = CalculateLJ(rr);
 			for_D_ fid[d] -= _f * dr[d];
- 
-			//if (abs(id2 - id) >= 5)
-			//{
-			//	float dx = x[id2] - xid;
-			//	float dy = y[id2] - yid;
-			//	DevicePBC(dx, _XBOX);
-			//	DevicePBC(dy, _YBOX);
-			//	float rr = dx*dx + dy*dy;
-			//	//.. only repulsive for intraworm
-			//	if (rr <= _R2MIN)
-			//	{
-			//		float ff = _LJ_AMP*((_2SIGMA6 / (rr*rr*rr*rr*rr*rr*rr)) - (1.0f / (rr*rr*rr*rr)));
-			//		fxid -= ff * dx;
-			//		fyid -= ff * dy;
-			//	}
-			//}
 		}
 
 		//.. viscous drag
@@ -339,15 +215,6 @@ __global__ void InterForceKernel(float *f,
 
 		//.. assign temp fxid and fyid to memory
 		for_D_ f[id + d*fshift] += fid[d];
-		//f[id + 0 * fshift] += fid[0];
-		//f[id + 1 * fshift] += fid[1];
-		//f[id + 2 * fshift] += fid[2];
-
-
-#ifdef __PRINT_FORCES__
-		if (id == __PRINT_INDEX__) 
-			printf("\n\tInternal Kernel:\n\tf = { %f, %f, %f }", f[id], f[id + fshift], f[id + 2*fshift]);
-#endif
 	}
 }
 

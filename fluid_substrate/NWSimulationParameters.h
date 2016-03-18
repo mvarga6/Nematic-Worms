@@ -30,7 +30,12 @@ typedef struct {
 	float _BOX[_D_];
 
 	//.. flags for sim prodecures
-	bool _LMEM;
+	bool _LMEM, // linear memory on gpu 
+		_PBC, // periodic boundary conditions
+		_SBC, // soft wall boundary conditions
+		_HBC, // hard wall boundary conditions
+		_ROUND; // circular boundaries 2d, spherical in 3d
+
 
 } SimulationParameters;
 /* ------------------------------------------------------------------------
@@ -61,6 +66,9 @@ namespace DEFAULT {
 		static const float ZBOX = 100.0f;
 		static const std::string FILENAME = "output.xyz";
 		static const bool LMEM = false;
+		static const bool PBC = true;
+		static const bool SBC = false;
+		static const bool HBC = false;
 	}
 }
 //--------------------------------------------------------------------------
@@ -120,6 +128,21 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		else if (arg == "-lmem"){
 			parameters->_LMEM = true;
 		}
+		else if (arg == "-sbc"){
+			parameters->_SBC = true;
+			parameters->_PBC = false;
+			parameters->_HBC = false;
+		}
+		else if (arg == "-hbc"){
+			parameters->_HBC = true;
+			parameters->_PBC = false;
+			parameters->_SBC = false;
+		}
+		else if (arg == "-pbc"){
+			parameters->_PBC = true;
+			parameters->_HBC = false;
+			parameters->_SBC = false;
+		}
 	}
 }
 //--------------------------------------------------------------------------
@@ -136,6 +159,9 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
 	outfile = DEFAULT::SIM::FILENAME;
 	parameters->_LMEM = DEFAULT::SIM::LMEM;
+	parameters->_PBC = DEFAULT::SIM::PBC;
+	parameters->_HBC = DEFAULT::SIM::HBC;
+	parameters->_SBC = DEFAULT::SIM::SBC;
 
 	//.. get assign cmdline parameters
 	GrabParameters(parameters, argc, argv, outfile);
