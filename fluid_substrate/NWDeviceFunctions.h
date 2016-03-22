@@ -47,6 +47,14 @@ __device__ float mag(const float v[_D_]){
 	return sqrt(dot(v,v));
 }
 //-----------------------------------------------------------------------------------
+__device__ void diff_dir(const float this_v[_D_], const float minus_v[_D_], float _unit_dir[_D_]){
+	float _dif[_D_];
+	for_D_ _dif[d] = this_v[d] - minus_v[d];
+	BC_dr(_dif, dev_simParams._BOX);
+	float _mag = mag(_dif);
+	for_D_ _unit_dir[d] = _dif[d] / _mag;
+}
+//-----------------------------------------------------------------------------------
 __device__ float CalculateRR(const float _rid[_D_], const float _rnab[_D_], float _dr[_D_]){
 	float _r_[_D_];
 	for_D_ _r_[d] = _rnab[d] - _rid[d];

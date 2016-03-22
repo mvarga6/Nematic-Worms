@@ -498,15 +498,6 @@ void Worms::DataDeviceToHost(){
 	DEBUG_MESSAGE("DataDeviceToHost");
 
 	std::clock_t b4 = std::clock();
-	/*CheckSuccess(cudaMemcpy2D(this->r,
-		this->nparticles_float_alloc,
-		this->dev_r,
-		this->rpitch,
-		this->nparticles_float_alloc,
-		this->height3,
-		cudaMemcpyDeviceToHost));
-	ErrorHandler(cudaDeviceSynchronize());
-	ErrorHandler(cudaGetLastError());*/
 	if (this->pitched_memory) 
 		this->DataDeviceToHost_Pitched();
 	else {
@@ -530,16 +521,6 @@ void Worms::DataHostToDevice(){
 		ErrorHandler(cudaDeviceSynchronize());
 		//ErrorHandler(cudaGetLastError());
 	}
-
-	/*CheckSuccess(cudaMemcpy2D(this->dev_r,
-		this->rpitch,
-		this->r,
-		this->nparticles_float_alloc,
-		this->nparticles_float_alloc,
-		this->height3,
-		cudaMemcpyHostToDevice));
-	ErrorHandler(cudaDeviceSynchronize());
-	ErrorHandler(cudaGetLastError());*/
 }
 //-------------------------------------------------------------------------------------------
 //.. sets neighbors list between worm-worm and worm-fluid
@@ -547,7 +528,7 @@ void Worms::ResetNeighborsList(){
 	DEBUG_MESSAGE("ResetNeighborsList");
 	std::clock_t b4 = std::clock();
 
-	//.. reset memory to -1
+	//.. reset list memory to -1
 	if (pitched_memory) {
 		CheckSuccess(cudaMemset2D(this->dev_nlist,
 			this->nlpitch,
@@ -904,8 +885,6 @@ void Worms::AdjustDistribute(float target_percent){
 
 	//.. flip orientation for target_percent of worms
 	float * save = new float[_D_ * np]; 
-	//float * save = new float[np];
-	//float * save = new float[np]; 
 
 	for (int w = 0; w < nworms; w++){
 		float random = float(rand()) / float(RAND_MAX);
@@ -914,18 +893,12 @@ void Worms::AdjustDistribute(float target_percent){
 			for (int i = 0; i < np; i++){
 				int id = w*np + i;
 				for_D_ save[i + d*np] = this->r[id + d*N];
-				//savex[i] = this->r[id];
-				//savey[i] = this->r[id + N];
-				//savez[i] = this->r[id + 2 * N];
 			}
 
 			//.. replace reversed particles
 			for (int j = 0; j < np; j++){
 				int id = w*np + j;
 				for_D_ this->r[id + d*N] = save[(np - 1 - j) + d*np];
-				//this->r[id] = savex[(np - 1 - j)];
-				//this->r[id + N] = savey[(np - 1 - j)];
-				//this->r[id + 2 * N] = savez[(np - 1) - j];
 			}
 		}
 	}

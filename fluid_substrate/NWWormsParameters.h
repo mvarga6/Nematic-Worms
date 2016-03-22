@@ -29,6 +29,9 @@ typedef struct {
 	//.. LJ energy and length scale, activity scalor
 	float _EPSILON, _SIGMA, _DRIVE, _DRIVE_ROT;
 
+	//.. drive type
+	bool _EXTENSILE;
+
 	//.. spring constants in worms
 	float _K1, _K2, _K3, _Ka;
 
@@ -77,8 +80,8 @@ cudaError_t ParametersToDevice(WormsParameters &params){
 namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
-		static const int	YDIM = 40;
-		static const int	ZDIM = 1;
+		static const int	YDIM = 5;
+		static const int	ZDIM = 5;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
@@ -108,28 +111,29 @@ namespace DEFAULT {
 		static const bool	XRAMP = false;
 		static const float	DCELL = 3.0f;
 		static const bool	RAD = false;
+		static const bool   EXTENSILE = false;
 	}
 }
 //----------------------------------------------------------------------------
 void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 	if (_D_ == 2) parameters->_ZDIM = 1; // ensure one layer if 2d
-	parameters->_NWORMS = parameters->_XDIM * parameters->_YDIM * parameters->_ZDIM;
-	parameters->_NPARTICLES = parameters->_NP * parameters->_NWORMS;
-	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f);
-	parameters->_2SIGMA6 = 2.0f * parameters->_SIGMA6;
-	parameters->_LJ_AMP = 24.0f * parameters->_EPSILON * parameters->_SIGMA6;
-	parameters->_RMIN = nw::constants::_216 * parameters->_SIGMA;
-	parameters->_R2MIN = parameters->_RMIN * parameters->_RMIN;
-	if (WCA) // set Lennard Jones style
+	parameters->_NWORMS = parameters->_XDIM * parameters->_YDIM * parameters->_ZDIM; // calculate # of worms
+	parameters->_NPARTICLES = parameters->_NP * parameters->_NWORMS; // calculate # of particles
+	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f); // LJ scalor
+	parameters->_2SIGMA6 = 2.0f * parameters->_SIGMA6; // LJ scalor
+	parameters->_LJ_AMP = 24.0f * parameters->_EPSILON * parameters->_SIGMA6; // LJ scalor
+	parameters->_RMIN = nw::constants::_216 * parameters->_SIGMA; // calculate LJ minimum
+	parameters->_R2MIN = parameters->_RMIN * parameters->_RMIN; // calculate sqr minimum
+	if (WCA) // set Weeks-Chandeler-Anderson cutoff
 		parameters->_RCUT = parameters->_RMIN;
-	else
+	else // set full Lennard-Jones cutoff
 		parameters->_RCUT = 2.5f * parameters->_SIGMA;
-	parameters->_DCELL = parameters->_RCUT + parameters->_BUFFER;
-	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT;
-	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f;
-	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f;
-	parameters->_L2 = 2.0f * parameters->_L1;
-	parameters->_L3 = 3.0f * parameters->_L1;
+	parameters->_DCELL = parameters->_RCUT + parameters->_BUFFER; // linked-list cell width
+	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT; // LJ cutoff distance
+	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f; // move this to setting it
+	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f; //
+	parameters->_L2 = 2.0f * parameters->_L1; // adjust 2nd neighbor distance based on first
+	parameters->_L3 = 3.0f * parameters->_L1; // adjsut 3rd neighbor distance based on first
 	
 }
 //----------------------------------------------------------------------------
@@ -292,6 +296,10 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-rad"){
 			parameters->_RAD = true;
 			printf("\nInitializing worms using Random Adhersion");
+		}
+		else if (arg == "-extensile"){
+			parameters->_EXTENSILE = true;
+			printf("\nUsing extensile driving mechanism");
 		}
 	}
 }

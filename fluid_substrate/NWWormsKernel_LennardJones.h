@@ -20,17 +20,20 @@ __global__ void LennardJonesNListKernel(float *f,
 
 		float fid[_D_], rid[_D_], dr[_D_], _r[_D_];
 		float _f, _rr;
+		const int np = dev_Params._NP;
+		const float drive = dev_Params._DRIVE;
+		int pnp = id % np; // particle in chain
 		for_D_{ fid[d] = 0.0f; rid[d] = r[id + d*rshift];}
-		//fid[0] = 0.0f; fid[1] = 0.0f; fid[2] = 0.0f;
-		//rid[0] = r[ix];
-		//rid[1] = r[iy];
-		//rid[2] = r[iz];
+
+		bool extensile = dev_Params._EXTENSILE;
 
 		//.. loop through neighbors
+		int nnp, nid;
 		for (int i = 0; i < dev_Params._NMAX; i++)
 		{
 			//.. neighbor id
-			int nid = nlist[id + i*nshift];
+			nid = nlist[id + i*nshift];
+			nnp = nid % np;
 
 			//.. if no more players
 			if (nid == -1) break;
@@ -43,6 +46,25 @@ __global__ void LennardJonesNListKernel(float *f,
 
 			//.. calculate LJ force
 			_f = CalculateLJ(_rr);
+
+			//.. extensile driving mechanism applied here!!! need a better place
+			if (extensile){
+				if ((pnp < np - 1) && (nnp < np - 1)){
+					float rnxt1[_D_], rnxt2[_D_], x[_D_], u[_D_], f_ext[_D_];
+					for_D_ rnxt1[d] = r[(id + 1) + d*rshift];
+					for_D_ rnxt2[d] = r[(nid + 1) + d*rshift];
+					CalculateRR(rid, rnxt1, x); // vector connecting id to next particle
+					CalculateRR(_r, rnxt2, u); // vector connecting nid to next particle
+
+					//..  average of x and -u (to preserve detailed balance)
+					for_D_ f_ext[d] = (x[d] - u[d]) / 2.0f;
+					for_D_ fid[d] += (f_ext[d] * dev_Params._DRIVE) / sqrt(_rr); // try this for now
+					//float dotprod = dot(x, u); // dot product
+					//if (dotprod < -75.0f){ // if anti-parallel
+					//	for_D_ fid[d] += dotprod * drive * 
+					//}
+				}
+			}
 
 			//.. apply forces to directions
 			for_D_ fid[d] -= _f * dr[d];
