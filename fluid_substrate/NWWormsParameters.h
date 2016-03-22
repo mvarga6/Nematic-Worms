@@ -128,6 +128,8 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT;
 	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f;
 	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f;
+	parameters->_L2 = 2.0f * parameters->_L1;
+	parameters->_L3 = 3.0f * parameters->_L1;
 	
 }
 //----------------------------------------------------------------------------
