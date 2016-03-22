@@ -49,16 +49,16 @@ __global__ void WormsLandscapeKernel(float *f,
 		
 		CalculateRR(rid, rnab, dr); // calculate distance
 		BC_dr(dr, dev_simParams._BOX); // boundary conditions
-		for_D_ f[id + d*fshift] -= dev_Params._LANDSCALE * dr[d]; // calc and apply forces
+		for_D_ f[id + d*fshift] += dev_Params._LANDSCALE * dr[d]; // calc and apply forces
 
 		//.. harmonic potential zeroed around z = 0
 		//f[id + 2 * fshift] -= dev_Params._LANDSCALE * r[id + 2 * rshift];
-
+		//
 		//.. attraction to giant attractor at { Lx/2, Ly/2, 0 }
-		/*const float rr = CalculateRR_3d(rid, rnab, dr);
-		const float _f = CalculateLJ_3d(rr, sig, eps);
-		for (int d = 0; d < 3; d++) 
-			f[id + d * fshift] -= _f * dr[d];*/
+		//const float rr = CalculateRR_3d(rid, rnab, dr);
+		//const float _f = CalculateLJ_3d(rr, sig, eps);
+		//for (int d = 0; d < 3; d++) 
+		//	f[id + d * fshift] -= _f * dr[d];
 	}
 }
 
