@@ -42,15 +42,13 @@ __global__ void UpdateSystemKernel(float *f,
 		for_D_ rid[d] += dr[d];
 
 		//.. boundary conditions and apply new pos
-		AdjPosPBC(rid, dev_simParams._BOX);
+		BC_r(rid, dev_simParams._BOX);
 		for_D_ r[id + d*rshift] = rid[d];
 
 		for_D_ r[id + d*rshift] = rid[d];
 
 		//.. update velocities
 		for_D_ v[id + d*vshift] += dv[d];
-		//DeviceMovementPBC(r[id], dev_simParams._XBOX);
-		//DeviceMovementPBC(r[id + rshift], dev_simParams._YBOX);
 
 		//.. update cell address
 		for_D_ cell[id + d*cshift] = (int)(rid[d] / dev_Params._DCELL);
@@ -84,9 +82,9 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		v[vid] += dvx;
 
 		//.. for X, Y, and Z dimensions
-		if (bid == 0) DeviceMovementPBC(r[rid], dev_simParams._XBOX);
-		else if (bid == 1) DeviceMovementPBC(r[rid], dev_simParams._YBOX);
-		else if (bid == 2) DeviceMovementPBC(r[rid], dev_simParams._ZBOX);
+		if (bid == 0) BC_r(r[rid], dev_simParams._XBOX);
+		else if (bid == 1) BC_r(r[rid], dev_simParams._YBOX);
+		else if (bid == 2) BC_r(r[rid], dev_simParams._ZBOX);
 		
 		//.. update cell list
 		cell[cid] = (int)(r[rid] / dev_Params._DCELL);

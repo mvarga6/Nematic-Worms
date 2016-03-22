@@ -43,8 +43,8 @@ __global__ void BondBendingForces(float *f,
 			}
 
 			//.. boundary conditions
-			AdjDistPBC(r12, dev_simParams._BOX);
-			AdjDistPBC(r23, dev_simParams._BOX);
+			BC_dr(r12, dev_simParams._BOX);
+			BC_dr(r23, dev_simParams._BOX);
 
 			//.. calculate terms
 			float dot_r12_r23 = dot(r12, r23);

@@ -36,10 +36,6 @@ __global__ void LennardJonesNListKernel(float *f,
 			if (nid == -1) break;
 
 			for_D_ _r[d] = r[nid + d*rshift];
-			//_r[0] = r[nid];
-			//_r[1] = r[nid + rshift];
-			//_r[2] = r[nid + 2 * rshift];
-
 			_rr = CalculateRR(rid, _r, dr);
 
 			//.. stop if too far
@@ -54,9 +50,6 @@ __global__ void LennardJonesNListKernel(float *f,
 
 		//.. assign tmp to memory
 		for_D_ f[id + d*fshift] += fid[d];
-		//f[id] += fid[0];
-		//f[id + fshift] += fid[1];
-		//f[id + 2*fshift] += fid[2];
 
 #ifdef __PRINT_FORCES__
 		if (id == __PRINT_INDEX__)
@@ -76,12 +69,6 @@ __global__ void FastLennardJonesNListKernel(float *f, int fshift,
 			float rid[_D_], rnab[_D_], dr[_D_], _f, rr;
 			for_D_ rid[d] = r[pid + d*rshift];
 			for_D_ rnab[d] = r[nid + d*rshift];
-			//rid[0] = r[pid];
-			//rid[1] = r[pid + rshift];
-			//rid[2] = r[pid + 2 * rshift];
-			//rnab[0] = r[nid];
-			//rnab[1] = r[nid + rshift];
-			//rnab[2] = r[nid + 2 * rshift];
 			rr = CalculateRR(rid, rnab, dr);
 			if (rr < dev_Params._R2CUT){
 				_f = CalculateLJ(rr);

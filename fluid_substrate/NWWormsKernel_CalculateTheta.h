@@ -19,12 +19,7 @@ __global__ void CalculateThetaKernel(float *r,
 			int pp1 = id + 1;
 			float dr[3] = { 0, 0, 0 }; // always 3d
 			for_D_ dr[d] = r[pp1 + d*rshift];
-			//float dx = r[pp1]			 - r[ix];
-			//float dy = r[pp1 + rshift]	 - r[iy];
-			//float dz = r[pp1 + 2*rshift] - r[iz];
-			AdjDistPBC(dr, dev_simParams._BOX);
-			//DevicePBC(dr[0], dev_simParams._XBOX);
-			//DevicePBC(dr[1], dev_simParams._YBOX);
+			BC_dr(dr, dev_simParams._BOX);
 			const float rmag = mag(dr);
 			thphi[id] = atan2f(dr[1] / rmag, dr[0] / rmag);
 			thphi[id + tshift] = PI / 2.0f - asinf(dr[2] / rmag);
