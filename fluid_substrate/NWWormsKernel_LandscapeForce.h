@@ -39,12 +39,17 @@ __global__ void WormsLandscapeKernel(float *f,
 		//const float X = dev_simParams._XBOX / 2.0f;
 		//const float Y = dev_simParams._YBOX / 2.0f;
 		//const float Z = 0.0f;
-
-		////.. position vectors
-		//float rid[3], float rnab[3], dr[3];
-		//for (int d = 0; d < 3; d++) 
-		//	rid[d] = r[id + d*rshift];
-		//rnab[0] = X; rnab[1] = Y; rnab[2] = Z;
+		
+		//.. position vectors
+		float rid[_D_], float rnab[_D_], dr[_D_];
+		for_D_ {
+			rid[d] = r[id + d*rshift];
+			rnab[d] = dev_simParams._BOX[d] / 2.0f; // attract to center		
+		}
+		
+		CalculateRR(rid, rnab, dr); // calculate distance
+		BC_dr(dr, dev_simParams._BOX); // boundary conditions
+		for_D_ f[id + d*fshift] -= dev_Params._LANDSCALE * dr[d]; // calc and apply forces
 
 		//.. harmonic potential zeroed around z = 0
 		//f[id + 2 * fshift] -= dev_Params._LANDSCALE * r[id + 2 * rshift];
