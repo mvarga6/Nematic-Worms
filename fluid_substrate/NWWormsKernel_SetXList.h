@@ -25,8 +25,8 @@ __global__ void SetXListWormsKernel(
 		{
 			dx = flx[i] - wxid;
 			dy = fly[i] - wyid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
 			rr = dx*dx + dy*dy;
 
 			//.. only sets when within XCUT2 interaction range

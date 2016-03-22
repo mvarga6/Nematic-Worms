@@ -41,7 +41,7 @@ __global__ void WormsLandscapeKernel(float *f,
 		//const float Z = 0.0f;
 		
 		//.. position vectors
-		float rid[_D_], float rnab[_D_], dr[_D_];
+		float rid[_D_], rnab[_D_], dr[_D_];
 		for_D_ {
 			rid[d] = r[id + d*rshift];
 			rnab[d] = dev_simParams._BOX[d] / 2.0f; // attract to center		
