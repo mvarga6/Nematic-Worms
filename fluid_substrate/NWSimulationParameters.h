@@ -34,7 +34,10 @@ typedef struct {
 		_PBC, // periodic boundary conditions
 		_SBC, // soft wall boundary conditions
 		_HBC, // hard wall boundary conditions
-		_ROUND; // circular boundaries 2d, spherical in 3d
+		_SPHERE; // circular boundaries 2d, spherical in 3d
+
+	//.. strength of wall potentials
+	float _Kw;
 
 
 } SimulationParameters;
@@ -68,7 +71,10 @@ namespace DEFAULT {
 		static const bool LMEM = false;
 		static const bool PBC = true;
 		static const bool SBC = false;
+		static const float KWALL = 5.0f;
 		static const bool HBC = false;
+		static const bool SPHERE = false;
+		static const float Kw = 5.0f;
 	}
 }
 //--------------------------------------------------------------------------
@@ -128,12 +134,17 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		else if (arg == "-lmem"){
 			parameters->_LMEM = true;
 		}
-		else if (arg == "-sbc"){
+		else if (arg == "-softwalls"){
 			parameters->_SBC = true;
 			parameters->_PBC = false;
 			parameters->_HBC = false;
 		}
-		else if (arg == "-hbc"){
+		else if (arg == "-kw"){
+			if (i + 1 < argc){
+				parameters->_Kw = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-hardwalls"){
 			parameters->_HBC = true;
 			parameters->_PBC = false;
 			parameters->_SBC = false;
@@ -142,6 +153,9 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 			parameters->_PBC = true;
 			parameters->_HBC = false;
 			parameters->_SBC = false;
+		}
+		else if (arg == "-spherical"){
+			parameters->_SPHERE = true;
 		}
 	}
 }
@@ -162,6 +176,8 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_PBC = DEFAULT::SIM::PBC;
 	parameters->_HBC = DEFAULT::SIM::HBC;
 	parameters->_SBC = DEFAULT::SIM::SBC;
+	parameters->_SPHERE = DEFAULT::SIM::SPHERE;
+	parameters->_Kw = DEFAULT::SIM::Kw;
 
 	//.. get assign cmdline parameters
 	GrabParameters(parameters, argc, argv, outfile);

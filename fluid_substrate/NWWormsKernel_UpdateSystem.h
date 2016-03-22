@@ -26,25 +26,27 @@ __global__ void UpdateSystemKernel(float *f,
 	if (id < dev_Params._NPARTICLES)
 	{
 		//.. local components
-		float dv[_D_], dr[_D_], rid[_D_];
+		float dv[_D_], dr[_D_], rid[_D_], fid[_D_];
 		for_D_ rid[d] = r[id + d*rshift];
+		for_D_ fid[d] = f[id + d*fshift];
+
+		//.. boundary conditions
+		BC_r(fid, rid, dev_simParams._BOX);
 
 		//.. change in velocity
-		for_D_ dv[d] = 0.5f * (f[id + d*fshift] + f_old[id + d*foshift]) * dt;
+		for_D_ dv[d] = 0.5f * (fid[d] + f_old[id + d*foshift]) * dt;
 
 		//.. change in position
 		for_D_ dr[d] = v[id + d*vshift] * dt + 0.5f * f_old[id + d*foshift] * dt * dt;
 
 		//.. save forces
-		for_D_ f_old[id + d*foshift] = f[id + d*fshift];
+		for_D_ f_old[id + d*foshift] = fid[d];
 
 		//.. update positions
 		for_D_ rid[d] += dr[d];
 
 		//.. boundary conditions and apply new pos
-		BC_r(rid, dev_simParams._BOX);
-		for_D_ r[id + d*rshift] = rid[d];
-
+		//BC_r(rid, dev_simParams._BOX);
 		for_D_ r[id + d*rshift] = rid[d];
 
 		//.. update velocities
@@ -75,19 +77,24 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		const int rid = tid + bid * rshift;
 		const int cid = tid + bid * cshift;
 
+		//.. boundary conditions
+		BC_r(f[fid], r[rid], dev_simParams._BOX[bid]); // only applies to
+
 		float dvx = 0.5f * (f[fid] + f_old[foid]) * dt;
 		float dx = v[vid] * dt + 0.5f * f_old[foid] * dt * dt;
 		f_old[foid] = f[fid];
 		r[rid] += dx;
 		v[vid] += dvx;
 
-		//.. for X, Y, and Z dimensions
-		if (bid == 0) BC_r(r[rid], dev_simParams._XBOX);
-		else if (bid == 1) BC_r(r[rid], dev_simParams._YBOX);
-		else if (bid == 2) BC_r(r[rid], dev_simParams._ZBOX);
+		//.. boundary conditions
+		//BC_r(r[rid], dev_simParams._BOX[bid]); // only applies to
+
+		//if (bid == 0) BC_r(r[rid], dev_simParams._XBOX);
+		//else if (bid == 1) BC_r(r[rid], dev_simParams._YBOX);
+		//else if (bid == 2) BC_r(r[rid], dev_simParams._ZBOX);
 		
 		//.. update cell list
-		cell[cid] = (int)(r[rid] / dev_Params._DCELL);
+		//cell[cid] = (int)(r[rid] / dev_Params._DCELL);
 
 		f[fid] = 0.0f;
 	}

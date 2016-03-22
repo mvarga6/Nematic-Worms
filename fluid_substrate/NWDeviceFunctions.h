@@ -10,22 +10,29 @@
 //-----------------------------------------------------------------------------------
 __device__ void BC_dr(float &dR, float L)
 {
-	if (dR > L / 2.0f) dR -= L;
-	if (dR < -L / 2.0f) dR += L;
+	if (dev_simParams._PBC){
+		if (dR > L / 2.0f) dR -= L;
+		else if (dR < -L / 2.0f) dR += L;
+	}
 }
 //-----------------------------------------------------------------------------------
 __device__ void BC_dr(float _dR[_D_], float _box[_D_]){
 	for_D_ BC_dr(_dR[d], _box[d]);
 }
 //-----------------------------------------------------------------------------------
-__device__ void BC_r(float &R, float L)
+__device__ void BC_r(float &F, float &R, float L) // actually implements the BCs
 {
-	if (R > L) R -= L;
-	if (R < 0) R += L;
+	if (dev_simParams._PBC){ // move to otherside of box
+		if (R > L) R -= L;
+		else if (R < 0) R += L;
+	}
+	else if (dev_simParams._SBC){ // apply force from soft wall
+		if (R > L || R < 0.0f) F -= dev_simParams._Kw * (R - L);
+	}
 }
 //-----------------------------------------------------------------------------------
-__device__ void BC_r(float _R[_D_], float _box[_D_]){
-	for_D_ BC_r(_R[d], _box[d]);
+__device__ void BC_r(float _F[_D_], float _R[_D_], float _box[_D_]){
+	for_D_ BC_r(_F[d], _R[d], _box[d]);
 }
 //-----------------------------------------------------------------------------------
 __device__ bool InList(int arg, int* list, int listSize)
