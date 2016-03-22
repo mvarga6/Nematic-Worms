@@ -8,9 +8,9 @@
 #include "NWSimulationParameters.h"
 
 __global__ void CalculateThetaKernel(float *r,
-									int rshift,
-									float *thphi,
-									int tshift)
+							int rshift,
+							float *thphi,
+							int tshift)
 {
 	int id = threadIdx.x + blockIdx.x * blockDim.x;
 	if (id < dev_Params._NPARTICLES){

@@ -212,7 +212,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+<<<<<<< HEAD
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+=======
+      <HostDebugInfo>Yes</HostDebugInfo>
+>>>>>>> 8784a18628346493f11b1fe0971b136a12405a81
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

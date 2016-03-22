@@ -20,15 +20,15 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 
 		const int w1 = id / dev_Params._NP;
 		int found = 0;
-		int cid[_D_], ncid[_D_], dcid[_D_], ncell[_D_]; // cell indices occupied by particle
-		for_D_ cid[d] = cell[id + d*cshift]; // assign local from global
-		for_D_ ncell[d] = (int)(ceil(dev_simParams._BOX[d] / dev_Params._DCELL)); // calc number of cells
+		//int cid[_D_], ncid[_D_], dcid[_D_], ncell[_D_]; // cell indices occupied by particle
+		//for_D_ cid[d] = cell[id + d*cshift]; // assign local from global
+		//for_D_ ncell[d] = (int)(ceil(dev_simParams._BOX[d] / dev_Params._DCELL)); // calc number of cells
 
 		float dr[_D_], rnab[_D_], rid[_D_], _rr; // position vectors
 		for_D_ rid[d] = r[id + d*rshift]; // assign local from global
 
 		const float cutoff = dev_Params._R2CUT + dev_Params._BUFFER;
-		bool next;
+		//bool next;
 		for (int p2 = 0; p2 < dev_Params._NPARTICLES; p2++){
 			
 			int w2 = p2 / dev_Params._NP;

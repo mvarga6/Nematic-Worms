@@ -86,10 +86,10 @@ cudaError_t ParametersToDevice(WormsParameters &params, bool attractivePotential
 --------------------------------------------------------------------------*/
 namespace DEFAULT {
 	namespace WORMS {
-		static const int	XDIM = 5;
-		static const int	YDIM = 40;
+		static const int	XDIM = 1;
+		static const int	YDIM = 100;
 		static const int	ZDIM = 1;
-		static const int	NP = 10;
+		static const int	NP = 500;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
 		static const int	LISTSETGAP = 10;
@@ -101,7 +101,7 @@ namespace DEFAULT {
 		static const float	K1 = 57.146f;
 		static const float	K2 = 10.0f * K1;
 		static const float	K3 = 2.0f * K2 / 3.0f;
-		static const float	Ka = 5.0f;
+		static const float	Ka = 10.0f;
 		static const float	L1 = 0.8f;
 		static const float	L2 = 1.6f;
 		static const float	L3 = 2.4f;
@@ -273,13 +273,13 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		}
 		else if (arg == "-xstart"){
 			if (i + 1 < argc){
-				parameters->_XSTART = std::strtof(argv[1 + i++], NULL);
+				parameters->_XSTART = (int)std::strtof(argv[1 + i++], NULL);
 				printf("\nxstart changed: %i", parameters->_XSTART);
 			}
 		}
 		else if (arg == "-xhold"){
 			if (i + 1 < argc){
-				parameters->_XHOLD = std::strtof(argv[1 + i++], NULL);
+				parameters->_XHOLD = (int)std::strtof(argv[1 + i++], NULL);
 				printf("\nxhold changed: %f", parameters->_XHOLD);
 			}
 		}

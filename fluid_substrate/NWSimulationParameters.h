@@ -13,17 +13,23 @@
 ----------------------------------------------------------------------------*/
 typedef struct {
 
-	//.. # of time steps
+	//.. # of time steps once cross-linked
 	int _NSTEPS;
+
+	//.. number of inner time steps for fast potential calculations
+	int _NSTEPS_INNER;
+
+	//.. number of steps of equilization before cross-linking
+	int _NSTEPS_EQUIL;
+
+	//.. number of steps allowed for cross-linking
+	int _NSTEPS_XLINK;
 
 	//.. rate of printing frames, and max frames per output file
 	int _FRAMERATE, _FRAMESPERFILE;
 
 	//.. long time integration constant
 	float _DT;
-
-	//.. number of inner time steps for fast potential calculations
-	int _NSTEPS_INNER;
 
 	//..system physical size
 	float _XBOX, _YBOX, _ZBOX;
@@ -51,15 +57,17 @@ cudaError_t ParametersToDevice(SimulationParameters &params){
 --------------------------------------------------------------------------*/
 namespace DEFAULT {
 	namespace SIM {
-		static const int NSTEPS = 100000;
+		static const int NSTEPS = 1000000;
 		static const int NSTEPS_INNER = 10;
-		static const int FRAMERATE = 1000;
-		static const int FRAMESPERFILE = 100;
+		static const int NSTEPS_EQUIL = 100000;
+		static const int NSTEPS_XLINK = 50000;
+		static const int FRAMERATE = 5000;
+		static const int FRAMESPERFILE = 40;
 		static const float DT = 0.01f;
-		static const float XBOX = 100.0f;
-		static const float YBOX = 100.0f;
+		static const float XBOX = 2000.0f;
+		static const float YBOX = 2000.0f;
 		static const float ZBOX = 100.0f;
-		static const std::string FILENAME = "output.xyz";
+		static const std::string FILENAME = "xlinker_simulation.xyz";
 		static const bool LMEM = false;
 	}
 }
@@ -102,6 +110,16 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 				parameters->_NSTEPS_INNER = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
+		else if (arg == "-nsteps-equil"){
+			if (i + 1 < argc){
+				parameters->_NSTEPS_EQUIL = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-nsteps-xlink"){
+			if (i + 1 < argc){
+				parameters->_NSTEPS_XLINK = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
 		else if (arg == "-framerate"){
 			if (i + 1 < argc){
 				parameters->_FRAMERATE = (int)std::strtof(argv[1 + i++], NULL);
@@ -119,8 +137,8 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		}
 		else if (arg == "-lmem"){
 			parameters->_LMEM = true;
-		}
 	}
+}
 }
 //--------------------------------------------------------------------------
 void Init(SimulationParameters * parameters, int argc, char *argv[], std::string &outfile){
@@ -132,6 +150,7 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_ZBOX = DEFAULT::SIM::ZBOX;
 	parameters->_NSTEPS = DEFAULT::SIM::NSTEPS;
 	parameters->_NSTEPS_INNER = DEFAULT::SIM::NSTEPS_INNER;
+	parameters->_NSTEPS_EQUIL = DEFAULT::SIM::NSTEPS_EQUIL;
 	parameters->_FRAMERATE = DEFAULT::SIM::FRAMERATE;
 	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
 	outfile = DEFAULT::SIM::FILENAME;
