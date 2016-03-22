@@ -1,7 +1,7 @@
 
 #ifndef __WORMS_PARAMETERS_H__
 #define __WORMS_PARAMETERS_H__
-
+// 2D
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "NWConstants.h"
@@ -27,7 +27,7 @@ typedef struct {
 	int _LISTSETGAP, _NMAX;
 
 	//.. LJ energy and length scale, activity scalor
-	float _EPSILON, _SIGMA, _DRIVE;
+	float _EPSILON, _SIGMA, _DRIVE, _DRIVE_ROT;
 
 	//.. spring constants in worms
 	float _K1, _K2, _K3, _Ka;
@@ -43,13 +43,19 @@ typedef struct {
 	float _RMIN, _R2MIN;
 	float _RCUT, _R2CUT;
 
-	//.. cross-linker density, spring constant, and distance
+	//.. cross-linker density, spring constant, distance, and flag
 	float _XLINKERDENSITY, _Kx, _Lx;
 	int _XSTART, _XHOLD;
 	bool _XRAMP;
 
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
+
+	//.. cell size for neighbor finding
+	float _DCELL;
+
+	//.. flag for random adhering distribute
+	bool _RAD;
 
 } WormsParameters;
 /* ------------------------------------------------------------------------
@@ -82,15 +88,16 @@ namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
 		static const int	YDIM = 40;
-		static const int	ZDIM = 2;
+		static const int	ZDIM = 1;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
-		static const int	LISTSETGAP = 50;
+		static const int	LISTSETGAP = 10;
 		static const int	NMAX = 128;
 		static const float	EPSILON = 0.2f;
 		static const float	SIGMA = 1.0f;
 		static const float	DRIVE = 1.0f;
+		static const float	DRIVE_ROT = 0.0f;
 		static const float	K1 = 57.146f;
 		static const float	K2 = 10.0f * K1;
 		static const float	K3 = 2.0f * K2 / 3.0f;
@@ -101,7 +108,7 @@ namespace DEFAULT {
 		static const float	KBT = 0.25f;
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
-		static const float	BUFFER = 0.5f;
+		static const float	BUFFER = 1.0f;
 		static const float	LANDSCALE = 1.0f;
 		static const float	XLINKERDENSITY = 0.0f;
 		static const float	Kx = 10.0f;
@@ -109,10 +116,13 @@ namespace DEFAULT {
 		static const int	XSTART = 0;
 		static const int	XHOLD = -1; // needs to default to end
 		static const bool	XRAMP = false;
+		static const float	DCELL = 3.0f;
+		static const bool	RAD = false;
 	}
 }
 //----------------------------------------------------------------------------
 void CalculateParameters(WormsParameters * parameters, bool WCA = false){
+	if (_D_ == 2) parameters->_ZDIM = 1; // ensure one layer if 2d
 	parameters->_NWORMS = parameters->_XDIM * parameters->_YDIM * parameters->_ZDIM;
 	parameters->_NPARTICLES = parameters->_NP * parameters->_NWORMS;
 	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f);
@@ -124,6 +134,7 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 		parameters->_RCUT = parameters->_RMIN;
 	else
 		parameters->_RCUT = 2.5f * parameters->_SIGMA;
+	parameters->_DCELL = parameters->_RCUT + parameters->_BUFFER;
 	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT;
 	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f;
 	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f;
@@ -179,6 +190,11 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-drive"){
 			if (i + 1 < argc){
 				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-driverot"){
+			if (i + 1 < argc){
+				parameters->_DRIVE_ROT = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-k1"){
@@ -281,6 +297,10 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 			parameters->_XRAMP = true;
 			printf("\nRamping cross-linker denisty from 0 -> [xlink]");
 		}
+		else if (arg == "-rad"){
+			parameters->_RAD = true;
+			printf("\nInitializing worms using Random Adhersion");
+		}
 	}
 }
 //--------------------------------------------------------------------------
@@ -296,6 +316,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_EPSILON = DEFAULT::WORMS::EPSILON;
 	parameters->_SIGMA = DEFAULT::WORMS::SIGMA;
 	parameters->_DRIVE = DEFAULT::WORMS::DRIVE;
+	parameters->_DRIVE_ROT = DEFAULT::WORMS::DRIVE_ROT;
 	parameters->_K1 = DEFAULT::WORMS::K1;
 	parameters->_K2 = DEFAULT::WORMS::K2;
 	parameters->_K3 = DEFAULT::WORMS::K3;
@@ -313,6 +334,8 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_Lx = DEFAULT::WORMS::Lx;
 	parameters->_XSTART = DEFAULT::WORMS::XSTART;
 	parameters->_XHOLD = DEFAULT::WORMS::XHOLD;
+	parameters->_DCELL = DEFAULT::WORMS::DCELL;
+	parameters->_RAD = DEFAULT::WORMS::RAD;
 	
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);

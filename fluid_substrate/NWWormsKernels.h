@@ -1,7 +1,6 @@
-
 #ifndef __WORMS_KERNELS_H__
 #define __WORMS_KERNELS_H__
-
+// 2D
 // -----------------
 //.. cuda includes
 // -----------------

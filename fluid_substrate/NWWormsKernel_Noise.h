@@ -1,5 +1,6 @@
 #ifndef __WORMS_KERNELS__NOISE_KERNEL__
 #define __WORMS_KERNELS__NOISE_KERNEL__
+// 2D
 // ----------------------------------------------------------------------------
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"

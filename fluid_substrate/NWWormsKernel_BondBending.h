@@ -1,5 +1,6 @@
 #ifndef __WORMS_KERNEL__BOND_BENDING_H__
 #define __WORMS_KERNEL__BOND_BENDING_H__
+// 2D
 // ------------------------------------------------------------------------------------------
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
@@ -19,9 +20,9 @@ __global__ void BondBendingForces(float *f,
 
 		//.. loop through particles in worm (excluding last)
 		int p2id, p3id;
-		float r1[3], r2[3], r3[3], f1[3], f2[3], f3[3];
-		float r12[3], r23[3];
-		float BOX[] = { dev_simParams._XBOX, dev_simParams._YBOX };
+		float r1[_D_], r2[_D_], r3[_D_], f1[_D_], f2[_D_], f3[_D_];
+		float r12[_D_], r23[_D_];
+		//float BOX[] = { dev_simParams._XBOX, dev_simParams._YBOX };
 		for (int p1id = wid * np; p1id < ((wid + 1)*np) - 2; p1id++){
 
 			//.. particle ids
@@ -29,7 +30,7 @@ __global__ void BondBendingForces(float *f,
 			p3id = p2id + 1;
 
 			//.. grab memory and calculate distances
-			for (int d = 0; d < 3; d++){
+			for_D_ {
 
 				//.. memory
 				r1[d] = r[p1id + d *rshift];
@@ -39,14 +40,11 @@ __global__ void BondBendingForces(float *f,
 				//.. distances
 				r12[d] = r2[d] - r1[d];
 				r23[d] = r3[d] - r2[d];
-
-				//.. PBC
-				if (d < 2) {
-					DevicePBC(r12[d], BOX[d]);
-					DevicePBC(r23[d], BOX[d]);
-				}
-
 			}
+
+			//.. boundary conditions
+			BC_dr(r12, dev_simParams._BOX);
+			BC_dr(r23, dev_simParams._BOX);
 
 			//.. calculate terms
 			float dot_r12_r23 = dot(r12, r23);
@@ -55,10 +53,10 @@ __global__ void BondBendingForces(float *f,
 			float mag12inv = 1.0f / mag(r12);
 			float mag23inv = 1.0f / mag(r23);
 			float a = k_a * mag12inv * mag23inv;
-			float A[] = { a, a, a };
+			float A[] = { a, a, a }; // always 3d
 
 			//..  calculate forces x, y, z
-			for (int d = 0; d < 3; d++){
+			for_D_ {
 
 				//.. particle 1
 				f1[d] = A[d] * (r23[d] - ((dot_r12_r23 / r12r12) * r12[d]));
@@ -69,7 +67,7 @@ __global__ void BondBendingForces(float *f,
 				//.. particle 3
 				f3[d] = A[d] * (((dot_r12_r23 / r23r23) * r23[d]) - r12[d]);
 
-				//.. apply to containers
+				//.. apply forces to all 3 particles
 				f[p1id + d * fshift] -= f1[d];
 				f[p2id + d * fshift] -= f2[d];
 				f[p3id + d * fshift] -= f3[d];
