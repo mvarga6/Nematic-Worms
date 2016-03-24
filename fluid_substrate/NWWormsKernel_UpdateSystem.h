@@ -78,7 +78,7 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		const int cid = tid + bid * cshift;
 
 		//.. boundary conditions
-		BC_r(f[fid], r[rid], dev_simParams._BOX[bid]); // only applies to
+		BC_r(f[fid], r[rid], dev_simParams._BOX[bid], bid); // only applies to
 
 		float dvx = 0.5f * (f[fid] + f_old[foid]) * dt;
 		float dx = v[vid] * dt + 0.5f * f_old[foid] * dt * dt;

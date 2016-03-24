@@ -6,6 +6,7 @@
 #include "cuda_runtime.h"
 #include <string>
 #include <cstdlib>
+#include "NWmain.h"
 /* ------------------------------------------------------------------------
 *	Data structure containing the parameters needed to run a simulation.  
 *	Intended to exist inside a simulaltion object, NOT taken by reference
@@ -31,9 +32,9 @@ typedef struct {
 
 	//.. flags for sim prodecures
 	bool _LMEM, // linear memory on gpu 
-		_PBC, // periodic boundary conditions
-		_SBC, // soft wall boundary conditions
-		_HBC, // hard wall boundary conditions
+		_PBC[_D_], // periodic boundary conditions
+		_SBC[_D_], // soft wall boundary conditions
+		_HBC[_D_], // hard wall boundary conditions
 		_SPHERE; // circular boundaries 2d, spherical in 3d
 
 	//.. strength of wall potentials
@@ -69,13 +70,73 @@ namespace DEFAULT {
 		static const float ZBOX = 100.0f;
 		static const std::string FILENAME = "output.xyz";
 		static const bool LMEM = false;
-		static const bool PBC = true;
-		static const bool SBC = false;
+		static const bool PBC[_D_] = { true, true
+#if _D_ == 3 
+			, true // for 3rd dim
+#endif
+		};
+		static const bool SBC[_D_] = { false, false
+#if _D_ == 3
+			, true
+#endif
+		};
 		static const float KWALL = 5.0f;
-		static const bool HBC = false;
+		static const bool HBC[_D_] = { false, false
+#if _D_ == 3
+			, true
+#endif
+		};
 		static const bool SPHERE = false;
 		static const float Kw = 5.0f;
 	}
+}
+//--------------------------------------------------------------------------
+void set_unset_D_bool_vectors(const std::string& val, bool set[_D_], bool unset1[_D_], bool unset2[_D_]){
+	if (val == "x"){
+		set[0] = true;
+		unset1[0] = unset2[0] = false;
+	}
+	else if (val == "y"){
+		set[1] = true;
+		unset1[1] = unset2[1] = false;
+	}
+#if _D_ == 3
+	else if (val == "z"){
+		set[2] = true;
+		unset1[2] = unset2[2] = false;
+	}
+#endif
+	else if (val == "xy" || val == "yx"){
+		set[0] = set[1] = true;
+		unset1[0] = unset2[0] = false;
+		unset1[1] = unset2[1] = false;
+	}
+	else if (val == "xz" || val == "zx") {
+		set[0] = true;
+		unset1[0] = unset2[0] = false;
+#if _D_ == 3
+		set[2] = true;
+		unset1[2] = unset2[2] = false;
+#endif
+	}
+	else if (val == "yz" || val == "zy") {
+		set[1] = true;
+		unset1[1] = unset2[1] = false;
+#if _D_ == 3
+		set[2] = true;
+		unset1[2] = unset2[2] = false;
+#endif
+	}
+	else if (val == "xyz") {
+		set[0] = set[1] = true;
+		unset1[0] = unset2[0] = false;
+		unset1[1] = unset2[1] = false;
+#if _D_ == 3
+		set[2] = true;
+		unset1[2] = unset2[2] = false;
+#endif
+	}
+	else printf("\n[ ERROR ] : Unrecognized option argument ('%s')", val.c_str());
 }
 //--------------------------------------------------------------------------
 void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], std::string &outfile){
@@ -135,9 +196,17 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 			parameters->_LMEM = true;
 		}
 		else if (arg == "-softwalls"){
-			parameters->_SBC = true;
-			parameters->_PBC = false;
-			parameters->_HBC = false;
+			if (i + 1 < argc){
+				val = argv[1 + i++];
+				set_unset_D_bool_vectors(val, parameters->_SBC, parameters->_HBC, parameters->_PBC);
+			}
+			else {
+				for_D_{
+					parameters->_SBC[d] = true;
+					parameters->_PBC[d] = false;
+					parameters->_HBC[d] = false;
+				}
+			}
 		}
 		else if (arg == "-kw"){
 			if (i + 1 < argc){
@@ -145,14 +214,30 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 			}
 		}
 		else if (arg == "-hardwalls"){
-			parameters->_HBC = true;
-			parameters->_PBC = false;
-			parameters->_SBC = false;
+			if (i + 1 < argc){
+				val = argv[1 + i++];
+				set_unset_D_bool_vectors(val, parameters->_HBC, parameters->_SBC, parameters->_PBC);
+			}
+			else {
+				for_D_{
+					parameters->_HBC[d] = true;
+					parameters->_PBC[d] = false;
+					parameters->_SBC[d] = false;
+				}
+			}
 		}
-		else if (arg == "-pbc"){
-			parameters->_PBC = true;
-			parameters->_HBC = false;
-			parameters->_SBC = false;
+		else if (arg == "-periodic"){
+			if (i + 1 < argc){
+				val = argv[1 + i++];
+				set_unset_D_bool_vectors(val, parameters->_PBC, parameters->_HBC, parameters->_SBC);
+			}
+			else {
+				for_D_{
+					parameters->_PBC[d] = true;
+					parameters->_SBC[d] = false;
+					parameters->_HBC[d] = false;
+				}
+			}
 		}
 		else if (arg == "-spherical"){
 			parameters->_SPHERE = true;
@@ -173,9 +258,9 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
 	outfile = DEFAULT::SIM::FILENAME;
 	parameters->_LMEM = DEFAULT::SIM::LMEM;
-	parameters->_PBC = DEFAULT::SIM::PBC;
-	parameters->_HBC = DEFAULT::SIM::HBC;
-	parameters->_SBC = DEFAULT::SIM::SBC;
+	for_D_ parameters->_PBC[d] = DEFAULT::SIM::PBC[d];
+	for_D_ parameters->_HBC[d] = DEFAULT::SIM::HBC[d];
+	for_D_ parameters->_SBC[d] = DEFAULT::SIM::SBC[d];
 	parameters->_SPHERE = DEFAULT::SIM::SPHERE;
 	parameters->_Kw = DEFAULT::SIM::Kw;
 
