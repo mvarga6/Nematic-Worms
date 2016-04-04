@@ -12,6 +12,9 @@
 #include "NWErrorHandler.h"
 // 2D
 class ForceXchanger;
+
+//texture<float, 2, cudaReadModeElementType> wTex;
+
 // -----------------------------------------------------------------------------------------
 //	This class defines a set of active flexible worms.
 // -----------------------------------------------------------------------------------------
@@ -157,6 +160,11 @@ dev_f_old(NULL), dev_thphi(NULL), clock_rate(clockingRate) {
 	DEBUG_MESSAGE("Constructor");
 	//.. do necessities
 	srand(time(NULL));
+	//cudaChannelFormatDesc channelDesc = 
+	//cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
+	//cudaArray *cuArray;
+	//cudaMallocArray(&cuArray, &channelDesc, parameters->_NPARTICLES, _D_);
+	//cudaBind
 }
 //-------------------------------------------------------------------------------------------
 Worms::~Worms(){
@@ -301,6 +309,7 @@ void Worms::NoiseForces(){
 //-------------------------------------------------------------------------------------------
 void Worms::LJForces(){
 	DEBUG_MESSAGE("LJForces");
+	if (this->parameters->_NOINT) return; // stop if not needed
 	std::clock_t b4 = std::clock();
 	LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -526,6 +535,7 @@ void Worms::DataHostToDevice(){
 //.. sets neighbors list between worm-worm and worm-fluid
 void Worms::ResetNeighborsList(){
 	DEBUG_MESSAGE("ResetNeighborsList");
+	if (this->parameters->_NOINT) return; // stop if not needed
 	std::clock_t b4 = std::clock();
 
 	//.. reset list memory to -1
