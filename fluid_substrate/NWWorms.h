@@ -12,6 +12,9 @@
 #include "NWErrorHandler.h"
 // 2D
 class ForceXchanger;
+
+//texture<float, 2, cudaReadModeElementType> wTex;
+
 // -----------------------------------------------------------------------------------------
 //	This class defines a set of active flexible worms.
 // -----------------------------------------------------------------------------------------
@@ -157,6 +160,11 @@ dev_f_old(NULL), dev_thphi(NULL), clock_rate(clockingRate) {
 	DEBUG_MESSAGE("Constructor");
 	//.. do necessities
 	srand(time(NULL));
+	//cudaChannelFormatDesc channelDesc = 
+	//cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
+	//cudaArray *cuArray;
+	//cudaMallocArray(&cuArray, &channelDesc, parameters->_NPARTICLES, _D_);
+	//cudaBind
 }
 //-------------------------------------------------------------------------------------------
 Worms::~Worms(){
@@ -222,7 +230,7 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 		this->DistributeWormsOnHost();
 		this->AdjustDistribute(0.5f);
 	}
-	
+
 	//.. choose memory allocation methods
 	if (usePitchedMemory){
 		this->AllocateGPUMemory_Pitched();
@@ -251,7 +259,6 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 		this->PlaceWormExplicit(i, headX[i], headY[i], wormAngle[i]);
 
 	this->DataHostToDevice();
-	ErrorHandler(cudaDeviceSynchronize());
 }
 //-------------------------------------------------------------------------------------------
 void Worms::InternalForces(){
@@ -267,7 +274,6 @@ void Worms::InternalForces(){
 		this->dev_r, this->rshift,
 		rng_ptr, noise
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Internal_clock += std::clock() - b4;
 }
@@ -294,13 +300,13 @@ void Worms::NoiseForces(){
 		this->dev_f, this->fshift,
 		this->rng->Generate(N), noise
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Noise_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::LJForces(){
 	DEBUG_MESSAGE("LJForces");
+	if (this->parameters->_NOINT) return; // stop if not needed
 	std::clock_t b4 = std::clock();
 	LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
@@ -308,16 +314,20 @@ void Worms::LJForces(){
 		this->dev_r, this->rshift, 
 		this->dev_nlist, this->nlshift
 	);
-	/*dim3 threadStruct(16, 16);
-	dim3 numBlocks((this->parameters->_NPARTICLES / threadStruct.x) + 1, 
-				   (this->parameters->_NMAX / threadStruct.y) + 1);
-	FastLennardJonesNListKernel <<< numBlocks, threadStruct >>>
-	(
-		this->dev_f, this->fshift,
-		this->dev_r, this->rshift,
-		this->dev_nlist, this->nlshift
-	);*/
-	ErrorHandler(cudaDeviceSynchronize());
+
+	//const int nblocks = this->Blocks_Per_Kernel;
+	//const int nthreads = this->Threads_Per_Block;
+	//const int nmax = this->parameters->_NMAX;
+	//const int nparts = this->parameters->_NPARTICLES;
+
+	//dim3 threadStruct( nmax/8, 8); // nmax should be 2^n value
+	//dim3 numBlocks((int)sqrt(nparts) + 1, (int)(nparts) + 1);
+	//FastLennardJonesNListKernel <<< numBlocks, threadStruct, sizeof(float)*_D_*nmax >>>
+	//(
+	//	this->dev_f, this->fshift,
+	//	this->dev_r, this->rshift,
+	//	this->dev_nlist, this->nlshift
+	//);
 	ErrorHandler(cudaGetLastError());
 	this->LJ_clock += std::clock() - b4;
 }
@@ -333,7 +343,6 @@ void Worms::AutoDriveForces(int itime, int istart = 0){
 		/*this->dev_thphi, this->tpshift*/
 		this->dev_r, this->rshift
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Drive_clock += std::clock() - b4;
 	
@@ -347,7 +356,6 @@ void Worms::LandscapeForces(){
 		this->dev_f, this->fshift,
 		this->dev_r, this->rshift
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Land_clock += std::clock() - b4;
 }
@@ -374,12 +382,11 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 	//.. count linkages
 	int currentNumber;
 	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, this->dev_xcount);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	
 	//.. calculate current density
 	CheckSuccess(cudaMemcpy(&currentNumber, this->dev_xcount, sizeof(int), cudaMemcpyDeviceToHost));
-	ErrorHandler(cudaDeviceSynchronize());
+
 	ErrorHandler(cudaGetLastError());
 	const float currentDensity = float(currentNumber) / float(N);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
@@ -395,7 +402,6 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 		rng_ptr,
 		offsetDensity, linkCutoff
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 
 	//.. apply forces from linkages to linker particle
@@ -405,7 +411,6 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 		this->dev_r, this->rshift,
 		this->dev_xlink, true
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	
 	//.. apply forces from linkages to linked particle 2
@@ -415,7 +420,6 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 		this->dev_r, this->rshift,
 		this->dev_xlink, false
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	DEBUG_MESSAGE("XLinkerForces_forces2");
 }
@@ -442,7 +446,6 @@ void Worms::SlowUpdate(){
 		this->dev_cell, this->cshift,
 		this->envirn->_DT
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Update_clock += std::clock() - b4;
 }
@@ -471,7 +474,6 @@ void Worms::QuickUpdate(){
 		this->dev_cell, this->cshift,
 		this->envirn->_DT / increaseRatio
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Update_clock += std::clock() - b4;
 }
@@ -484,12 +486,11 @@ void Worms::CalculateThetaPhi(){
 		this->dev_r, this->rshift, 
 		this->dev_thphi, this->tpshift
 	);
-	ErrorHandler(cudaDeviceSynchronize());
+
 	FinishCalculateThetaKernel <<< (this->parameters->_NWORMS / this->Threads_Per_Block) + 1, this->Threads_Per_Block >>>
 	(
 		this->dev_thphi, this->tpshift
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->ThPhi_clock += std::clock() - b4;
 }
@@ -505,7 +506,6 @@ void Worms::DataDeviceToHost(){
 			this->dev_r, 
 			_D_ * this->nparticles_float_alloc,
 			cudaMemcpyDeviceToHost));
-		ErrorHandler(cudaDeviceSynchronize());
 		ErrorHandler(cudaGetLastError());
 	}
 	this->DataTrans_clock += std::clock() - b4;
@@ -518,14 +518,14 @@ void Worms::DataHostToDevice(){
 		this->DataHostToDevice_Pitched();
 	else {
 		CheckSuccess(cudaMemcpy(this->dev_r, this->r, _D_ * this->nparticles_float_alloc, cudaMemcpyHostToDevice));
-		ErrorHandler(cudaDeviceSynchronize());
-		//ErrorHandler(cudaGetLastError());
+		ErrorHandler(cudaGetLastError());
 	}
 }
 //-------------------------------------------------------------------------------------------
 //.. sets neighbors list between worm-worm and worm-fluid
 void Worms::ResetNeighborsList(){
 	DEBUG_MESSAGE("ResetNeighborsList");
+	if (this->parameters->_NOINT) return; // stop if not needed
 	std::clock_t b4 = std::clock();
 
 	//.. reset list memory to -1
@@ -541,7 +541,7 @@ void Worms::ResetNeighborsList(){
 			this->parameters->_NMAX * this->nparticles_int_alloc));
 
 	}
-	ErrorHandler(cudaDeviceSynchronize());
+	//ErrorHandler(cudaDeviceSynchronize());
 
 	//.. assign neighbors
 	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -550,8 +550,6 @@ void Worms::ResetNeighborsList(){
 		this->dev_nlist, this->nlshift,
 		this->dev_cell, this->cshift
 	);
-
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 	this->Nlist_clock += std::clock() - b4;
 }
@@ -581,7 +579,7 @@ void Worms::DislayThetaPhi(){
 			cudaMemcpyDeviceToHost));
 	}
 
-	ErrorHandler(cudaDeviceSynchronize());
+	//ErrorHandler(cudaDeviceSynchronize());
 	for (int i = 0; i < this->parameters->_NPARTICLES; i++){
 		/*if (isnan(thphi[i]))
 			std::cout << "thphi[" << i << "] = NaN" << std::endl;
@@ -611,8 +609,7 @@ void Worms::DisplayNList(){
 			this->dev_nlist, 
 			size * sizeof(int), 
 			cudaMemcpyDeviceToHost));
-	}
-	ErrorHandler(cudaDeviceSynchronize());
+	};
 
 	for (int i = 0; i < parameters->_NPARTICLES; i++){
 		//printf("\nParticle %i\n", i);
@@ -669,7 +666,6 @@ void Worms::ZeroForce(){
 	else {
 		CheckSuccess(cudaMemset(this->dev_f, 0, _D_ * this->nparticles_float_alloc));
 	}
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 }
 //-------------------------------------------------------------------------------------------
@@ -681,7 +677,6 @@ void Worms::AddConstantForce(int dim, float force){
 		this->dev_f, this->fpitch,
 		dim, force
 	);
-	ErrorHandler(cudaDeviceSynchronize());
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ColorXLinked(){
@@ -840,18 +835,12 @@ void Worms::DistributeWormsOnHost(){
 		zbox / float(zdim + 1) //parameters->_RCUT
 	};
 	float * r0 = new float[_D_*nworms];
-	//float *x0 = new float[nworms];
-	//float *y0 = new float[nworms];
-	//float *z0 = new float[nworms];
 	int iw = 0;
 	for (int k = 0; k < zdim; k++){
 		for (int i = 0; i < xdim; i++){
 			for (int j = 0; j < ydim; j++){
 				const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
 				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
-				//r0[iw] = 0.001 + float(i)*;
-				//r0[iw] = 0.001 + float(j)*;
-				//z0[iw] = float(k) *;
 				iw++;
 			}
 		}
@@ -868,9 +857,6 @@ void Worms::DistributeWormsOnHost(){
 		MovementBC(_r[0], xbox);
 		MovementBC(_r[1], ybox);
 		for_D_ r[i + d*nparts] = _r[d];
-		//this->r[i + 0*nparts] = _r[0];
-		//this->r[i + 1*nparts] = _r[1];
-		//this->r[i + 2*nparts] = z + rz;
 	}
 
 	delete[] r0;
@@ -1032,7 +1018,6 @@ void Worms::DataDeviceToHost_Pitched(){
 		this->nparticles_float_alloc,
 		_D_,
 		cudaMemcpyDeviceToHost));
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 }
 //-------------------------------------------------------------------------------------------
@@ -1044,7 +1029,6 @@ void Worms::DataHostToDevice_Pitched(){
 		this->nparticles_float_alloc,
 		_D_,
 		cudaMemcpyHostToDevice));
-	ErrorHandler(cudaDeviceSynchronize());
 	ErrorHandler(cudaGetLastError());
 }
 //-------------------------------------------------------------------------------------------
@@ -1059,7 +1043,6 @@ void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
-	ErrorHandler(cudaDeviceSynchronize());
 	printf("\nMemory zeroed");
 }
 //-------------------------------------------------------------------------------------------

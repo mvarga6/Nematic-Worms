@@ -76,7 +76,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	if (!this->fxyz.is_open())
 		printf("\n***\nError opening output file: %s!\n***", this->outputfile.c_str());
 	else
-		printf("\nWriting data to outfile: %s", this->outputfile.c_str());
+		printf("\nWriting data to outfile: %s\n", this->outputfile.c_str());
 }
 //-------------------------------------------------------------------------------------------
 NWSimulation::~NWSimulation(){
@@ -197,7 +197,7 @@ void NWSimulation::XYZPrint(int itime){
 	double hours_left = mins_left / 60.0;
 	int hours = int(hours_left);
 	int mins = int((hours_left - (double)hours) * 60);
-	printf("\nframe %i: %i hrs %i mins remaining", frame++, hours, mins);
+	printf("\rframe %i: %i hrs %i mins remaining", frame++, hours, mins);
 	this->timer = clock();
 }
 //-------------------------------------------------------------------------------------------

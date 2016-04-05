@@ -29,6 +29,9 @@ typedef struct {
 	//.. LJ energy and length scale, activity scalor
 	float _EPSILON, _SIGMA, _DRIVE, _DRIVE_ROT;
 
+	//.. steric interaction on/off
+	bool _NOINT;
+
 	//.. drive type
 	bool _EXTENSILE;
 
@@ -122,6 +125,7 @@ namespace DEFAULT {
 		static const float	DCELL = 3.0f;
 		static const bool	RAD = false;
 		static const bool   EXTENSILE = false;
+		static const bool	NOINT = false;
 	}
 }
 //----------------------------------------------------------------------------
@@ -311,6 +315,10 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 			parameters->_EXTENSILE = true;
 			printf("\nUsing extensile driving mechanism");
 		}
+		else if (arg == "-noint"){
+			parameters->_NOINT = true;
+			printf("\nExcluding steric interaction between worms");
+		}
 	}
 }
 //--------------------------------------------------------------------------
@@ -325,7 +333,9 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_NMAX = DEFAULT::WORMS::NMAX;
 	parameters->_EPSILON = DEFAULT::WORMS::EPSILON;
 	parameters->_SIGMA = DEFAULT::WORMS::SIGMA;
+	parameters->_NOINT = DEFAULT::WORMS::NOINT;
 	parameters->_DRIVE = DEFAULT::WORMS::DRIVE;
+	parameters->_EXTENSILE = DEFAULT::WORMS::EXTENSILE;
 	parameters->_DRIVE_ROT = DEFAULT::WORMS::DRIVE_ROT;
 	parameters->_K1 = DEFAULT::WORMS::K1;
 	parameters->_K2 = DEFAULT::WORMS::K2;
