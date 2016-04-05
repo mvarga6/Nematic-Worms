@@ -230,7 +230,7 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 		this->DistributeWormsOnHost();
 		this->AdjustDistribute(0.5f);
 	}
-	
+
 	//.. choose memory allocation methods
 	if (usePitchedMemory){
 		this->AllocateGPUMemory_Pitched();
@@ -386,7 +386,7 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 	
 	//.. calculate current density
 	CheckSuccess(cudaMemcpy(&currentNumber, this->dev_xcount, sizeof(int), cudaMemcpyDeviceToHost));
-	//ErrorHandler(cudaDeviceSynchronize());
+
 	ErrorHandler(cudaGetLastError());
 	const float currentDensity = float(currentNumber) / float(N);
 	const float offsetDensity = crossLinkDensityTarget - currentDensity;
