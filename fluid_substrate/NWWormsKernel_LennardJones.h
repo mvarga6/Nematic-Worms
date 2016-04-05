@@ -80,12 +80,15 @@ __global__ void LennardJonesNListKernel(float *f,
 	}
 }
 //---------------------------------------------------------------------------------------------------
+//.. each block handles a particle and all interactions, a block for each particle basically
 __global__ void FastLennardJonesNListKernel(float *f, int fshift,
 											float *r, int rshift,
 											int *nlist, int nlshift){
-	int pid = threadIdx.x + blockDim.x * blockIdx.x; // particle index
-	int nab = threadIdx.y + blockDim.y * blockIdx.y; // neighbor count
-	if ((pid < dev_Params._NPARTICLES) && (nab < dev_Params._NMAX)){
+	int pid = blockIdx.x + gridDim.x * blockIdx.x; // particle index is total block id
+	int nab = threadIdx.x + blockDim.x * threadIdx.y; // neighbor count
+	const int nmax = dev_Params._NMAX;
+	if ((pid < dev_Params._NPARTICLES) && (nab < nmax)){
+		extern __shared__ float f_shared[];
 		int nid = nlist[pid + nab * nlshift];
 		if (nid != -1){
 			float rid[_D_], rnab[_D_], dr[_D_], _f, rr;
@@ -94,10 +97,24 @@ __global__ void FastLennardJonesNListKernel(float *f, int fshift,
 			rr = CalculateRR(rid, rnab, dr);
 			if (rr < dev_Params._R2CUT){
 				_f = CalculateLJ(rr);
-				for_D_ f[pid + d*fshift] -= _f * dr[d];
+				for_D_ f_shared[nab + d*nmax] -= _f * dr[d];
 			}
 		}
-	}
+		else{
+			for_D_ f_shared[nab + d*nmax] = 0.0f; // sets to zero if no partcle theres
+		}
 
+		__syncthreads(); // sync before adding them all up
+		float fid[_D_];
+		for_D_ {
+			fid[d] = 0.0f;
+			for (int n = 0; n < nmax; n++){
+				fid[d] += f_shared[n + d*nmax];
+			}
+		}
+
+		//.. apply to global forces
+		for_D_ f[pid + d*fshift] += fid[d];
+	}
 }
 #endif
