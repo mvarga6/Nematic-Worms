@@ -166,6 +166,7 @@ void NWSimulation::XYZPrint(int itime){
 	//const int ntypes = (ka_ratio < 1.0f ? 2 : maxTypes);
 	const char ptypes[maxTypes] = { 'A', 'B', 'C', 'D', 'E' };
 	const int N = params->_NPARTICLES;
+	const int nworms = params->_NWORMS;
 
 	int nBlownUp = 0;
 	this->fxyz << N + 4 << std::endl;
@@ -173,7 +174,7 @@ void NWSimulation::XYZPrint(int itime){
 	for (int i = 0; i < params->_NPARTICLES; i++){
 		const int w = i / params->_NP;
 		// choose 0 or 1,2,3,4 type
-		const int t = (w > N*ka_ratio ? 0 : w % (maxTypes - 1) + 1);
+		const int t = (w > nworms*ka_ratio ? 0 : w % (maxTypes - 1) + 1);
 		float _r[3] = { 0, 0, 0 }; // always 3d
 		for_D_ _r[d] = worms->r[i + d*N];
 		//float x = worms->r[i], y = worms->r[i + N], z = 0.0f;
