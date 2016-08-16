@@ -187,7 +187,7 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 				parameters->_FRAMESPERFILE = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
-		else if (arg == "-o"){
+		else if (arg == "-o" || arg == "--output"){
 			if (i + 1 < argc){
 				outfile = std::string(argv[1 + i++]);
 			}
