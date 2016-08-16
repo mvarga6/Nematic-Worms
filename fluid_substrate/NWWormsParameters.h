@@ -36,7 +36,8 @@ typedef struct {
 	bool _EXTENSILE;
 
 	//.. spring constants in worms
-	float _K1, _K2, _K3, _Ka;
+	float _K1, _K2, _K3, _Ka, _Ka2;
+	float _Ka_RATIO;
 
 	//.. spring equilibrium lengths
 	float _L1, _L2, _L3;
@@ -98,6 +99,8 @@ namespace DEFAULT {
 		static const float	K2 = 10.0f * K1;
 		static const float	K3 = 2.0f * K2 / 3.0f;
 		static const float	Ka = 5.0f;
+		static const float  Ka2 = Ka;
+		static const float  Ka_RATIO = 1.0f;
 		static const float	L1 = 0.8f;
 		static const float	L2 = 1.6f;
 		static const float	L3 = 2.4f;
@@ -138,7 +141,8 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f; //
 	parameters->_L2 = 2.0f * parameters->_L1; // adjust 2nd neighbor distance based on first
 	parameters->_L3 = 3.0f * parameters->_L1; // adjsut 3rd neighbor distance based on first
-	
+	if (parameters->_Ka_RATIO > 1.0f) parameters->_Ka_RATIO = 1.0f;
+	else if (parameters->_Ka_RATIO < 0.0f) parameters->_Ka_RATIO = 0.0f;
 }
 //----------------------------------------------------------------------------
 void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &wca, bool &xramp){
@@ -216,6 +220,18 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 			if (i + 1 < argc){
 				parameters->_Ka = std::strtof(argv[1 + i++], NULL);
 				printf("\nKa changed: %f", parameters->_Ka);
+			}
+		}
+		else if (arg == "-ka2"){
+			if (i + 1 < argc){
+				parameters->_Ka2 = std::strtof(argv[1 + i++], NULL);
+				printf("\nKa2 changed: %f", parameters->_Ka2);
+			}
+		}
+		else if (arg == "-karatio"){
+			if (i + 1 < argc){
+				parameters->_Ka_RATIO = std::strtof(argv[1 + i++], NULL);
+				printf("\nKa_Ratio changed: %f", parameters->_Ka_RATIO);
 			}
 		}
 		else if (arg == "-l1"){
@@ -331,6 +347,8 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_K2 = DEFAULT::WORMS::K2;
 	parameters->_K3 = DEFAULT::WORMS::K3;
 	parameters->_Ka = DEFAULT::WORMS::Ka;
+	parameters->_Ka2 = DEFAULT::WORMS::Ka2;
+	parameters->_Ka_RATIO = DEFAULT::WORMS::Ka_RATIO;
 	parameters->_L1 = DEFAULT::WORMS::L1;
 	parameters->_L2 = DEFAULT::WORMS::L2;
 	parameters->_L3 = DEFAULT::WORMS::L3;

@@ -15,8 +15,13 @@ __global__ void BondBendingForces(float *f,
 	int wid = threadIdx.x + blockDim.x * blockIdx.x;
 	int nworms = dev_Params._NWORMS;
 	int np = dev_Params._NP;
-	const float k_a = dev_Params._Ka;
+	const float ka_ratio = dev_Params._Ka_RATIO;
+	const float ka1 = dev_Params._Ka;
+	const float ka2 = dev_Params._Ka2;
 	if (wid < nworms){
+
+		//.. chose ka to use (default to ka1)
+		const float k_a = (wid <= nworms*ka_ratio ? ka1 : ka2);
 
 		//.. loop through particles in worm (excluding last)
 		int p2id, p3id;
