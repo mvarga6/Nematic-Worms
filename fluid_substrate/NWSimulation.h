@@ -62,7 +62,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	this->ReconsileParameters(this->simparams, this->params);
 
 	//.. setup random number generator
-	this->rng = new GRNG(_D_ * params->_NPARTICLES, 0.0f, 1.0f);
+	this->rng = new GRNG(_D_ * params->_NPARTS_ADJ, 0.0f, 1.0f);
 
 	//.. define the worms
 	this->worms = new Worms();
