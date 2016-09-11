@@ -214,11 +214,12 @@ void NWSimulation::DisplayErrors(){
 }
 //-------------------------------------------------------------------------------------------
 void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters *wP){
-	printf("\nParameters being adjusted for consistency.");
+	printf("\nParameters being adjusted for ... ");
 
 	//.. Adjust the number of particles to reflect a flexible encapsilation (2D-only)
 #if _D_ == 2
 	if (sP->_FLEX_ENCAPS) {
+		printf("\n\n\tFLEXIBLE ENCAPSILATION");
 		const int worm_n = wP->_NPARTICLES;
 		const float xbox = sP->_BOX[0];
 		const float ybox = sP->_BOX[1];
@@ -243,5 +244,7 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 	//.. show parameters on device
 	CheckParametersOnDevice << < 1, 1 >> >();
 	ErrorHandler(cudaDeviceSynchronize());
+
+	printf("\n\nAdjusted Particle #:\t%i", wP->_NPARTS_ADJ);
 }
 #endif 
