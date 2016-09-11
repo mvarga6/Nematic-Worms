@@ -1,7 +1,7 @@
 
 #ifndef __WORMS_KERNEL__SET_X_LIST_H__
 #define __WORMS_KERNEL__SET_X_LIST_H__
-
+// 2D only
 #include "NWDeviceFunctions.h"
 #include "NWParams.h"
 #include "NWSimulationParameters.h"
@@ -25,8 +25,8 @@ __global__ void SetXListWormsKernel(
 		{
 			dx = flx[i] - wxid;
 			dy = fly[i] - wyid;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
 			rr = dx*dx + dy*dy;
 
 			//.. only sets when within XCUT2 interaction range

@@ -24,8 +24,8 @@ __global__ void SetXListFluidKernel(
 		{
 			dx = wx[i] - _flx;
 			dy = wy[i] - _fly;
-			DevicePBC(dx, dev_simParams._XBOX);
-			DevicePBC(dy, dev_simParams._YBOX);
+			//DevicePBC(dx, dev_simParams._XBOX);
+			//DevicePBC(dy, dev_simParams._YBOX);
 			rr = dx*dx + dy*dy;
 
 			//.. only pics over XCUT2 interaction range

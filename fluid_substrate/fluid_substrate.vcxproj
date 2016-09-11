@@ -52,25 +52,34 @@
     <ClInclude Include="NWSimulationParameters.h" />
     <ClInclude Include="NWWorms.h" />
     <ClInclude Include="NWWormsKernels.h" />
+    <ClInclude Include="NWWormsKernel_BondBending.h" />
     <ClInclude Include="NWWormsKernel_CalculateTheta.h" />
     <ClInclude Include="NWWormsKernel_DriveForce.h" />
     <ClInclude Include="NWWormsKernel_InternalForce.h" />
     <ClInclude Include="NWWormsKernel_LandscapeForce.h" />
     <ClInclude Include="NWWormsKernel_LennardJones.h" />
+    <ClInclude Include="NWWormsKernel_Noise.h" />
     <ClInclude Include="NWWormsKernel_SetNList.h" />
     <ClInclude Include="NWWormsKernel_SetXList.h" />
     <ClInclude Include="NWWormsKernel_UpdateSystem.h" />
+    <ClInclude Include="NWWormsKernel_XLinkers.h" />
     <ClInclude Include="NWWormsParameters.h" />
+    <ClInclude Include="NWXYZIO.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="XYZPrinter.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="poordraw.cfg" />
     <None Include="run.pbs" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="fluid_substrate.rc" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AFB9EADE-CCC6-4839-94C5-9B764B55658B}</ProjectGuid>
     <RootNamespace>fluid_substrate</RootNamespace>
-    <CudaToolkitCustomDir>..\..\..\..\..\..\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0</CudaToolkitCustomDir>
+    <CudaToolkitCustomDir>
+    </CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -148,7 +157,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>curand.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -156,7 +165,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <FastMath>true</FastMath>
+      <FastMath>Yes</FastMath>
+      <Defines>__DEBUG__</Defines>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -193,7 +203,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>cudart.lib;curand.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <Version>
+      </Version>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -201,7 +212,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
