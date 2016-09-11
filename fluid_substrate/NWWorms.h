@@ -261,7 +261,7 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 	this->DataHostToDevice();
 }
 //-------------------------------------------------------------------------------------------
-void Worms::InternalForces(const float l_encap = 0){
+void Worms::InternalForces(const float l_encap = 1){
 	DEBUG_MESSAGE("InternalForces");
 	std::clock_t b4 = std::clock();
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
@@ -293,7 +293,7 @@ void Worms::BendingForces(){
 		(
 			this->dev_f, this->fshift,
 			this->dev_r, this->rshift
-		)
+		);
 	}
 }
 //-------------------------------------------------------------------------------------------
