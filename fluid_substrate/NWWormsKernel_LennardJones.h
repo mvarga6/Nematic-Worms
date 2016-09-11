@@ -16,24 +16,22 @@ __global__ void LennardJonesNListKernel(float *f,
 										int nshift )
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-	if (id < dev_Params._NPARTICLES){
+	if (id < dev_Params._NPARTS_ADJ){
 
 		float fid[_D_], rid[_D_], dr[_D_], _r[_D_];
 		float _f, _rr;
 		const int np = dev_Params._NP;
-		const float drive = dev_Params._DRIVE;
-		int pnp = id % np; // particle in chain
+		
 		for_D_{ fid[d] = 0.0f; rid[d] = r[id + d*rshift];}
 
 		bool extensile = dev_Params._EXTENSILE;
 
 		//.. loop through neighbors
-		int nnp, nid;
-		for (int i = 0; i < dev_Params._NMAX; i++)
-		{
+		int nid;
+		for (int i = 0; i < dev_Params._NMAX; i++){
+			
 			//.. neighbor id
 			nid = nlist[id + i*nshift];
-			nnp = nid % np;
 
 			//.. if no more players
 			if (nid == -1) break;
@@ -49,6 +47,9 @@ __global__ void LennardJonesNListKernel(float *f,
 
 			//.. extensile driving mechanism applied here!!! need a better place
 			if (extensile){
+				const float drive = dev_Params._DRIVE;
+				int pnp = id % np; // particle in chain
+				int nnp = nid % np;
 				if ((pnp < np - 1) && (nnp < np - 1)){
 					float rnxt1[_D_], rnxt2[_D_], x[_D_], u[_D_], f_ext[_D_];
 					for_D_ rnxt1[d] = r[(id + 1) + d*rshift];
@@ -104,7 +105,7 @@ __global__ void FastLennardJonesNListKernel(float *f, int fshift,
 			for_D_ f_shared[nab + d*nmax] = 0.0f; // sets to zero if no partcle theres
 		}
 
-		__syncthreads(); // sync before adding them all up
+		//__syncthreads(); // sync before adding them all up
 		float fid[_D_];
 		for_D_ {
 			fid[d] = 0.0f;

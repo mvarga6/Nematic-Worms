@@ -16,7 +16,10 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 										 int cshift)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-	if (id < dev_Params._NPARTICLES){
+	const int ntotal = dev_Params._NPARTS_ADJ;
+	const int nparts = dev_Params._NPARTICLES;
+	const int nencap = ntotal - nparts;
+	if (id < ntotal){
 
 		const int w1 = id / dev_Params._NP;
 		int found = 0;
@@ -29,12 +32,18 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 
 		const float cutoff = dev_Params._R2CUT + dev_Params._BUFFER;
 		bool next;
-		for (int p2 = 0; p2 < dev_Params._NPARTICLES; p2++){
+		for (int p2 = 0; p2 < ntotal; p2++){
 			
-			int w2 = p2 / dev_Params._NP;
+			if (id < nparts){ // for worm paricles
+				int w2 = p2 / dev_Params._NP;
 
-			//.. stop if in same worm
-			if (w2 == w1) continue;
+				//.. stop if in same worm
+				if (w2 == w1) continue;
+			}
+			else { // encaps particle
+				int sep = abs((p2 - id) % (nencap - 5));
+				if (sep <= 5) continue; //.. ignore close neighbors
+			}
 
 			//next = false; // set to do calculate
 			//for_D_ ncid[d] = cell[p2 + d*cshift]; // get neighbor cell indices

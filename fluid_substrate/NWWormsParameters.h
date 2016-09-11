@@ -18,7 +18,7 @@ typedef struct {
 	int _XDIM, _YDIM, _ZDIM;
 
 	//.. particles per worm, # of worms, total particle #
-	int _NP, _NWORMS, _NPARTICLES;
+	int _NP, _NWORMS, _NPARTICLES, _NPARTS_ADJ;
 
 	//.. scales the landscape forces
 	float _LANDSCALE;
@@ -126,6 +126,7 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 	if (_D_ == 2) parameters->_ZDIM = 1; // ensure one layer if 2d
 	parameters->_NWORMS = parameters->_XDIM * parameters->_YDIM * parameters->_ZDIM; // calculate # of worms
 	parameters->_NPARTICLES = parameters->_NP * parameters->_NWORMS; // calculate # of particles
+	parameters->_NPARTS_ADJ = parameters->_NPARTICLES;
 	parameters->_SIGMA6 = powf(parameters->_SIGMA, 6.0f); // LJ scalor
 	parameters->_2SIGMA6 = 2.0f * parameters->_SIGMA6; // LJ scalor
 	parameters->_LJ_AMP = 24.0f * parameters->_EPSILON * parameters->_SIGMA6; // LJ scalor

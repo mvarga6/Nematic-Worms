@@ -29,6 +29,7 @@ typedef struct {
 	//..system physical size
 	float _XBOX, _YBOX, _ZBOX;
 	float _BOX[_D_];
+	float _BOX_ADJ[_D_];
 
 	//.. flags for sim prodecures
 	bool _LMEM, // linear memory on gpu 
@@ -39,6 +40,9 @@ typedef struct {
 
 	//.. strength of wall potentials
 	float _Kw;
+
+	//.. encapsilation of simulation in flexible ring (2D)
+	bool _FLEX_ENCAPS;
 
 
 } SimulationParameters;
@@ -87,6 +91,7 @@ namespace DEFAULT {
 #endif
 		};
 		static const bool SPHERE = false;
+		static const bool FLEX_ENCAPS = false;
 		static const float Kw = 5.0f;
 	}
 }
@@ -242,6 +247,9 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		else if (arg == "-spherical"){
 			parameters->_SPHERE = true;
 		}
+		else if (arg == "-encapsilate2d" && _D_ == 2){
+			parameters->_FLEX_ENCAPS = true;
+		}
 	}
 }
 //--------------------------------------------------------------------------
@@ -263,13 +271,14 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	for_D_ parameters->_SBC[d] = DEFAULT::SIM::SBC[d];
 	parameters->_SPHERE = DEFAULT::SIM::SPHERE;
 	parameters->_Kw = DEFAULT::SIM::Kw;
+	parameters->_FLEX_ENCAPS = DEFAULT::SIM::FLEX_ENCAPS;
 
 	//.. get assign cmdline parameters
 	GrabParameters(parameters, argc, argv, outfile);
 
 	//.. calculate parameters
 	const float box[3] = { parameters->_XBOX, parameters->_YBOX, parameters->_ZBOX };
-	for_D_ parameters->_BOX[d] = box[d];
+	for_D_ parameters->_BOX[d] = parameters->_BOX_ADJ[d] = box[d];
 
 	//.. put on GPU and check for error
 	cudaError_t err;

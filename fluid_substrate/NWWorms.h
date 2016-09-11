@@ -101,7 +101,7 @@ public:
 	//.. user access to running simulation
 	void Init(GRNG *, WormsParameters *, SimulationParameters *, bool, int);
 	void CustomInit(float *headX, float *headY, float *wormAngle);
-	void InternalForces();
+	void InternalForces(const float l_encap);
 	void BendingForces();
 	void NoiseForces();
 	void LJForces();
@@ -261,18 +261,18 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 	this->DataHostToDevice();
 }
 //-------------------------------------------------------------------------------------------
-void Worms::InternalForces(){
+void Worms::InternalForces(const float l_encap = 0){
 	DEBUG_MESSAGE("InternalForces");
 	std::clock_t b4 = std::clock();
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
-	int N = _D_ * this->parameters->_NPARTICLES;
+	int N = _D_ * this->parameters->_NPARTS_ADJ;
 	float * rng_ptr = this->rng->Get(N);
 	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift,
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
-		rng_ptr, noise
+		rng_ptr, noise, l_encap
 	);
 	ErrorHandler(cudaGetLastError());
 	this->Internal_clock += std::clock() - b4;
@@ -286,6 +286,15 @@ void Worms::BendingForces(){
 			this->dev_f, this->fshift,
 			this->dev_r, this->rshift
 	);
+
+	if (this->envirn->_FLEX_ENCAPS) {
+		Blocks = 1 + ((parameters->_NPARTS_ADJ - parameters->_NPARTICLES) / this->Threads_Per_Block);
+		BondBendingForces_Encap <<<Blocks, this->Threads_Per_Block >>>
+		(
+			this->dev_f, this->fshift,
+			this->dev_r, this->rshift
+		)
+	}
 }
 //-------------------------------------------------------------------------------------------
 void Worms::NoiseForces(){
@@ -293,7 +302,7 @@ void Worms::NoiseForces(){
 	std::clock_t b4 = std::clock();
 	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
 	dim3 blockStruct(this->Threads_Per_Block);
-	int N = _D_ * this->parameters->_NPARTICLES;
+	int N = _D_ * this->parameters->_NPARTS_ADJ;
 	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
 	NoiseKernel <<< gridStruct, blockStruct >>>
 	(
@@ -561,7 +570,7 @@ void Worms::ResetNeighborsList(int itime){
 //-------------------------------------------------------------------------------------------
 void Worms::DislayThetaPhi(){
 
-	float * thphi = new float[2 * this->parameters->_NPARTICLES];
+	float * thphi = new float[2 * this->parameters->_NPARTS_ADJ];
 
 	if (pitched_memory) {
 		CheckSuccess(cudaMemcpy2D(thphi,
@@ -580,19 +589,19 @@ void Worms::DislayThetaPhi(){
 	}
 
 	//ErrorHandler(cudaDeviceSynchronize());
-	for (int i = 0; i < this->parameters->_NPARTICLES; i++){
+	for (int i = 0; i < this->parameters->_NPARTS_ADJ; i++){
 		/*if (isnan(thphi[i]))
 			std::cout << "thphi[" << i << "] = NaN" << std::endl;
 		if (isnan(thphi[i + this->parameters->_NPARTICLES])) 
 			std::cout << "thphi[" << i << "] = NaN" << std::endl;*/
-		std::cout << "\nth = " << thphi[i] << "\tphi = " << thphi[i + this->parameters->_NPARTICLES];
+		std::cout << "\nth = " << thphi[i] << "\tphi = " << thphi[i + this->parameters->_NPARTS_ADJ];
 	}
 	delete[] thphi;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::DisplayNList(){
 
-	size_t size = this->parameters->_NPARTICLES * this->parameters->_NMAX;
+	size_t size = this->parameters->_NPARTS_ADJ * this->parameters->_NMAX;
 	int * nlist = new int[size];
 
 	if (pitched_memory) {
@@ -611,11 +620,11 @@ void Worms::DisplayNList(){
 			cudaMemcpyDeviceToHost));
 	};
 
-	for (int i = 0; i < parameters->_NPARTICLES; i++){
+	for (int i = 0; i < parameters->_NPARTS_ADJ; i++){
 		//printf("\nParticle %i\n", i);
 		for (int n = 0; n < parameters->_NMAX; n++){
 			//printf("\t%i == %i", n, nlist[i + n*this->parameters->_NPARTICLES]);
-			int p = nlist[i + n*this->parameters->_NPARTICLES];
+			int p = nlist[i + n*this->parameters->_NPARTS_ADJ];
 			if (p != -1) printf("\nParticle %i:\t%i", i, p);
 		}
 	}
@@ -660,7 +669,7 @@ void Worms::ZeroForce(){
 		CheckSuccess(cudaMemset2D(this->dev_f,
 			this->fpitch,
 			0,
-			this->parameters->_NPARTICLES*sizeof(float),
+			this->parameters->_NPARTS_ADJ*sizeof(float),
 			_D_));
 	}
 	else {
@@ -694,8 +703,8 @@ void Worms::ColorXLinked(){
 // ------------------------------------------------------------------------------------------
 void Worms::AllocateHostMemory(){
 	DEBUG_MESSAGE("AllocateHostMemory");
-	this->r = new float[_D_*this->parameters->_NPARTICLES];
-	this->c = new char[this->parameters->_NPARTICLES];
+	this->r = new float[_D_*this->parameters->_NPARTS_ADJ];
+	this->c = new char[this->parameters->_NPARTS_ADJ];
 }
 //-------------------------------------------------------------------------------------------
 void Worms::FreeHostMemory(){
@@ -710,12 +719,12 @@ void Worms::AllocateGPUMemory(){
 	printf("\nUsing linear memory:\t");
 	
 	//.. calculate and assign shifts as normal
-	this->fshift = this->parameters->_NPARTICLES;
-	this->foshift = this->parameters->_NPARTICLES;
-	this->vshift = this->parameters->_NPARTICLES;
-	this->rshift = this->parameters->_NPARTICLES;
-	this->tpshift = this->parameters->_NPARTICLES;
-	this->nlshift = this->parameters->_NPARTICLES;
+	this->fshift = this->parameters->_NPARTS_ADJ;
+	this->foshift = this->parameters->_NPARTS_ADJ;
+	this->vshift = this->parameters->_NPARTS_ADJ;
+	this->rshift = this->parameters->_NPARTS_ADJ;
+	this->tpshift = this->parameters->_NPARTS_ADJ;
+	this->nlshift = this->parameters->_NPARTS_ADJ;
 
 	//.. allocate linear memory
 	CheckSuccess(cudaMalloc((void**)&this->dev_r, _D_ * this->nparticles_float_alloc));
@@ -821,6 +830,7 @@ void Worms::DistributeWormsOnHost(){
 	//.. grab parameters
 	const int nworms = this->parameters->_NWORMS;
 	const int nparts = this->parameters->_NPARTICLES;
+	const int ntotal = this->parameters->_NPARTS_ADJ;
 	const int np = this->parameters->_NP;
 	const int xdim = this->parameters->_XDIM;
 	const int ydim = this->parameters->_YDIM;
@@ -834,6 +844,8 @@ void Worms::DistributeWormsOnHost(){
 		ybox / float(ydim + 1),
 		zbox / float(zdim + 1) //parameters->_RCUT
 	};
+
+	//.. distribute heads (worms)
 	float * r0 = new float[_D_*nworms];
 	int iw = 0;
 	for (int k = 0; k < zdim; k++){
@@ -846,7 +858,7 @@ void Worms::DistributeWormsOnHost(){
 		}
 	}
 
-	// Distribute bodies
+	//.. distribute particles (worms)
 	const float s[3] = { l1, 0, 0 }; // always 3d: slope of laying chains from head
 	for (int i = 0; i < nparts; i++){
 		const int w = i / np;
@@ -854,12 +866,38 @@ void Worms::DistributeWormsOnHost(){
 		float rn[_D_], _r[_D_];
 		for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
 		for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
-		MovementBC(_r[0], xbox);
-		MovementBC(_r[1], ybox);
-		for_D_ r[i + d*nparts] = _r[d];
+		//MovementBC(_r[0], xbox);
+		//MovementBC(_r[1], ybox);
+		for_D_ r[i + d*ntotal] = _r[d];
 	}
 
 	delete[] r0;
+
+	//.. place encaspilation
+#if _D_ == 2
+	if (this->envirn->_FLEX_ENCAPS){
+		const float adj_xbox = this->envirn->_BOX_ADJ[0];
+		const float adj_ybox = this->envirn->_BOX_ADJ[1];
+		const float cx = adj_xbox / 2.0f; // center of box
+		const float cy = adj_ybox / 2.0f;
+		const float R = sqrt(xbox*xbox + ybox*ybox) / 2.0f;
+		const int encap_n = this->parameters->_NPARTS_ADJ - nparts;
+		const float ang_per_encap_part = (2.0 * M_PI) / double(encap_n);
+		float x, y, theta = 0; int i = 0;
+		for (int p = nparts; p < nparts + encap_n; p++){ // all encap parts
+			x = R * cos(theta);
+			y = R * sin(theta);
+			r[p + 0 * ntotal] = cx + x;
+			r[p + 1 * ntotal] = cy + y;
+			theta += ang_per_encap_part;
+		}
+
+		//.. adjust box size after init
+		this->envirn->_XBOX = this->envirn->_BOX_ADJ[0];
+		this->envirn->_YBOX = this->envirn->_BOX_ADJ[1];
+		for_D_ this->envirn->_BOX[d] = this->envirn->_BOX_ADJ[d];
+	}
+#endif
 }
 //-------------------------------------------------------------------------------------------
 void Worms::AdjustDistribute(float target_percent){
@@ -867,7 +905,7 @@ void Worms::AdjustDistribute(float target_percent){
 	//.. grab parameters
 	const int np = this->parameters->_NP;
 	const int nworms = this->parameters->_NWORMS;
-	const int N = np * nworms;
+	const int N = this->parameters->_NPARTS_ADJ;
 
 	//.. flip orientation for target_percent of worms
 	float * save = new float[_D_ * np]; 
@@ -1006,7 +1044,7 @@ void Worms::RandomAdheringDistribute(){ // 2D only
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroHost(){
-	for (int i = 0; i < _D_ *this->parameters->_NPARTICLES; i++)
+	for (int i = 0; i < _D_ *this->parameters->_NPARTS_ADJ; i++)
 		this->r[i] = 0.0f;
 }
 //-------------------------------------------------------------------------------------------
@@ -1119,11 +1157,12 @@ void Worms::CheckSuccess(cudaError_t err){
 void Worms::FigureBlockThreadStructure(int tpb){
 	if (tpb >= 0) this->Threads_Per_Block = tpb;
 	else this->Threads_Per_Block = 256; // good default value
-	this->Blocks_Per_Kernel = this->parameters->_NPARTICLES / this->Threads_Per_Block + 1; // add one to guarentee enough
-	this->nparticles_float_alloc = this->parameters->_NPARTICLES * sizeof(float);
-	this->nparticles_int_alloc = this->parameters->_NPARTICLES * sizeof(int);
+
+	this->Blocks_Per_Kernel = this->parameters->_NPARTS_ADJ / this->Threads_Per_Block + 1; // add one to guarentee enough
+	this->nparticles_float_alloc = this->parameters->_NPARTS_ADJ * sizeof(float);
+	this->nparticles_int_alloc = this->parameters->_NPARTS_ADJ * sizeof(int);
 	printf("\nWorms:\n------\nTotalThreads = %i\nBlocksPerKernel = %i\nThreadsPerBlock = %i", 
-		this->parameters->_NPARTICLES, 
+		this->parameters->_NPARTS_ADJ, 
 		this->Blocks_Per_Kernel, 
 		this->Threads_Per_Block);
 	printf("\nfloat allocs = %i\nint allocs = %i\n",
