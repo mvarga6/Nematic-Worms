@@ -892,6 +892,11 @@ void Worms::DistributeWormsOnHost(){
 			theta += ang_per_encap_part;
 		}
 
+		//.. shift particles by half box increased from encapsilation
+		for (int i = 0; i < nparts; i++){
+			for_D_ r[i + d*ntotal] += 0.5f*(this->envirn->_BOX_ADJ[d] - this->envirn->_BOX[d]);
+		}
+
 		//.. adjust box size after init
 		this->envirn->_XBOX = this->envirn->_BOX_ADJ[0];
 		this->envirn->_YBOX = this->envirn->_BOX_ADJ[1];
