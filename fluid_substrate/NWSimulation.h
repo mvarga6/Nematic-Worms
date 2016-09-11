@@ -42,6 +42,7 @@ public:
 private:
 	void XYZPrint(int itime);
 	void DisplayErrors();
+	void ReconsileParameters(SimulationParameters *sP, WormsParameters *wP);
 
 };
 //-------------------------------------------------------------------------------------------
@@ -57,9 +58,8 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	this->simparams = new SimulationParameters();
 	Init(this->simparams, argc, argv, this->outputfile);
 
-	//.. show parameters on device
-	CheckParametersOnDevice <<< 1, 1 >>>();
-	ErrorHandler(cudaDeviceSynchronize());
+	//.. Update parameter sets for consistency
+	this->ReconsileParameters(this->simparams, this->params);
 
 	//.. setup random number generator
 	this->rng = new GRNG(_D_ * params->_NPARTICLES, 0.0f, 1.0f);
@@ -69,7 +69,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 
 	//.. initial worms object
 	this->time = 0.0f;
-	this->worms->Init(this->rng, this->params, this->simparams, !this->simparams->_LMEM, 512);
+	this->worms->Init(this->rng, this->params, this->simparams, this->simparams->_LMEM, 512);
 
 	//.. outputfile
 	this->fxyz.open(this->outputfile.c_str());
@@ -115,6 +115,8 @@ void NWSimulation::Run(){
 	//.. start timer clock
 	this->timer = clock();
 
+	this->worms->ZeroForce();
+
 	//.. MAIN SIMULATION LOOP
 	for (int itime = 0; itime < nsteps; itime++){
 		
@@ -123,7 +125,7 @@ void NWSimulation::Run(){
 
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
-			this->worms->ZeroForce();
+			//this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
 			//this->worms->XLinkerForces(itime, xdensity);
@@ -132,7 +134,7 @@ void NWSimulation::Run(){
 		}
 
 		//.. finish time set with slow potential forces
-		this->worms->ZeroForce();
+		//this->worms->ZeroForce();
 		this->worms->AutoDriveForces(itime);
 		//this->worms->LandscapeForces();
 		this->worms->SlowUpdate();
@@ -210,4 +212,35 @@ void NWSimulation::DisplayErrors(){
 	this->worms->DisplayErrors();
 }
 //-------------------------------------------------------------------------------------------
+void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters *wP){
+	printf("\nParameters being adjusted for consistency.");
+
+	//.. Adjust the number of particles to reflect a flexible encapsilation (2D-only)
+#if _D_ == 2
+	if (sP->_FLEX_ENCAPS) {
+		const int worm_n = wP->_NPARTICLES;
+		const float xbox = sP->_BOX[0];
+		const float ybox = sP->_BOX[1];
+		const float init_encap_l = 1.0f;
+
+		//.. make initial diameter of encaps corner to corner distance to
+		//	 ensure all inital positions of worms will fit inside enscapsilation
+		const float encap_d = sqrt(xbox*xbox + ybox*ybox);
+		
+		//.. determine number of particles to add to fill the circumference
+		const int encap_n = int((M_PI * encap_d) / init_encap_l);
+
+		//.. adjusted box size (xbox & ybox == encap diameter + eps)
+		//   actual box size with be set to this after partice init
+		sP->_BOX_ADJ[0] = sP->_BOX_ADJ[1] = encap_d + 2*wP->_BUFFER;
+
+		//.. set adjust particle number (N-worms + N-encap)
+		wP->_NPARTS_ADJ = wP->_NPARTICLES + encap_n;
+	}
+#endif
+
+	//.. show parameters on device
+	CheckParametersOnDevice << < 1, 1 >> >();
+	ErrorHandler(cudaDeviceSynchronize());
+}
 #endif 

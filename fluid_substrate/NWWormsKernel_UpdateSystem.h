@@ -23,7 +23,7 @@ __global__ void UpdateSystemKernel(float *f,
 								   float dt)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-	if (id < dev_Params._NPARTICLES)
+	if (id < dev_Params._NPARTS_ADJ)
 	{
 		//.. local components
 		float dv[_D_], dr[_D_], rid[_D_], fid[_D_];
@@ -69,7 +69,7 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 								 float dt){
 	int tid = threadIdx.x + blockDim.x * blockIdx.x;
 	int bid = blockIdx.y;
-	if (tid < dev_Params._NPARTICLES){
+	if (tid < dev_Params._NPARTS_ADJ){
 
 		const int fid = tid + bid * fshift;
 		const int foid = tid + bid * foshift;
@@ -81,7 +81,7 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		BC_r(f[fid], r[rid], dev_simParams._BOX[bid], bid); // only applies to
 
 		float dvx = 0.5f * (f[fid] + f_old[foid]) * dt;
-		float dx = v[vid] * dt + 0.5f * f_old[foid] * dt * dt;
+		float dx = v[vid] * dt + 0.5f * f[fid] * dt * dt; // maybe f_old[foid] instead
 		f_old[foid] = f[fid];
 		r[rid] += dx;
 		v[vid] += dvx;
