@@ -85,11 +85,12 @@ __global__ void InterForceKernel(float *f,
 		// PARTICLES IN FLEXIBLE ENCAPSILATION
 		else if (id < ntotal && dev_simParams._FLEX_ENCAPS){
 
+			float rnab[_D_], dr[_D_];
+			float _r, _f;
+
 			//.. ahead spring force
 			int pp1 = id + 1;
 			if (pp1 > ntotal - 1) pp1 = nparts; // first encap particle
-			float rnab[_D_], dr[_D_];
-			float _r, _f;
 			for_D_ rnab[d] = r[pp1 + d*rshift];
 			_r = sqrt(CalculateRR(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - l_encap)) / _r;
@@ -98,8 +99,6 @@ __global__ void InterForceKernel(float *f,
 			//.. behind spring force
 			int pm1 = id - 1;
 			if (pm1 < nparts) pm1 = ntotal - 1; // last encap particle
-			float rnab[_D_], dr[_D_];
-			float _r, _f;
 			for_D_ rnab[d] = r[pm1 + d*rshift];
 			_r = sqrt(CalculateRR(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - l_encap)) / _r;
