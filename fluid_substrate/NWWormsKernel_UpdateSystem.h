@@ -111,7 +111,7 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		//.. update cell list
 		//cell[cid] = (int)(r[rid] / dev_Params._DCELL);
 
-		f[fid] = 0.0f;
+		f[id] = 0.0f;
 	}
 }
 
