@@ -16,7 +16,6 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 										 int cshift)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-
 	const int ntotal = dev_Params._NPARTS_ADJ;
 	const int nparts = dev_Params._NPARTICLES;
 	const int nencap = ntotal - nparts;
