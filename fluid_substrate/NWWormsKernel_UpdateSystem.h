@@ -76,9 +76,10 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 	int tid = threadIdx.x + blockDim.x * blockIdx.x;
 	int bid = blockIdx.y;
 	//if (threadId < nrange*_D_){
+	int fid;
 	if (tid < nrange){
 
-		const int fid = tid + bid * fshift;
+				  fid = tid + bid * fshift;
 		const int foid = tid + bid * foshift;
 		const int vid = tid + bid * vshift;
 		const int rid = tid + bid * rshift;
@@ -111,9 +112,9 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		
 		//.. update cell list
 		//cell[cid] = (int)(r[rid] / dev_Params._DCELL);
-
+	}
+	else if (tid < dev_Params._NPARTS_ADJ){ // always zero forces for all to be safe
 		f[fid] = 0.0f;
-
 		//f[id] = 0.0f;
 	}
 }
