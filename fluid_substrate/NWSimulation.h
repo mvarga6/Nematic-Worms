@@ -127,15 +127,11 @@ void NWSimulation::Run(){
 
 	//.. MAIN SIMULATION LOOP
 	this->worms->ZeroForce();
-	int range; float encap_l = 1.0f;
+	float encap_l = 1.0f;
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. flexible encapsilation
-		if (itime < (nsteps / 10)){
-			range = this->params->_NPARTICLES;
-		}
-		else{
-			range = -1;
+		if (itime > (nsteps / 10)){
 			if (encap_l > 0.35f) encap_l *= 0.999995;
 		}
 
@@ -150,14 +146,14 @@ void NWSimulation::Run(){
 			this->worms->BendingForces();
 			//this->worms->XLinkerForces(itime, xdensity);
 			this->worms->LJForces();
-			this->worms->QuickUpdate(range);
+			this->worms->QuickUpdate();
 		}
 
 		//.. finish time set with slow potential forces
 		//this->worms->ZeroForce();
 		this->worms->AutoDriveForces(itime);
 		//this->worms->LandscapeForces();
-		this->worms->SlowUpdate(range);
+		this->worms->SlowUpdate();
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
