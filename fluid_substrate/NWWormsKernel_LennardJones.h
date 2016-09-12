@@ -16,7 +16,6 @@ __global__ void LennardJonesNListKernel(float *f,
 										int nshift)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
-
 	const int np = dev_Params._NP;
 	const int ntotal = dev_Params._NPARTS_ADJ;
 	//int blockId = blockIdx.x + blockIdx.y * gridDim.x;

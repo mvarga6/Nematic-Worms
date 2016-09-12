@@ -127,15 +127,14 @@ void NWSimulation::Run(){
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. flexible encapsilation
-		if (this->simparams->_FLEX_ENCAPS){
-			if (itime < nsteps / 5){
-				range = this->params->_NPARTICLES;
-			}
-			else{
-				range = -1;
-				if (encap_l > 0.35f) encap_l *= 0.999995;
-			}
+		if (itime < (nsteps / 5)){
+			range = this->params->_NPARTICLES;
 		}
+		else{
+			range = -1;
+			if (encap_l > 0.35f) encap_l *= 0.999995;
+		}
+
 
 		//.. setup neighbors for iteration
 		this->worms->ResetNeighborsList(itime);
