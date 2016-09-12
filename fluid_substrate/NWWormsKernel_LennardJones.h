@@ -13,14 +13,21 @@ __global__ void LennardJonesNListKernel(float *f,
 										float *r,
 										int rshift,
 										int *nlist,
-										int nshift )
+										int nshift)
 {
-	int id = threadIdx.x + blockDim.x * blockIdx.x;
-	if (id < dev_Params._NPARTS_ADJ){
+	//int id = threadIdx.x + blockDim.x * blockIdx.x;
+
+	const int np = dev_Params._NP;
+	const int ntotal = dev_Params._NPARTS_ADJ;
+	int blockId = blockIdx.x + blockIdx.y * gridDim.x;
+	int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
+	if (threadId < ntotal){
+
+		const int id = threadId;
 
 		float fid[_D_], rid[_D_], dr[_D_], _r[_D_];
 		float _f, _rr;
-		const int np = dev_Params._NP;
+		
 		
 		for_D_{ fid[d] = 0.0f; rid[d] = r[id + d*rshift];}
 

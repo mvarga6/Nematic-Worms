@@ -115,8 +115,6 @@ void NWSimulation::Run(){
 	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
 	xramp = (xtarget - xdensity) / float(xhold - xstart);
 
-	float encap_l = 1.0f;
-
 	//.. check for errors before starting
 	this->DisplayErrors();
 
@@ -125,10 +123,19 @@ void NWSimulation::Run(){
 
 	//.. MAIN SIMULATION LOOP
 	this->worms->ZeroForce();
-	int range;
+	int range; float encap_l = 1.0f;
 	for (int itime = 0; itime < nsteps; itime++){
 		
-		range = (itime < nsteps / 5 ? this->params->_NPARTICLES : -1);
+		//.. flexible encapsilation
+		if (this->simparams->_FLEX_ENCAPS){
+			if (itime < nsteps / 5){
+				range = this->params->_NPARTICLES;
+			}
+			else{
+				range = -1;
+				if (encap_l > 0.35f) encap_l *= 0.999995;
+			}
+		}
 
 		//.. setup neighbors for iteration
 		this->worms->ResetNeighborsList(itime);
@@ -155,9 +162,6 @@ void NWSimulation::Run(){
 		//.. adjust tickers
 		if (itime > xstart && itime < xhold) // in ramping range 
 			xdensity += xramp; // no effect if not ramping
-
-		if (encap_l > 0.35f) encap_l *= 0.999995;
-		//printf("\nencap_l = %f\n", encap_l);
 
 		this->time += dt;
 	}
