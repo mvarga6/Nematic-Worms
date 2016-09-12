@@ -77,6 +77,10 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	ParametersToDevice(*params);
 	ParametersToDevice(*simparams);
 
+	//.. show parameters on device
+	CheckParametersOnDevice <<< 1, 1 >>>();
+	ErrorHandler(cudaDeviceSynchronize());
+
 	//.. outputfile
 	this->fxyz.open(this->outputfile.c_str());
 	if (!this->fxyz.is_open())
@@ -255,13 +259,11 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 
 		//.. set adjust particle number (N-worms + N-encap)
 		wP->_NPARTS_ADJ = wP->_NPARTICLES + encap_n;
+
+		printf("\n\nAdjusted Particle #:\t%i", wP->_NPARTS_ADJ);
 	}
 #endif
 
-	//.. show parameters on device
-	CheckParametersOnDevice << < 1, 1 >> >();
-	ErrorHandler(cudaDeviceSynchronize());
-
-	printf("\n\nAdjusted Particle #:\t%i", wP->_NPARTS_ADJ);
+	
 }
 #endif 
