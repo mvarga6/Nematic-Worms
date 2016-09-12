@@ -57,7 +57,10 @@ __constant__ SimulationParameters dev_simParams;
 *	the errors directly.  Basically acts as a typedef for cudaMemcpy(..)
 ----------------------------------------------------------------------------*/
 cudaError_t ParametersToDevice(SimulationParameters &params){
-	return cudaMemcpyToSymbol(dev_simParams, &params, sizeof(SimulationParameters));
+	cudaError_t err;
+	err = cudaMemcpyToSymbol(dev_simParams, &params, sizeof(SimulationParameters));
+	std::cout << "\nSimulation parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err);
+	return err;
 }
 /*--------------------------------------------------------------------------
 *	Default values for all parameter values in SimulationParameters.
@@ -281,9 +284,11 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	for_D_ parameters->_BOX[d] = parameters->_BOX_ADJ[d] = box[d];
 
 	//.. put on GPU and check for error
-	cudaError_t err;
-	err = ParametersToDevice(*parameters);
-	std::cout << "\nSimulation parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err);
+	//cudaError_t err;
+	//err = ParametersToDevice(*parameters);
+	//std::cout << "\nSimulation parameters cudaMemcpyToSymbol returned:     \t" << cudaGetErrorString(err);
 }
 //--------------------------------------------------------------------------
+
+
 #endif

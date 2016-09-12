@@ -71,6 +71,10 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	this->time = 0.0f;
 	this->worms->Init(this->rng, this->params, this->simparams, this->simparams->_LMEM, 512);
 
+	//.. send parameters to device once initialized
+	ParametersToDevice(*params);
+	ParametersToDevice(*simparams);
+
 	//.. outputfile
 	this->fxyz.open(this->outputfile.c_str());
 	if (!this->fxyz.is_open())
@@ -219,7 +223,7 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 	//.. Adjust the number of particles to reflect a flexible encapsilation (2D-only)
 #if _D_ == 2
 	if (sP->_FLEX_ENCAPS) {
-		printf("\n\n\tFLEXIBLE ENCAPSILATION");
+		printf("\n\nFLEXIBLE ENCAPSILATION\n");
 		const int worm_n = wP->_NPARTICLES;
 		const float xbox = sP->_BOX[0];
 		const float ybox = sP->_BOX[1];
