@@ -66,9 +66,9 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 								 float *v, int vshift,
 								 float *r, int rshift,
 								 int *cell, int cshift,
-								 float dt, int range = -1){
+								 float dt, int range){
 
-	//const int nrange = (range > 0 ? range : dev_Params._NPARTS_ADJ);
+	const int nrange = (range > 0 ? range : dev_Params._NPARTS_ADJ);
 	//int blockId = blockIdx.x + blockIdx.y * gridDim.x;
 	//int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
 	//int pid = threadId % nrange; // particle id
@@ -86,6 +86,8 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 		const int cid = tid + bid * cshift;
 
 		//const int id = pid + dim * rshift;
+
+		if (tid >= nrange) f[fid] = 0.0f;
 
 		//.. boundary conditions
 		BC_r(f[fid], r[rid], dev_simParams._BOX[bid], bid); // only applies to
