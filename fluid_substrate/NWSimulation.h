@@ -151,7 +151,7 @@ void NWSimulation::Run(){
 		if (itime > xstart && itime < xhold) // in ramping range 
 			xdensity += xramp; // no effect if not ramping
 
-		if (encap_l > 0.25) encap_l *= 0.95;
+		if (encap_l > 0.25) encap_l *= 0.999;
 		printf("\nencap_l = %f\n", encap_l);
 
 		this->time += dt;
