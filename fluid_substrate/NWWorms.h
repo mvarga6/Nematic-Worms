@@ -316,7 +316,12 @@ void Worms::LJForces(){
 	DEBUG_MESSAGE("LJForces");
 	if (this->parameters->_NOINT) return; // stop if not needed
 	std::clock_t b4 = std::clock();
-	LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	dim3 gridStruct(int(sqrt(this->Blocks_Per_Kernel)) + 1,
+		int(sqrt(this->Blocks_Per_Kernel)) + 1);
+	dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1, 
+		int(sqrt(this->Threads_Per_Block)) + 1);
+	//LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	LennardJonesNListKernel <<< gridStruct, blockStruct >>>
 	(
 		this->dev_f, this->fshift, 
 		this->dev_r, this->rshift, 
@@ -550,7 +555,12 @@ void Worms::ResetNeighborsList(){
 	//ErrorHandler(cudaDeviceSynchronize());
 
 	//.. assign neighbors
-	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	dim3 gridStruct(int(sqrt(this->Blocks_Per_Kernel)) + 1,
+		int(sqrt(this->Blocks_Per_Kernel)) + 1);
+	dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1,
+		int(sqrt(this->Threads_Per_Block)) + 1);
+	//SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	SetNeighborList_N2Kernel <<< gridStruct, blockStruct >>>
 	(
 		this->dev_r, this->rshift,
 		this->dev_nlist, this->nlshift,
