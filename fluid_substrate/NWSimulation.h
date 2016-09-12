@@ -194,7 +194,7 @@ void NWSimulation::XYZPrint(int itime){
 		//char c = worms->c[i];
 		char c = ptypes[t];
 		if (i >= this->params->_NPARTICLES) c = 'F';
-		//if (abs(z) > 100.0f) nBlownUp++;
+		
 		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
 	}
 	this->fxyz << "F " << 0 << " " << 0 << " 0 " << std::endl;
