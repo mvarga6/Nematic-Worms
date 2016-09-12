@@ -159,7 +159,6 @@ r(NULL), dev_r(NULL), dev_v(NULL), dev_f(NULL),
 dev_f_old(NULL), dev_thphi(NULL), clock_rate(clockingRate) {
 	DEBUG_MESSAGE("Constructor");
 	//.. do necessities
-	srand(time(NULL));
 	//cudaChannelFormatDesc channelDesc = 
 	//cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
 	//cudaArray *cuArray;

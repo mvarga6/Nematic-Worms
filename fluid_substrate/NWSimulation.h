@@ -50,6 +50,8 @@ private:
 //-------------------------------------------------------------------------------------------
 NWSimulation::NWSimulation(int argc, char *argv[]){
 
+	srand(std::time(NULL));
+
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
 	Init(this->params, argc, argv);
