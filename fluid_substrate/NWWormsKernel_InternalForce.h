@@ -103,21 +103,6 @@ __global__ void InterForceKernel(float *f,
 			_r = sqrt(CalculateRR(rid, rnab, dr));
 			_f = -(dev_Params._K1 * (_r - l_encap)) / _r;
 			for_D_ fid[d] -= _f * dr[d];
-
-			//.. LJ between encap particles
-			//for (int id2 = nparts; id2 < ntotal; id2++)
-			//{
-			//	int sep = abs(id2 - id);
-			//	if (sep <= 5) continue; //.. ignore close neighbors
-			//	float rnab[3], dr[3];
-			//	float rr, _f;
-			//	for_D_ rnab[d] = r[id2 + d*rshift];
-			//	rr = CalculateRR(rid, rnab, dr);
-			//	if (rr > dev_Params._R2MIN) continue; //.. repulsive only
-			//	_f = CalculateLJ(rr);
-			//	for_D_ fid[d] -= _f * dr[d];
-			//}
-
 		}
 
 		//.. viscous drag

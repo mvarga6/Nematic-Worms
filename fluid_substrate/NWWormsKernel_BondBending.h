@@ -90,7 +90,7 @@ __global__ void BondBendingForces_Encap(float *f,
 	int p1id = tid + dev_Params._NPARTICLES; // shift to encaps particles
 	if (p1id < dev_Params._NPARTS_ADJ){
 
-		const float k_a = 5.0f;
+		const float k_a = 15.0f;
 		const int nparts = dev_Params._NPARTICLES;
 		const int ntotal = dev_Params._NPARTS_ADJ;
 		const int nencap = ntotal - nparts;
@@ -123,7 +123,7 @@ __global__ void BondBendingForces_Encap(float *f,
 		//.. calculate terms
 		float dot_r12_r23 = dot(r12, r23);
 		float r12r12 = dot(r12, r12);
-		//float r23r23 = dot(r23, r23);
+		float r23r23 = dot(r23, r23);
 		float mag12inv = 1.0f / mag(r12);
 		float mag23inv = 1.0f / mag(r23);
 		float a = k_a * mag12inv * mag23inv;
@@ -133,17 +133,17 @@ __global__ void BondBendingForces_Encap(float *f,
 		for_D_{ // Apply only
 
 			//.. particle 1
-			f1[d] = A[d] * (r23[d] - ((dot_r12_r23 / r12r12) * r12[d]));
+			//f1[d] = A[d] * (r23[d] - ((dot_r12_r23 / r12r12) * r12[d]));
 
 			//.. particle 2
-			//f2[d] = A[d] * (((dot_r12_r23 / r12r12) * r12[d]) - ((dot_r12_r23 / r23r23) * r23[d]) + r12[d] - r23[d]);
+			f2[d] = A[d] * (((dot_r12_r23 / r12r12) * r12[d]) - ((dot_r12_r23 / r23r23) * r23[d]) + r12[d] - r23[d]);
 
 			//.. particle 3
 			//f3[d] = A[d] * (((dot_r12_r23 / r23r23) * r23[d]) - r12[d]);
 
 			//.. apply forces to all 3 particles
-			f[p1id + d * fshift] -= f1[d];
-			//f[p2id + d * fshift] -= f2[d];
+			//f[p1id + d * fshift] -= f1[d];
+			f[p2id + d * fshift] -= f2[d];
 			//f[p3id + d * fshift] -= f3[d];
 		}
 	}

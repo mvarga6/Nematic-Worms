@@ -113,15 +113,16 @@ void NWSimulation::Run(){
 	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
 	xramp = (xtarget - xdensity) / float(xhold - xstart);
 
+	float encap_l = 1.0f;
+
 	//.. check for errors before starting
 	this->DisplayErrors();
 
 	//.. start timer clock
 	this->timer = clock();
 
-	this->worms->ZeroForce();
-
 	//.. MAIN SIMULATION LOOP
+	this->worms->ZeroForce();
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. setup neighbors for iteration
@@ -130,7 +131,7 @@ void NWSimulation::Run(){
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
 			//this->worms->ZeroForce();
-			this->worms->InternalForces();
+			this->worms->InternalForces(encap_l);
 			this->worms->BendingForces();
 			//this->worms->XLinkerForces(itime, xdensity);
 			this->worms->LJForces();
@@ -149,6 +150,10 @@ void NWSimulation::Run(){
 		//.. adjust tickers
 		if (itime > xstart && itime < xhold) // in ramping range 
 			xdensity += xramp; // no effect if not ramping
+
+		if (encap_l > 0.25) encap_l *= 0.95;
+		printf("\nencap_l = %f\n", encap_l);
+
 		this->time += dt;
 	}
 	this->fxyz.close();
@@ -238,7 +243,7 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 
 		//.. adjusted box size (xbox & ybox == encap diameter + eps)
 		//   actual box size with be set to this after partice init
-		sP->_BOX_ADJ[0] = sP->_BOX_ADJ[1] = encap_d + 2*wP->_BUFFER;
+		sP->_BOX_ADJ[0] = sP->_BOX_ADJ[1] = 2 * encap_d;
 
 		//.. set adjust particle number (N-worms + N-encap)
 		wP->_NPARTS_ADJ = wP->_NPARTICLES + encap_n;
