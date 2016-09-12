@@ -316,12 +316,12 @@ void Worms::LJForces(){
 	DEBUG_MESSAGE("LJForces");
 	if (this->parameters->_NOINT) return; // stop if not needed
 	std::clock_t b4 = std::clock();
-	dim3 gridStruct(int(sqrt(this->Blocks_Per_Kernel)) + 1,
-		int(sqrt(this->Blocks_Per_Kernel)) + 1);
-	dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1, 
-		int(sqrt(this->Threads_Per_Block)) + 1);
-	//LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	LennardJonesNListKernel <<< gridStruct, blockStruct >>>
+	//dim3 gridStruct(int(sqrt(this->Blocks_Per_Kernel)) + 1,
+	//	int(sqrt(this->Blocks_Per_Kernel)) + 1);
+	//dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1, 
+	//	int(sqrt(this->Threads_Per_Block)) + 1);
+	LennardJonesNListKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	//LennardJonesNListKernel <<< gridStruct, blockStruct >>>
 	(
 		this->dev_f, this->fshift, 
 		this->dev_r, this->rshift, 
@@ -451,7 +451,8 @@ void Worms::SlowUpdate(const int rangeLimit = -1){
 	//dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
 	//dim3 blockStruct(this->Threads_Per_Block);
 	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
-	dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1, int(sqrt(this->Threads_Per_Block)) + 1);
+	dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1, 
+		int(sqrt(this->Threads_Per_Block)) + 1);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>
 	(
 		this->dev_f, this->fshift,
