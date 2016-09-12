@@ -93,7 +93,7 @@ __global__ void InterForceKernel(float *f,
 			if (pp1 > ntotal - 1) pp1 = nparts; // first encap particle
 			for_D_ rnab[d] = r[pp1 + d*rshift];
 			_r = sqrt(CalculateRR(rid, rnab, dr));
-			_f = -(dev_Params._K1 * (_r - l_encap)) / _r;
+			_f = -(5*dev_Params._K1 * (_r - l_encap)) / _r;
 			for_D_ fid[d] -= _f * dr[d];
 
 			//.. behind spring force
@@ -101,7 +101,7 @@ __global__ void InterForceKernel(float *f,
 			if (pm1 < nparts) pm1 = ntotal - 1; // last encap particle
 			for_D_ rnab[d] = r[pm1 + d*rshift];
 			_r = sqrt(CalculateRR(rid, rnab, dr));
-			_f = -(dev_Params._K1 * (_r - l_encap)) / _r;
+			_f = -(5*dev_Params._K1 * (_r - l_encap)) / _r;
 			for_D_ fid[d] -= _f * dr[d];
 		}
 
