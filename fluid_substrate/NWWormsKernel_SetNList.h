@@ -15,14 +15,14 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 										 int *cell,
 										 int cshift)
 {
-	//int id = threadIdx.x + blockDim.x * blockIdx.x;
+	int id = threadIdx.x + blockDim.x * blockIdx.x;
 
 	const int ntotal = dev_Params._NPARTS_ADJ;
 	const int nparts = dev_Params._NPARTICLES;
 	const int nencap = ntotal - nparts;
-	int blockId = blockIdx.x + blockIdx.y * gridDim.x;
-	int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
-	const int id = threadId;
+	//int blockId = blockIdx.x + blockIdx.y * gridDim.x;
+	//int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
+	//const int id = threadId;
 	if (id < ntotal){
 
 		const int w1 = id / dev_Params._NP;
