@@ -131,7 +131,7 @@ void NWSimulation::Run(){
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. flexible encapsilation
-		if (itime < (nsteps / 5)){
+		if (itime < (nsteps / 10)){
 			range = this->params->_NPARTICLES;
 		}
 		else{
