@@ -66,25 +66,40 @@ __global__ void FastUpdateKernel(float *f, int fshift,
 								 float *v, int vshift,
 								 float *r, int rshift,
 								 int *cell, int cshift,
-								 float dt){
-	int tid = threadIdx.x + blockDim.x * blockIdx.x;
-	int bid = blockIdx.y;
-	if (tid < dev_Params._NPARTS_ADJ){
+								 float dt, int range = -1){
 
-		const int fid = tid + bid * fshift;
-		const int foid = tid + bid * foshift;
-		const int vid = tid + bid * vshift;
-		const int rid = tid + bid * rshift;
-		const int cid = tid + bid * cshift;
+	const int nrange = (range > 0 ? range : dev_Params._NPARTS_ADJ);
+	int blockId = blockIdx.x + blockIdx.y * gridDim.x;
+	int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
+	int pid = threadId % nrange; // particle id
+	int dim = threadId / nrange;
+	//int tid = threadIdx.x + blockDim.x * blockIdx.x;
+	//int bid = blockIdx.y;
+	if (threadId < nrange*_D_){
+
+		//const int fid = tid + bid * fshift;
+		//const int foid = tid + bid * foshift;
+		//const int vid = tid + bid * vshift;
+		//const int rid = tid + bid * rshift;
+		//const int cid = tid + bid * cshift;
+
+		const int id = pid + dim * rshift;
 
 		//.. boundary conditions
-		BC_r(f[fid], r[rid], dev_simParams._BOX[bid], bid); // only applies to
+		//BC_r(f[fid], r[rid], dev_simParams._BOX[bid], bid); // only applies to
+		BC_r(f[id], r[id], dev_simParams._BOX[id], id); // only applies to
 
-		float dvx = 0.5f * (f[fid] + f_old[foid]) * dt;
-		float dx = v[vid] * dt + 0.5f * f[fid] * dt * dt; // maybe f_old[foid] instead
-		f_old[foid] = f[fid];
-		r[rid] += dx;
-		v[vid] += dvx;
+		//float dvx = 0.5f * (f[fid] + f_old[foid]) * dt;
+		//float dx = v[vid] * dt + 0.5f * f[fid] * dt * dt; // maybe f_old[foid] instead
+		//f_old[foid] = f[fid];
+		//r[rid] += dx;
+		//v[vid] += dvx;
+
+		float dvx = 0.5f * (f[id] + f_old[id]) * dt;
+		float dx = v[id] * dt + 0.5f * f[id] * dt * dt; // maybe f_old[foid] instead
+		f_old[id] = f[id];
+		r[id] += dx;
+		v[id] += dvx;
 
 		//.. boundary conditions
 		//BC_r(r[rid], dev_simParams._BOX[bid]); // only applies to

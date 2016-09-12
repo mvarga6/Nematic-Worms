@@ -109,8 +109,8 @@ public:
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
 	void XLinkerForces(int itime, float xtargetPercent);
-	void SlowUpdate();
-	void QuickUpdate();
+	void SlowUpdate(const int rangeLimit);
+	void QuickUpdate(const int rangeLimit);
 	void CalculateThetaPhi();
 	void DataDeviceToHost();
 	void DataHostToDevice();
@@ -432,7 +432,7 @@ void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
 	DEBUG_MESSAGE("XLinkerForces_forces2");
 }
 //-------------------------------------------------------------------------------------------
-void Worms::SlowUpdate(){
+void Worms::SlowUpdate(const int rangeLimit = -1){
 	DEBUG_MESSAGE("SlowUpdate");
 
 	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -443,8 +443,10 @@ void Worms::SlowUpdate(){
 		this->dev_r, this->rpitch
 	);*/
 	std::clock_t b4 = std::clock();
+	//dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
+	//dim3 blockStruct(this->Threads_Per_Block);
 	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
-	dim3 blockStruct(this->Threads_Per_Block);
+	dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1, int(sqrt(this->Threads_Per_Block)) + 1);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>
 	(
 		this->dev_f, this->fshift,
@@ -452,27 +454,22 @@ void Worms::SlowUpdate(){
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
 		this->dev_cell, this->cshift,
-		this->envirn->_DT
+		this->envirn->_DT,
+		rangeLimit
 	);
 	ErrorHandler(cudaGetLastError());
 	this->Update_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::QuickUpdate(){
+void Worms::QuickUpdate(const int rangeLimit = -1){
 	DEBUG_MESSAGE("QuickUpdate");
-
-	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	(
-	this->dev_f, this->fpitch,
-	this->dev_f_old, this->fopitch,
-	this->dev_v, this->vpitch,
-	this->dev_r, this->rpitch
-	);*/
 
 	std::clock_t b4 = std::clock();
 	const float increaseRatio = (float)this->envirn->_NSTEPS_INNER;
+	//dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
+	//dim3 blockStruct(this->Threads_Per_Block);
 	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
-	dim3 blockStruct(this->Threads_Per_Block);
+	dim3 blockStruct(int(sqrt(this->Threads_Per_Block)) + 1, int(sqrt(this->Threads_Per_Block)) + 1);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>
 	(
 		this->dev_f, this->fshift,
@@ -480,7 +477,8 @@ void Worms::QuickUpdate(){
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
 		this->dev_cell, this->cshift,
-		this->envirn->_DT / increaseRatio
+		this->envirn->_DT / increaseRatio,
+		rangeLimit
 	);
 	ErrorHandler(cudaGetLastError());
 	this->Update_clock += std::clock() - b4;

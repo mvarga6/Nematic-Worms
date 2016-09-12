@@ -125,8 +125,11 @@ void NWSimulation::Run(){
 
 	//.. MAIN SIMULATION LOOP
 	this->worms->ZeroForce();
+	int range;
 	for (int itime = 0; itime < nsteps; itime++){
 		
+		range = (itime < nsteps / 5 ? this->params->_NPARTICLES : -1);
+
 		//.. setup neighbors for iteration
 		this->worms->ResetNeighborsList(itime);
 
@@ -137,14 +140,14 @@ void NWSimulation::Run(){
 			this->worms->BendingForces();
 			//this->worms->XLinkerForces(itime, xdensity);
 			this->worms->LJForces();
-			this->worms->QuickUpdate();
+			this->worms->QuickUpdate(range);
 		}
 
 		//.. finish time set with slow potential forces
 		//this->worms->ZeroForce();
 		this->worms->AutoDriveForces(itime);
 		//this->worms->LandscapeForces();
-		this->worms->SlowUpdate();
+		this->worms->SlowUpdate(range);
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
@@ -153,7 +156,7 @@ void NWSimulation::Run(){
 		if (itime > xstart && itime < xhold) // in ramping range 
 			xdensity += xramp; // no effect if not ramping
 
-		if (encap_l > 0.4f) encap_l *= 0.999995;
+		if (encap_l > 0.35f) encap_l *= 0.999995;
 		//printf("\nencap_l = %f\n", encap_l);
 
 		this->time += dt;
@@ -234,7 +237,7 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 		const int worm_n = wP->_NPARTICLES;
 		const float xbox = sP->_BOX[0];
 		const float ybox = sP->_BOX[1];
-		const float init_encap_l = 1.0f;
+		const float init_encap_l = 0.8f;
 
 		//.. make initial diameter of encaps corner to corner distance to
 		//	 ensure all inital positions of worms will fit inside enscapsilation
