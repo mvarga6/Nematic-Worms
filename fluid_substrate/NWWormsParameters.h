@@ -76,7 +76,10 @@ __constant__ WormsParameters dev_Params;
 *	errors directly.  Basically acts as a typedef for cudaMemcpy(..)
 --------------------------------------------------------------------------*/
 cudaError_t ParametersToDevice(WormsParameters &params){
-	return cudaMemcpyToSymbol(dev_Params, &params, sizeof(WormsParameters));
+	cudaError_t err;
+	err = cudaMemcpyToSymbol(dev_Params, &params, sizeof(WormsParameters));
+	std::cout << "\nWorms parameters cudaMemcpyToSymbol returned:\t" << cudaGetErrorString(err);
+	return err;
 }
 /*------------------------------------------------------------------------
 *	Default values for all parameter values in WormsParameters.
@@ -369,9 +372,9 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);
 
-	cudaError_t err;
-	err = ParametersToDevice(*parameters);
-	std::cout << "\nWorms parameters cudaMemcpyToSymbol returned:\t" << cudaGetErrorString(err);
+	//cudaError_t err;
+	//err = ParametersToDevice(*parameters);
+	//std::cout << "\nWorms parameters cudaMemcpyToSymbol returned:\t" << cudaGetErrorString(err);
 }
 //--------------------------------------------------------------------------
 #endif
