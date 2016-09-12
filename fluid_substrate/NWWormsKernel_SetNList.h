@@ -42,7 +42,7 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 			}
 			else { // encaps particle
 				int sep = abs((p2 - id) % (nencap - 5));
-				if (sep <= 5) continue; //.. ignore close neighbors
+				if (sep <= 10) continue; //.. ignore close neighbors
 			}
 
 			//next = false; // set to do calculate
