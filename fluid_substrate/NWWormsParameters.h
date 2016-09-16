@@ -88,7 +88,7 @@ namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
 		static const int	YDIM = 5;
-		static const int	ZDIM = 5;
+		static const int	ZDIM = 1;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;

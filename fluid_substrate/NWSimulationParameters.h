@@ -251,6 +251,10 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 			parameters->_SPHERE = true;
 		}
 		else if (arg == "-encapsilate2d" && _D_ == 2){
+			if (_D_ != 2){
+				printf("\n%s - [ Fatal error ]: Cannot encapsulate if simulation dimension is greather than 2\n", argv[0]);
+				exit(99);
+			}
 			parameters->_FLEX_ENCAPS = true;
 		}
 	}

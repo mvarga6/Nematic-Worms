@@ -848,36 +848,71 @@ void Worms::DistributeWormsOnHost(){
 	const float xbox = this->envirn->_XBOX;
 	const float ybox = this->envirn->_YBOX;
 	const float zbox = this->envirn->_ZBOX;
+	const float dC = this->parameters->_SIGMA + this->parameters->_BUFFER;
 	const float spacing[3] = { // places worms in center of dimension
 		xbox / float(xdim + 1), // i.e. if zdim=1, z0=zbox/2
 		ybox / float(ydim + 1),
 		zbox / float(zdim + 1) //parameters->_RCUT
 	};
 
+
 	//.. distribute heads (worms)
 	float * r0 = new float[_D_*nworms];
-	int iw = 0;
-	for (int k = 0; k < zdim; k++){
-		for (int i = 0; i < xdim; i++){
-			for (int j = 0; j < ydim; j++){
-				const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
-				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
-				iw++;
+	float * theta0;
+	const float _2PI = 2.0000f * PI;
+	if (this->envirn->_FLEX_ENCAPS){
+		theta0 = new float[nworms];
+		float R, theta = 0.0f, dtheta, x, y; // , C;
+		int ring;
+		for (int w = 0; w < zdim*ydim*xdim; w++){
+			ring = int(theta / (_2PI)) + 1; // increases 1 every 2 PI
+			R = ring*l1*np + 0.5f;
+			//C = _2PI * R;
+			dtheta = dC / R; // = (_2PI * dC) / C
+			x = R*cos(theta);
+			y = R*sin(theta);
+			r0[w + 0*nworms] = x;
+			r0[w + 1*nworms] = y;
+			theta0[w] = theta;
+ 			theta += dtheta;
+		}
+	}
+	else {
+		int iw = 0;
+		for (int k = 0; k < zdim; k++){
+			for (int i = 0; i < xdim; i++){
+				for (int j = 0; j < ydim; j++){
+					const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
+					for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
+					iw++;
+				}
 			}
 		}
 	}
 
 	//.. distribute particles (worms)
-	const float s[3] = { l1, 0, 0 }; // always 3d: slope of laying chains from head
-	for (int i = 0; i < nparts; i++){
-		const int w = i / np;
-		const int p = i % np;
-		float rn[_D_], _r[_D_];
-		for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
-		for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
-		//MovementBC(_r[0], xbox);
-		//MovementBC(_r[1], ybox);
-		for_D_ r[i + d*ntotal] = _r[d];
+	int w, p; float _r[_D_], rn[_D_];
+	if (this->envirn->_FLEX_ENCAPS){
+		for (int i = 0; i < nparts; i++){
+			w = i / np;
+			p = i % np;
+			for_D_ rn[d] = 0.25f * (float(rand()) / float(RAND_MAX));
+			r[i + 0*ntotal] = r0[w + 0*nworms] + l1*p*cos(theta0[w]) + rn[0];
+			r[i + 1*ntotal] = r0[w + 1*nworms] + l1*p*sin(theta0[w]) + rn[1];
+		}
+		delete[] theta0;
+	}
+	else {
+		const float s[3] = { l1, 0, 0 }; // always 3d: slope of laying chains from head
+		for (int i = 0; i < nparts; i++){
+			w = i / np;
+			p = i % np;
+			for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
+			for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
+			MovementBC(_r[0], xbox);
+			MovementBC(_r[1], ybox);
+			for_D_ r[i + d*ntotal] = _r[d];
+		}
 	}
 
 	delete[] r0;
