@@ -127,7 +127,7 @@ void NWSimulation::Run(){
 
 	//.. MAIN SIMULATION LOOP
 	this->worms->ZeroForce();
-	float encap_l = 1.0f; int range;
+	float encap_l = 0.8f; int range;
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. flexible encapsilation
