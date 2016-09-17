@@ -856,18 +856,19 @@ void Worms::DistributeWormsOnHost(){
 	};
 
 	//.. distribute heads (worms)
-	printf("\nFinding head positons ... \t");
+	printf("\nFinding head positons ");
 	float * r0 = new float[_D_*nworms];
 	float * theta0, encap_R;
 	if (this->envirn->_FLEX_ENCAPS){ // Init in concentric circles
+		printf("[ concentric ] ... \t");
 		const float _2PI = 2.0000f * PI;
 		theta0 = new float[nworms];
-		float R, theta = 0.0f, dtheta, x[2]; // , C;
+		float R, theta = dC / (l1*np), dtheta, x[2]; // , C;
 		float center[2] = { xbox / 2.0f, xbox / 2.0f };
 		int ring;
 		for (int w = 0; w < nworms; w++){
 			ring = int(theta / (_2PI)) + 1; // increases 1 every 2 PI
-			R = ring*l1*np + 0.5f;
+			R = ring*l1*np * 1.1f;
 			//C = _2PI * R;
 			dtheta = dC / R; // = (_2PI * dC) / C
 			x[0] = center[0] + R*cos(theta);
@@ -875,12 +876,13 @@ void Worms::DistributeWormsOnHost(){
 			for_D_ r0[w + d*nworms] = x[d];
 			theta0[w] = theta;
  			theta += dtheta;
-			printf("\nw: %d\tring: %d\tdtheta: %f\ttheta: %f", w, ring, dtheta, theta);
+			//printf("\nw: %d\tring: %d\tdtheta: %f\ttheta: %f", w, ring, dtheta, theta);
 		}
 		encap_R = (ring + 2)*l1*np; // one ring size between worms and encap
 	}
 	else { // Init in square grid
 		int iw = 0;
+		printf("[ sqr grid ] ... \t");
 		for (int k = 0; k < zdim; k++){
 			for (int i = 0; i < xdim; i++){
 				for (int j = 0; j < ydim; j++){
@@ -932,7 +934,7 @@ void Worms::DistributeWormsOnHost(){
 		const float adj_ybox = this->envirn->_BOX_ADJ[1];
 		const float cx = adj_xbox / 2.0f; // center of box
 		const float cy = adj_ybox / 2.0f;
-		const float R = encap_R; 
+		const float R = (adj_xbox + adj_ybox) / 8.0f; 
 		//const float R = sqrt(xbox*xbox + ybox*ybox) / 2.0f;
 		const int encap_n = this->parameters->_NPARTS_ADJ - nparts;
 		const float ang_per_encap_part = (2.0 * M_PI) / double(encap_n);

@@ -98,7 +98,7 @@ NWSimulation::~NWSimulation(){
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	
-	//this->XYZPrint(0); 
+	this->XYZPrint(0); 
 	//return; // to test init positions only
 
 	//.. grab needed parameters
@@ -248,7 +248,7 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 
 		//.. make initial diameter of encaps corner to corner distance to
 		//	 ensure all inital positions of worms will fit inside enscapsilation
-		const float encap_d = sqrt(xbox*xbox + ybox*ybox);
+		const float encap_d = (xbox+ybox) / 4.0f;
 		
 		//.. determine number of particles to add to fill the circumference
 		const int encap_n = int((M_PI * encap_d) / init_encap_l);
