@@ -72,8 +72,8 @@ namespace DEFAULT {
 		static const int FRAMERATE = 1000;
 		static const int FRAMESPERFILE = 100;
 		static const float DT = 0.005f;
-		static const float XBOX = 100.0f;
-		static const float YBOX = 100.0f;
+		static const float XBOX = 500.0f;
+		static const float YBOX = 500.0f;
 		static const float ZBOX = 100.0f;
 		static const std::string FILENAME = "output.xyz";
 		static const bool LMEM = false;
@@ -251,6 +251,10 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 			parameters->_SPHERE = true;
 		}
 		else if (arg == "-encapsilate2d" && _D_ == 2){
+			if (_D_ != 2){
+				printf("\n%s - [ Fatal error ]: Cannot encapsulate if simulation dimension is greather than 2\n", argv[0]);
+				exit(99);
+			}
 			parameters->_FLEX_ENCAPS = true;
 		}
 	}

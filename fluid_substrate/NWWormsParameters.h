@@ -87,8 +87,8 @@ cudaError_t ParametersToDevice(WormsParameters &params){
 namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
-		static const int	YDIM = 5;
-		static const int	ZDIM = 5;
+		static const int	YDIM = 50;
+		static const int	ZDIM = 1;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
@@ -107,7 +107,7 @@ namespace DEFAULT {
 		static const float	L1 = 0.8f;
 		static const float	L2 = 1.6f;
 		static const float	L3 = 2.4f;
-		static const float	KBT = 0.25f;
+		static const float	KBT = 1.0f;
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
 		static const float	BUFFER = 1.0f;

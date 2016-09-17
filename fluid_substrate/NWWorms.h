@@ -848,6 +848,7 @@ void Worms::DistributeWormsOnHost(){
 	const float xbox = this->envirn->_XBOX;
 	const float ybox = this->envirn->_YBOX;
 	const float zbox = this->envirn->_ZBOX;
+	const float dC = this->parameters->_SIGMA + this->parameters->_BUFFER;
 	const float spacing[3] = { // places worms in center of dimension
 		xbox / float(xdim + 1), // i.e. if zdim=1, z0=zbox/2
 		ybox / float(ydim + 1),
@@ -855,41 +856,86 @@ void Worms::DistributeWormsOnHost(){
 	};
 
 	//.. distribute heads (worms)
+	printf("\nFinding head positons ");
 	float * r0 = new float[_D_*nworms];
-	int iw = 0;
-	for (int k = 0; k < zdim; k++){
-		for (int i = 0; i < xdim; i++){
-			for (int j = 0; j < ydim; j++){
-				const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
-				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
-				iw++;
+	float * theta0, encap_R;
+	if (this->envirn->_FLEX_ENCAPS){ // Init in concentric circles
+		printf("[ concentric ] ... \t");
+		const float _2PI = 2.0000f * PI;
+		theta0 = new float[nworms];
+		float R, theta = dC / (l1*np), dtheta, x[2]; // , C;
+		float center[2] = { xbox / 2.0f, xbox / 2.0f };
+		int ring;
+		for (int w = 0; w < nworms; w++){
+			ring = int(theta / (_2PI)) + 1; // increases 1 every 2 PI
+			R = ring*l1*np * 1.1f;
+			//C = _2PI * R;
+			dtheta = dC / R; // = (_2PI * dC) / C
+			x[0] = center[0] + R*cos(theta);
+			x[1] = center[0] + R*sin(theta);
+			for_D_ r0[w + d*nworms] = x[d];
+			theta0[w] = theta;
+ 			theta += dtheta;
+			//printf("\nw: %d\tring: %d\tdtheta: %f\ttheta: %f", w, ring, dtheta, theta);
+		}
+		encap_R = (ring + 2)*l1*np; // one ring size between worms and encap
+	}
+	else { // Init in square grid
+		int iw = 0;
+		printf("[ sqr grid ] ... \t");
+		for (int k = 0; k < zdim; k++){
+			for (int i = 0; i < xdim; i++){
+				for (int j = 0; j < ydim; j++){
+					const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
+					for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
+					iw++;
+				}
 			}
 		}
-	}
+	} 
+	printf("done");
 
+
+	printf("\nPlacing particles ");
 	//.. distribute particles (worms)
-	const float s[3] = { l1, 0, 0 }; // always 3d: slope of laying chains from head
-	for (int i = 0; i < nparts; i++){
-		const int w = i / np;
-		const int p = i % np;
-		float rn[_D_], _r[_D_];
-		for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
-		for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
-		//MovementBC(_r[0], xbox);
-		//MovementBC(_r[1], ybox);
-		for_D_ r[i + d*ntotal] = _r[d];
+	int w, p; float _r[_D_], rn[_D_];
+	if (this->envirn->_FLEX_ENCAPS){
+		printf("[ concentric ] ... \t");
+		for (int i = 0; i < nparts; i++){
+			w = i / np;
+			p = i % np;
+			for_D_ rn[d] = 0.25f * (float(rand()) / float(RAND_MAX));
+			r[i + 0*ntotal] = r0[w + 0*nworms] + l1*p*cos(theta0[w]) + rn[0];
+			r[i + 1*ntotal] = r0[w + 1*nworms] + l1*p*sin(theta0[w]) + rn[1];
+		}
+		delete[] theta0;
 	}
-
+	else {
+		printf("[ sqr grid ] ... \t");
+		const float s[3] = { l1, 0, 0 }; // always 3d: slope of laying chains from head
+		for (int i = 0; i < nparts; i++){
+			w = i / np;
+			p = i % np;
+			for_D_ rn[d] = 0.25f*float(rand()) / float(RAND_MAX);
+			for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
+			MovementBC(_r[0], xbox);
+			MovementBC(_r[1], ybox);
+			for_D_ r[i + d*ntotal] = _r[d];
+		}
+	}
 	delete[] r0;
+	printf("done");
 
 	//.. place encaspilation
 #if _D_ == 2
 	if (this->envirn->_FLEX_ENCAPS){
+		printf("\nPlacing flexible encapsulation ... \t");
 		const float adj_xbox = this->envirn->_BOX_ADJ[0];
 		const float adj_ybox = this->envirn->_BOX_ADJ[1];
 		const float cx = adj_xbox / 2.0f; // center of box
 		const float cy = adj_ybox / 2.0f;
-		const float R = sqrt(xbox*xbox + ybox*ybox) / 2.0f;
+		const float R = (adj_xbox + adj_ybox) / 8.0f; 
+		//const float R = sqrt(xbox*xbox + ybox*ybox) / 2.0f;
 		const int encap_n = this->parameters->_NPARTS_ADJ - nparts;
 		const float ang_per_encap_part = (2.0 * M_PI) / double(encap_n);
 		float x, y, theta = 0; int i = 0;
@@ -907,9 +953,10 @@ void Worms::DistributeWormsOnHost(){
 		}
 
 		//.. adjust box size after init
-		this->envirn->_XBOX = this->envirn->_BOX_ADJ[0];
-		this->envirn->_YBOX = this->envirn->_BOX_ADJ[1];
+		this->envirn->_XBOX = this->envirn->_BOX_ADJ[0]; // unnecessary now but
+		this->envirn->_YBOX = this->envirn->_BOX_ADJ[1]; // may be needed later
 		for_D_ this->envirn->_BOX[d] = this->envirn->_BOX_ADJ[d];
+		printf("done");
 	}
 #endif
 }
