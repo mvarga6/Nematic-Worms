@@ -855,29 +855,31 @@ void Worms::DistributeWormsOnHost(){
 		zbox / float(zdim + 1) //parameters->_RCUT
 	};
 
-
 	//.. distribute heads (worms)
+	printf("\nFinding head positons ... \t");
 	float * r0 = new float[_D_*nworms];
-	float * theta0;
-	const float _2PI = 2.0000f * PI;
-	if (this->envirn->_FLEX_ENCAPS){
+	float * theta0, encap_R;
+	if (this->envirn->_FLEX_ENCAPS){ // Init in concentric circles
+		const float _2PI = 2.0000f * PI;
 		theta0 = new float[nworms];
-		float R, theta = 0.0f, dtheta, x, y; // , C;
+		float R, theta = 0.0f, dtheta, x[2]; // , C;
+		float center[2] = { xbox / 2.0f, xbox / 2.0f };
 		int ring;
-		for (int w = 0; w < zdim*ydim*xdim; w++){
+		for (int w = 0; w < nworms; w++){
 			ring = int(theta / (_2PI)) + 1; // increases 1 every 2 PI
 			R = ring*l1*np + 0.5f;
 			//C = _2PI * R;
 			dtheta = dC / R; // = (_2PI * dC) / C
-			x = R*cos(theta);
-			y = R*sin(theta);
-			r0[w + 0*nworms] = x;
-			r0[w + 1*nworms] = y;
+			x[0] = center[0] + R*cos(theta);
+			x[1] = center[0] + R*sin(theta);
+			for_D_ r0[w + d*nworms] = x[d];
 			theta0[w] = theta;
  			theta += dtheta;
+			printf("\nw: %d\tring: %d\tdtheta: %f\ttheta: %f", w, ring, dtheta, theta);
 		}
+		encap_R = (ring + 2)*l1*np; // one ring size between worms and encap
 	}
-	else {
+	else { // Init in square grid
 		int iw = 0;
 		for (int k = 0; k < zdim; k++){
 			for (int i = 0; i < xdim; i++){
@@ -888,11 +890,15 @@ void Worms::DistributeWormsOnHost(){
 				}
 			}
 		}
-	}
+	} 
+	printf("done");
 
+
+	printf("\nPlacing particles ");
 	//.. distribute particles (worms)
 	int w, p; float _r[_D_], rn[_D_];
 	if (this->envirn->_FLEX_ENCAPS){
+		printf("[ concentric ] ... \t");
 		for (int i = 0; i < nparts; i++){
 			w = i / np;
 			p = i % np;
@@ -903,6 +909,7 @@ void Worms::DistributeWormsOnHost(){
 		delete[] theta0;
 	}
 	else {
+		printf("[ sqr grid ] ... \t");
 		const float s[3] = { l1, 0, 0 }; // always 3d: slope of laying chains from head
 		for (int i = 0; i < nparts; i++){
 			w = i / np;
@@ -914,17 +921,19 @@ void Worms::DistributeWormsOnHost(){
 			for_D_ r[i + d*ntotal] = _r[d];
 		}
 	}
-
 	delete[] r0;
+	printf("done");
 
 	//.. place encaspilation
 #if _D_ == 2
 	if (this->envirn->_FLEX_ENCAPS){
+		printf("\nPlacing flexible encapsulation ... \t");
 		const float adj_xbox = this->envirn->_BOX_ADJ[0];
 		const float adj_ybox = this->envirn->_BOX_ADJ[1];
 		const float cx = adj_xbox / 2.0f; // center of box
 		const float cy = adj_ybox / 2.0f;
-		const float R = sqrt(xbox*xbox + ybox*ybox) / 2.0f;
+		const float R = encap_R; 
+		//const float R = sqrt(xbox*xbox + ybox*ybox) / 2.0f;
 		const int encap_n = this->parameters->_NPARTS_ADJ - nparts;
 		const float ang_per_encap_part = (2.0 * M_PI) / double(encap_n);
 		float x, y, theta = 0; int i = 0;
@@ -942,9 +951,10 @@ void Worms::DistributeWormsOnHost(){
 		}
 
 		//.. adjust box size after init
-		this->envirn->_XBOX = this->envirn->_BOX_ADJ[0];
-		this->envirn->_YBOX = this->envirn->_BOX_ADJ[1];
+		this->envirn->_XBOX = this->envirn->_BOX_ADJ[0]; // unnecessary now but
+		this->envirn->_YBOX = this->envirn->_BOX_ADJ[1]; // may be needed later
 		for_D_ this->envirn->_BOX[d] = this->envirn->_BOX_ADJ[d];
+		printf("done");
 	}
 #endif
 }

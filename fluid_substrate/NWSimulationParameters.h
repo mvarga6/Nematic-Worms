@@ -72,8 +72,8 @@ namespace DEFAULT {
 		static const int FRAMERATE = 1000;
 		static const int FRAMESPERFILE = 100;
 		static const float DT = 0.005f;
-		static const float XBOX = 100.0f;
-		static const float YBOX = 100.0f;
+		static const float XBOX = 500.0f;
+		static const float YBOX = 500.0f;
 		static const float ZBOX = 100.0f;
 		static const std::string FILENAME = "output.xyz";
 		static const bool LMEM = false;
