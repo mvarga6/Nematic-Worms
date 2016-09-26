@@ -132,7 +132,7 @@ void NWSimulation::Run(){
 		
 		//.. flexible encapsilation
 		if (itime > (nsteps / 5)){
-			if (encap_l > 0.35f) encap_l *= 0.999995;
+			if (encap_l > 0.35f) encap_l *= 0.99995;
 			range = -1;
 		}
 		else {
@@ -145,7 +145,6 @@ void NWSimulation::Run(){
 
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
-			//this->worms->ZeroForce();
 			this->worms->InternalForces(encap_l);
 			this->worms->BendingForces();
 			//this->worms->XLinkerForces(itime, xdensity);
@@ -154,7 +153,6 @@ void NWSimulation::Run(){
 		}
 
 		//.. finish time set with slow potential forces
-		//this->worms->ZeroForce();
 		this->worms->AutoDriveForces(itime);
 		//this->worms->LandscapeForces();
 		this->worms->SlowUpdate(range);

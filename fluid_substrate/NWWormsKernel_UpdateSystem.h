@@ -54,6 +54,9 @@ __global__ void UpdateSystemKernel(float *f,
 
 		//.. update cell address
 		for_D_ cell[id + d*cshift] = (int)(rid[d] / dev_Params._DCELL);
+
+		//.. zero forces
+		for_D_ f[id + d*fshift] = 0.0f;
 	}
 }
 
