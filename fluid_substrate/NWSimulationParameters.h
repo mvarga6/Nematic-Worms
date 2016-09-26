@@ -60,30 +60,30 @@ cudaError_t ParametersToDevice(SimulationParameters &params){
 --------------------------------------------------------------------------*/
 namespace DEFAULT {
 	namespace SIM {
-		static const int NSTEPS = 100000;
+		static const int NSTEPS = 500000;
 		static const int NSTEPS_INNER = 10;
-		static const int FRAMERATE = 1000;
+		static const int FRAMERATE = 2500;
 		static const int FRAMESPERFILE = 100;
-		static const float DT = 0.005f;
+		static const float DT = 0.001f;
 		static const float XBOX = 100.0f;
 		static const float YBOX = 100.0f;
-		static const float ZBOX = 100.0f;
+		static const float ZBOX = 0.0f;
 		static const std::string FILENAME = "output.xyz";
 		static const bool LMEM = false;
 		static const bool PBC[_D_] = { true, true
 #if _D_ == 3 
-			, true // for 3rd dim
+			, false // for 3rd dim
 #endif
 		};
 		static const bool SBC[_D_] = { false, false
 #if _D_ == 3
-			, true
+			, false
 #endif
 		};
 		static const float KWALL = 5.0f;
 		static const bool HBC[_D_] = { false, false
 #if _D_ == 3
-			, true
+			, false
 #endif
 		};
 		static const bool SPHERE = false;

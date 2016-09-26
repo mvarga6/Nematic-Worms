@@ -59,10 +59,6 @@ __global__ void LennardJonesNListKernel(float *f,
 					//..  average of x and -u (to preserve detailed balance)
 					for_D_ f_ext[d] = (x[d] - u[d]) / 2.0f;
 					for_D_ fid[d] += (f_ext[d] * dev_Params._DRIVE) / sqrt(_rr); // try this for now
-					//float dotprod = dot(x, u); // dot product
-					//if (dotprod < -75.0f){ // if anti-parallel
-					//	for_D_ fid[d] += dotprod * drive * 
-					//}
 				}
 			}
 

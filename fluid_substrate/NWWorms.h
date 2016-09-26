@@ -29,9 +29,7 @@ class Worms {
 
 	//.. neighbors list within worms
 	int * dev_nlist;
-	int * dev_xlink;
 	int * dev_cell;
-	int * dev_xcount;
 
 	//.. for pitched memory
 	bool pitched_memory;
@@ -108,7 +106,6 @@ public:
 	void AutoDriveForces(int itime, int istart);
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
-	void XLinkerForces(int itime, float xtargetPercent);
 	void SlowUpdate();
 	void QuickUpdate();
 	void CalculateThetaPhi();
@@ -116,7 +113,6 @@ public:
 	void DataHostToDevice();
 	void ResetNeighborsList();
 	void ResetNeighborsList(int itime);
-	void ColorXLinked(); // pulls dev_xlink onto host and makes char list
 	void ClearAll();
 	void ZeroForce();
 
@@ -160,11 +156,6 @@ dev_f_old(NULL), dev_thphi(NULL), clock_rate(clockingRate) {
 	DEBUG_MESSAGE("Constructor");
 	//.. do necessities
 	srand(time(NULL));
-	//cudaChannelFormatDesc channelDesc = 
-	//cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
-	//cudaArray *cuArray;
-	//cudaMallocArray(&cuArray, &channelDesc, parameters->_NPARTICLES, _D_);
-	//cudaBind
 }
 //-------------------------------------------------------------------------------------------
 Worms::~Worms(){
@@ -182,8 +173,6 @@ void Worms::ClearAll(){
 	this->FreeGPUMemory();
 	this->dev_r = this->dev_v = NULL;
 	this->dev_f = this->dev_f_old = NULL;
-	this->dev_xcount = NULL;
-	this->dev_xlink = NULL;
 	this->dev_cell = NULL;
 	this->dev_thphi = NULL;
 	this->rng = NULL;
@@ -264,7 +253,7 @@ void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
 void Worms::InternalForces(){
 	DEBUG_MESSAGE("InternalForces");
 	std::clock_t b4 = std::clock();
-	float noise = sqrtf(2.0f * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
+	float noise = sqrtf(2.0f * envirn->_NSTEPS_INNER * parameters->_GAMMA * parameters->_KBT / envirn->_DT);
 	int N = _D_ * this->parameters->_NPARTICLES;
 	float * rng_ptr = this->rng->Get(N);
 	InterForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -360,81 +349,19 @@ void Worms::LandscapeForces(){
 	this->Land_clock += std::clock() - b4;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::XLinkerForces(int itime, float xtargetPercent = 0.0f){
-	DEBUG_MESSAGE("XLinkerForces");
-
-	//.. only process if needed
-	if (itime < this->parameters->_XSTART) return;
-	if (xtargetPercent <= 0.0f) return;
-	if (xtargetPercent > 1.0f) return;
-
-	//.. grab needed parameters
-	const float crossLinkDensityTarget = xtargetPercent;
-	const int N = this->parameters->_NPARTICLES;
-
-	//.. break a 10% percentage of cross links
-	float * uni_rn = this->rng->Get(N, true);
-	XLinkerBreakKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	(
-		this->dev_xlink, uni_rn, 0.00001f
-	);
-
-	//.. count linkages
-	int currentNumber;
-	XLinkerCountKernel<<<1, 1>>>(this->dev_xlink, this->dev_xcount);
-	ErrorHandler(cudaGetLastError());
-	
-	//.. calculate current density
-	CheckSuccess(cudaMemcpy(&currentNumber, this->dev_xcount, sizeof(int), cudaMemcpyDeviceToHost));
-
-	ErrorHandler(cudaGetLastError());
-	const float currentDensity = float(currentNumber) / float(N);
-	const float offsetDensity = crossLinkDensityTarget - currentDensity;
-
-	//.. adjust linkages to target percentage
-	float * rng_ptr = this->rng->Get(N, true);
-	float linkCutoff = this->parameters->_Lx;
-	XLinkerUpdateKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	(
-		this->dev_r, this->rshift,
-		this->dev_xlink,
-		this->dev_nlist, this->nlshift,
-		rng_ptr,
-		offsetDensity, linkCutoff
-	);
-	ErrorHandler(cudaGetLastError());
-
-	//.. apply forces from linkages to linker particle
-	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	(
-		this->dev_f, this->fshift,
-		this->dev_r, this->rshift,
-		this->dev_xlink, true
-	);
-	ErrorHandler(cudaGetLastError());
-	
-	//.. apply forces from linkages to linked particle 2
-	XLinkerForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-		(
-		this->dev_f, this->fshift,
-		this->dev_r, this->rshift,
-		this->dev_xlink, false
-	);
-	ErrorHandler(cudaGetLastError());
-	DEBUG_MESSAGE("XLinkerForces_forces2");
-}
-//-------------------------------------------------------------------------------------------
 void Worms::SlowUpdate(){
 	DEBUG_MESSAGE("SlowUpdate");
 
-	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
-		this->dev_f, this->fpitch, 
-		this->dev_f_old, this->fopitch, 
-		this->dev_v, this->vpitch, 
-		this->dev_r, this->rpitch
-	);*/
-	std::clock_t b4 = std::clock();
+		this->dev_f, this->fshift, 
+		this->dev_f_old, this->foshift, 
+		this->dev_v, this->vshift, 
+		this->dev_r, this->rshift,
+		this->dev_cell, this->cshift,
+		this->envirn->_DT
+	);
+	/*std::clock_t b4 = std::clock();
 	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
 	dim3 blockStruct(this->Threads_Per_Block);
 	FastUpdateKernel <<< gridStruct, blockStruct >>>
@@ -447,21 +374,23 @@ void Worms::SlowUpdate(){
 		this->envirn->_DT
 	);
 	ErrorHandler(cudaGetLastError());
-	this->Update_clock += std::clock() - b4;
+	this->Update_clock += std::clock() - b4;*/
 }
 //-------------------------------------------------------------------------------------------
 void Worms::QuickUpdate(){
 	DEBUG_MESSAGE("QuickUpdate");
-
-	/*UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	const float increaseRatio = (float)this->envirn->_NSTEPS_INNER;
+	UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
-	this->dev_f, this->fpitch,
-	this->dev_f_old, this->fopitch,
-	this->dev_v, this->vpitch,
-	this->dev_r, this->rpitch
-	);*/
+		this->dev_f, this->fshift,
+		this->dev_f_old, this->foshift,
+		this->dev_v, this->vshift,
+		this->dev_r, this->rshift,
+		this->dev_cell, this->cshift,
+		this->envirn->_DT / increaseRatio
+	);
 
-	std::clock_t b4 = std::clock();
+	/*std::clock_t b4 = std::clock();
 	const float increaseRatio = (float)this->envirn->_NSTEPS_INNER;
 	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
 	dim3 blockStruct(this->Threads_Per_Block);
@@ -475,7 +404,7 @@ void Worms::QuickUpdate(){
 		this->envirn->_DT / increaseRatio
 	);
 	ErrorHandler(cudaGetLastError());
-	this->Update_clock += std::clock() - b4;
+	this->Update_clock += std::clock() - b4;*/
 }
 //-------------------------------------------------------------------------------------------
 void Worms::CalculateThetaPhi(){
@@ -678,17 +607,6 @@ void Worms::AddConstantForce(int dim, float force){
 		dim, force
 	);
 }
-//-------------------------------------------------------------------------------------------
-void Worms::ColorXLinked(){
-	const int N = this->parameters->_NPARTICLES;
-	int * xlink = new int[N]; // create host copy of dev_xlink
-	CheckSuccess(cudaMemcpy(xlink, this->dev_xlink, this->nparticles_int_alloc, cudaMemcpyDeviceToHost));
-	for (int i = 0; i < N; i++){ // find linked particles
-		if (xlink[i] == -1) this->c[i] = 'A'; // type A if not linked
-		else this->c[i] = 'B'; // type B if linked
-	}
-	delete[] xlink; // delete local copy
-}
 // ------------------------------------------------------------------------------------------
 //	PRIVATE METHODS
 // ------------------------------------------------------------------------------------------
@@ -724,9 +642,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_f_old, _D_ * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_nlist, this->parameters->_NMAX * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_thphi, 2 * this->nparticles_float_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("Allocated");
@@ -777,9 +693,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 								widthN,
 								this->height2));
 
-	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
 	//CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
-	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 
 	//.. calculate and assign shifts
 	this->fshift = this->fpitch / sizeof(float);
@@ -830,16 +744,16 @@ void Worms::DistributeWormsOnHost(){
 	const float ybox = this->envirn->_YBOX;
 	const float zbox = this->envirn->_ZBOX;
 	const float spacing[3] = { // places worms in center of dimension
-		xbox / float(xdim + 1), // i.e. if zdim=1, z0=zbox/2
-		ybox / float(ydim + 1),
-		zbox / float(zdim + 1) //parameters->_RCUT
+		xbox / float(xdim), // i.e. if zdim=1, z0=zbox/2
+		ybox / float(ydim),
+		0 //parameters->_RCUT
 	};
 	float * r0 = new float[_D_*nworms];
 	int iw = 0;
 	for (int k = 0; k < zdim; k++){
 		for (int i = 0; i < xdim; i++){
 			for (int j = 0; j < ydim; j++){
-				const float idx[3] = { (i + 1), (j + 1), (k + 1) }; // always 3d
+				const float idx[3] = { (i), (j), (k) }; // always 3d
 				for_D_ r0[iw + d*nworms] = 0.001f + idx[d] * spacing[d];
 				iw++;
 			}
@@ -1041,7 +955,6 @@ void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_f_old, 0, _D_ * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_thphi, 0, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
-	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 	printf("\nMemory zeroed");
 }
@@ -1093,7 +1006,6 @@ void Worms::ZeroGPU_Pitched(){
 		this->nparticles_int_alloc,
 		_D_));
 
-	CheckSuccess(cudaMemset((void**)this->dev_xlink, -1, this->nparticles_int_alloc));
 	//CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 }
 //-------------------------------------------------------------------------------------------

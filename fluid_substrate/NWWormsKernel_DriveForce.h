@@ -26,11 +26,10 @@ __global__ void DriveForceKernel(float *f,
 			if (p < dev_Params._NP - 1){ // if not head
 				float u[_D_], dr[_D_], rid[_D_], rnab[_D_], umag;
 				for_D_ rid[d] = r[id + d*rshift]; // get pos of id particle
-				for_D_ rnab[d] = r[(id + 1) + d*rshift]; // get pos of next in chain
+				for_D_ rnab[d] = r[(id + 2) + d*rshift]; // get pos of next in chain
 				umag = sqrt(CalculateRR(rid, rnab, dr)); // calculate displacement vector and mag
 				for_D_ u[d] = dr[d] / umag; // make unit vector
-				if (_D_ == 2) Rotate2D(u, dev_Params._DRIVE_ROT); // works for 2d only
-				for_D_ f[id + d*fshift] += dev_Params._DRIVE * u[d]; // apply drive along unit vector
+				for_D_ f[(id + 1) + d*fshift] += dev_Params._DRIVE * u[d]; // apply drive along unit vector
 			}
 			//f[id]			 += dev_Params._DRIVE * cosf(thphi[id]) * sinphi;
 			//f[id + fshift]	 += dev_Params._DRIVE * sinf(thphi[id]) * sinphi;

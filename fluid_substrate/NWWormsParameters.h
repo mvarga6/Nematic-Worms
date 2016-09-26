@@ -27,7 +27,7 @@ typedef struct {
 	int _LISTSETGAP, _NMAX;
 
 	//.. LJ energy and length scale, activity scalor
-	float _EPSILON, _SIGMA, _DRIVE, _DRIVE_ROT;
+	float _EPSILON, _SIGMA, _DRIVE;
 
 	//.. steric interaction on/off
 	bool _NOINT;
@@ -36,11 +36,10 @@ typedef struct {
 	bool _EXTENSILE;
 
 	//.. spring constants in worms
-	float _K1, _K2, _K3, _Ka, _Ka2;
-	float _Ka_RATIO;
+	float _K1, _Ka;
 
 	//.. spring equilibrium lengths
-	float _L1, _L2, _L3;
+	float _L1;
 
 	//.. Langevin thermostat specs
 	float _KBT, _GAMMA, _DAMP;
@@ -49,11 +48,6 @@ typedef struct {
 	float _SIGMA6, _2SIGMA6, _LJ_AMP;
 	float _RMIN, _R2MIN;
 	float _RCUT, _R2CUT;
-
-	//.. cross-linker density, spring constant, distance, and flag
-	float _XLINKERDENSITY, _Kx, _Lx;
-	int _XSTART, _XHOLD;
-	bool _XRAMP;
 
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
@@ -85,7 +79,7 @@ namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
 		static const int	YDIM = 5;
-		static const int	ZDIM = 5;
+		static const int	ZDIM = 1;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
@@ -96,25 +90,14 @@ namespace DEFAULT {
 		static const float	DRIVE = 1.0f;
 		static const float	DRIVE_ROT = 0.0f;
 		static const float	K1 = 57.146f;
-		static const float	K2 = 10.0f * K1;
-		static const float	K3 = 2.0f * K2 / 3.0f;
 		static const float	Ka = 5.0f;
-		static const float  Ka2 = Ka;
-		static const float  Ka_RATIO = 1.0f;
 		static const float	L1 = 0.8f;
-		static const float	L2 = 1.6f;
-		static const float	L3 = 2.4f;
-		static const float	KBT = 0.25f;
+		static const float	KBT = 1.0f;
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
 		static const float	BUFFER = 1.0f;
 		static const float	LANDSCALE = 1.0f;
-		static const float	XLINKERDENSITY = 0.0f;
 		static const float	Kx = 10.0f;
-		static const float  Lx = L2;
-		static const int	XSTART = 0;
-		static const int	XHOLD = -1; // needs to default to end
-		static const bool	XRAMP = false;
 		static const float	DCELL = 3.0f;
 		static const bool	RAD = false;
 		static const bool   EXTENSILE = false;
@@ -137,12 +120,6 @@ void CalculateParameters(WormsParameters * parameters, bool WCA = false){
 		parameters->_RCUT = 2.5f * parameters->_SIGMA;
 	parameters->_DCELL = parameters->_RCUT + parameters->_BUFFER; // linked-list cell width
 	parameters->_R2CUT = parameters->_RCUT * parameters->_RCUT; // LJ cutoff distance
-	if (parameters->_XLINKERDENSITY > 1.0f) parameters->_XLINKERDENSITY = 1.0f; // move this to setting it
-	if (parameters->_XLINKERDENSITY < 0.0f) parameters->_XLINKERDENSITY = 0.0f; //
-	parameters->_L2 = 2.0f * parameters->_L1; // adjust 2nd neighbor distance based on first
-	parameters->_L3 = 3.0f * parameters->_L1; // adjsut 3rd neighbor distance based on first
-	if (parameters->_Ka_RATIO > 1.0f) parameters->_Ka_RATIO = 1.0f;
-	else if (parameters->_Ka_RATIO < 0.0f) parameters->_Ka_RATIO = 0.0f;
 }
 //----------------------------------------------------------------------------
 void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &wca, bool &xramp){
@@ -196,24 +173,9 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
 			}
 		}
-		else if (arg == "-driverot"){
-			if (i + 1 < argc){
-				parameters->_DRIVE_ROT = std::strtof(argv[1 + i++], NULL);
-			}
-		}
 		else if (arg == "-k1"){
 			if (i + 1 < argc){
 				parameters->_K1 = std::strtof(argv[1 + i++], NULL);
-			}
-		}
-		else if (arg == "-k2"){
-			if (i + 1 < argc){
-				parameters->_K2 = std::strtof(argv[1 + i++], NULL);
-			}
-		}
-		else if (arg == "-k3"){
-			if (i + 1 < argc){
-				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-ka"){
@@ -222,31 +184,9 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 				printf("\nKa changed: %f", parameters->_Ka);
 			}
 		}
-		else if (arg == "-ka2"){
-			if (i + 1 < argc){
-				parameters->_Ka2 = std::strtof(argv[1 + i++], NULL);
-				printf("\nKa2 changed: %f", parameters->_Ka2);
-			}
-		}
-		else if (arg == "-karatio"){
-			if (i + 1 < argc){
-				parameters->_Ka_RATIO = std::strtof(argv[1 + i++], NULL);
-				printf("\nKa_Ratio changed: %f", parameters->_Ka_RATIO);
-			}
-		}
 		else if (arg == "-l1"){
 			if (i + 1 < argc){
 				parameters->_L1 = std::strtof(argv[1 + i++], NULL);
-			}
-		}
-		else if (arg == "-l2"){
-			if (i + 1 < argc){
-				parameters->_L2 = std::strtof(argv[1 + i++], NULL);
-			}
-		}
-		else if (arg == "-l3"){
-			if (i + 1 < argc){
-				parameters->_L3 = std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-kbt"){
@@ -275,43 +215,9 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 				parameters->_LANDSCALE = std::strtof(argv[1 + i++], NULL);
 			}
 		}
-		else if (arg == "-xlink"){
-			if (i + 1 < argc){
-				parameters->_XLINKERDENSITY = std::strtof(argv[1 + i++], NULL);
-				printf("\nxlink changed: %f", parameters->_XLINKERDENSITY);
-			}
-		}
-		else if (arg == "-kx"){
-			if (i + 1 < argc){
-				parameters->_Kx = std::strtof(argv[1 + i++], NULL);
-				printf("\nkx changed: %f", parameters->_Kx);
-			}
-		}
-		else if (arg == "-xstart"){
-			if (i + 1 < argc){
-				parameters->_XSTART = std::strtof(argv[1 + i++], NULL);
-				printf("\nxstart changed: %i", parameters->_XSTART);
-			}
-		}
-		else if (arg == "-xhold"){
-			if (i + 1 < argc){
-				parameters->_XHOLD = std::strtof(argv[1 + i++], NULL);
-				printf("\nxhold changed: %f", parameters->_XHOLD);
-			}
-		}
-		else if (arg == "-lx"){
-			if (i + 1 < argc){
-				parameters->_Lx = std::strtof(argv[1 + i++], NULL);
-				printf("\nlx changed: %f", parameters->_Lx);
-			}
-		}
 		else if (arg == "-wca"){
 			wca = true;
 			printf("\nUsing Weeks-Chandler-Anderson potential");
-		}
-		else if (arg == "-xramp"){
-			parameters->_XRAMP = true;
-			printf("\nRamping cross-linker denisty from 0 -> [xlink]");
 		}
 		else if (arg == "-rad"){
 			parameters->_RAD = true;
@@ -342,26 +248,14 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_NOINT = DEFAULT::WORMS::NOINT;
 	parameters->_DRIVE = DEFAULT::WORMS::DRIVE;
 	parameters->_EXTENSILE = DEFAULT::WORMS::EXTENSILE;
-	parameters->_DRIVE_ROT = DEFAULT::WORMS::DRIVE_ROT;
 	parameters->_K1 = DEFAULT::WORMS::K1;
-	parameters->_K2 = DEFAULT::WORMS::K2;
-	parameters->_K3 = DEFAULT::WORMS::K3;
 	parameters->_Ka = DEFAULT::WORMS::Ka;
-	parameters->_Ka2 = DEFAULT::WORMS::Ka2;
-	parameters->_Ka_RATIO = DEFAULT::WORMS::Ka_RATIO;
 	parameters->_L1 = DEFAULT::WORMS::L1;
-	parameters->_L2 = DEFAULT::WORMS::L2;
-	parameters->_L3 = DEFAULT::WORMS::L3;
 	parameters->_KBT = DEFAULT::WORMS::KBT;
 	parameters->_GAMMA = DEFAULT::WORMS::GAMMA;
 	parameters->_DAMP = DEFAULT::WORMS::DAMP;
 	parameters->_BUFFER = DEFAULT::WORMS::BUFFER;
 	parameters->_LANDSCALE = DEFAULT::WORMS::LANDSCALE;
-	parameters->_XLINKERDENSITY = DEFAULT::WORMS::XLINKERDENSITY;
-	parameters->_Kx = DEFAULT::WORMS::Kx;
-	parameters->_Lx = DEFAULT::WORMS::Lx;
-	parameters->_XSTART = DEFAULT::WORMS::XSTART;
-	parameters->_XHOLD = DEFAULT::WORMS::XHOLD;
 	parameters->_DCELL = DEFAULT::WORMS::DCELL;
 	parameters->_RAD = DEFAULT::WORMS::RAD;
 	

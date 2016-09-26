@@ -60,9 +60,7 @@
     <ClInclude Include="NWWormsKernel_LennardJones.h" />
     <ClInclude Include="NWWormsKernel_Noise.h" />
     <ClInclude Include="NWWormsKernel_SetNList.h" />
-    <ClInclude Include="NWWormsKernel_SetXList.h" />
     <ClInclude Include="NWWormsKernel_UpdateSystem.h" />
-    <ClInclude Include="NWWormsKernel_XLinkers.h" />
     <ClInclude Include="NWWormsParameters.h" />
     <ClInclude Include="NWXYZIO.h" />
     <ClInclude Include="resource.h" />
