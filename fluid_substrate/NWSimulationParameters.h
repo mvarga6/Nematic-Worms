@@ -1,4 +1,3 @@
-
 #ifndef __SIMULATION_PARAMETERS_H__
 #define __SIMULATION_PARAMETERS_H__
 // 2D
