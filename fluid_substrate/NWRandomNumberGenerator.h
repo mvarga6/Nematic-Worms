@@ -87,6 +87,7 @@ GRNG::GRNG(int maxCallSize, float distributionMean, float standardDeviation)
 	stddev(standardDeviation), max_size(maxCallSize){
 	
 	CheckStatus(curandCreateGenerator(this->generator, CURAND_RNG_PSEUDO_DEFAULT));
+	curandSetPseudoRandomGeneratorSeed(*this->generator, rand());
 	
 	this->Threads_Per_Block = 256;
 	this->Blocks_Per_Kernel = (this->max_size / this->Threads_Per_Block) + 1;

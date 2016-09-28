@@ -10,6 +10,7 @@
 // -------------------------------------------------------------------------------------
 //.. Update positions and velocities of particles then save forces
 //	 Update list of cell positions for neighbor finding
+// NOT WORKING !!!! ????
 __global__ void UpdateSystemKernel(float *f,
 								   int fshift,
 								   float *f_old,
@@ -26,34 +27,60 @@ __global__ void UpdateSystemKernel(float *f,
 	if (id < dev_Params._NPARTICLES)
 	{
 		//.. local components
-		float dv[_D_], dr[_D_], rid[_D_], fid[_D_];
-		for_D_ rid[d] = r[id + d*rshift];
-		for_D_ fid[d] = f[id + d*fshift];
+		float dv[_D_], dr[_D_], rid[_D_];
+		float fid[_D_], foid[_D_], vid[_D_];
+		for_D_{
+			rid[d] = r[id + d*rshift];
+			vid[d] = v[id + d*vshift];
+			fid[d] = f[id + d*fshift];
+			foid[d] = f_old[id + d*foshift];
+		}
+			
+		float tu[_D_], tv[_D_], A = 15.0f;
+		T_u(A, rid[0], rid[1], tu);
+		T_v(A, rid[0], rid[1], tv);
+
+		for_D_{ // project force onto local tanget vectors in 3d
+			fid[d] = (fid[d] * tu[d] + fid[d] * tv[d]);
+			foid[d] = (foid[d] * tu[d] + foid[d] * tv[d]);
+		}
 
 		//.. boundary conditions
-		BC_r(fid, rid, dev_simParams._BOX);
+		//BC_r(fid, rid, dev_simParams._BOX);
 
 		//.. change in velocity
-		for_D_ dv[d] = 0.5f * (fid[d] + f_old[id + d*foshift]) * dt;
+		for_D_ dv[d] = 0.5f * (fid[d] + foid[d]) * dt;
 
 		//.. change in position
-		for_D_ dr[d] = v[id + d*vshift] * dt + 0.5f * f_old[id + d*foshift] * dt * dt;
+		for_D_ dr[d] = vid[d] * dt + 0.5f * foid[d] * dt * dt;
 
 		//.. save forces
 		for_D_ f_old[id + d*foshift] = fid[d];
 
-		//.. update positions
-		for_D_ rid[d] += dr[d];
+		//.. update positions 
+		//for_D_ r[id + d*rshift] += dr[d];
+		float x = rid[0], y = rid[1];
+		rid[0] += dr[0] * uxy_sinsin(A, x, y);
+		rid[1] += dr[1] * vxy_sinsin(A, x, y);
+
+		BC_r(fid[0], rid[0], dev_simParams._BOX[0], 0);
+		BC_r(fid[1], rid[1], dev_simParams._BOX[1], 1);
+
+		rid[2] = fxy_sinsin(A, rid[0], rid[1]);
 
 		//.. boundary conditions and apply new pos
 		//BC_r(rid, dev_simParams._BOX);
+		
 		for_D_ r[id + d*rshift] = rid[d];
 
 		//.. update velocities
 		for_D_ v[id + d*vshift] += dv[d];
 
+		//.. zero forces
+		for_D_ f[id + d*fshift] = 0.0f;
+
 		//.. update cell address
-		for_D_ cell[id + d*cshift] = (int)(rid[d] / dev_Params._DCELL);
+		//for_D_ cell[id + d*cshift] = (int)(rid[d] / dev_Params._DCELL);
 	}
 }
 

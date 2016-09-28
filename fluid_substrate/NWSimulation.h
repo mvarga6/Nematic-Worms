@@ -88,26 +88,13 @@ NWSimulation::~NWSimulation(){
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	
-	//this->XYZPrint(0);
+	this->XYZPrint(0);
 	//return;
 
 	//.. grab needed parameters
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
-	const float xtarget		 = this->params->_XLINKERDENSITY;
-	const int	xstart		 = this->params->_XSTART;
-		  int	xhold		 = this->params->_XHOLD;
-	
-	//.. setup cross-linker ramping
-	float xdensity, xramp;
-	if (this->params->_XRAMP) xdensity = 0.0f; // if ramping, init to zero
-	else xdensity = xtarget; // if not, init to target
-	if (xhold < 0) xhold = nsteps; // default to end of simulation, 
-	//	else already set properly
-
-	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
-	xramp = (xtarget - xdensity) / float(xhold - xstart);
 
 	//.. check for errors before starting
 	this->DisplayErrors();
@@ -116,6 +103,7 @@ void NWSimulation::Run(){
 	this->timer = clock();
 
 	//.. MAIN SIMULATION LOOP
+	this->worms->ZeroForce();
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. setup neighbors for iteration
@@ -123,26 +111,20 @@ void NWSimulation::Run(){
 
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
-			this->worms->ZeroForce();
+			//this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
-			//this->worms->XLinkerForces(itime, xdensity);
 			this->worms->LJForces();
 			this->worms->QuickUpdate();
 		}
 
 		//.. finish time set with slow potential forces
-		this->worms->ZeroForce();
-		this->worms->AutoDriveForces(itime);
-		//this->worms->LandscapeForces();
-		this->worms->SlowUpdate();
+		//this->worms->ZeroForce();
+		//this->worms->AutoDriveForces(itime);
+		//this->worms->SlowUpdate();
 		this->XYZPrint(itime);
-		this->worms->DisplayClocks(itime);
-		this->DisplayErrors();
-
-		//.. adjust tickers
-		if (itime > xstart && itime < xhold) // in ramping range 
-			xdensity += xramp; // no effect if not ramping
+		///this->worms->DisplayClocks(itime);
+		//this->DisplayErrors();
 		this->time += dt;
 	}
 	this->fxyz.close();
@@ -162,7 +144,6 @@ void NWSimulation::XYZPrint(int itime){
 
 	//.. print to ntypes
 	const int maxTypes = 5;
-	const float ka_ratio = this->params->_Ka_RATIO;
 	//const int ntypes = (ka_ratio < 1.0f ? 2 : maxTypes);
 	const char ptypes[maxTypes] = { 'A', 'B', 'C', 'D', 'E' };
 	const int N = params->_NPARTICLES;
@@ -174,7 +155,7 @@ void NWSimulation::XYZPrint(int itime){
 	for (int i = 0; i < params->_NPARTICLES; i++){
 		const int w = i / params->_NP;
 		// choose 0 or 1,2,3,4 type
-		const int t = (w > nworms*ka_ratio ? 0 : w % (maxTypes - 1) + 1);
+		const int t = w % 5;
 		float _r[3] = { 0, 0, 0 }; // always 3d
 		for_D_ _r[d] = worms->r[i + d*N];
 		//float x = worms->r[i], y = worms->r[i + N], z = 0.0f;

@@ -12,7 +12,7 @@
 // when switched from 2 to 3 or
 // vice versa !!!
 // ---------------------------------
-#define _D_ 2
+#define _D_ 3
 #define for_D_ for(int d = 0; d < _D_; d++)
 // ---------------------------------
 // The Current version of sim
