@@ -115,6 +115,7 @@ void NWSimulation::Run(){
 			this->worms->InternalForces();
 			this->worms->BendingForces();
 			this->worms->LJForces();
+			this->worms->AutoDriveForces(itime);
 			this->worms->QuickUpdate();
 		}
 

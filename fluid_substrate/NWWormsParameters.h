@@ -89,7 +89,7 @@ namespace DEFAULT {
 		static const float	SIGMA = 1.0f;
 		static const float	DRIVE = 1.0f;
 		static const float	DRIVE_ROT = 0.0f;
-		static const float	K1 = 57.146f;
+		static const float	K1 = 100.0f; //57.146f;
 		static const float	Ka = 5.0f;
 		static const float	L1 = 0.8f;
 		static const float	KBT = 1.0f;
