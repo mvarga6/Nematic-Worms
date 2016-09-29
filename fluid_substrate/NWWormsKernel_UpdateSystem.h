@@ -36,7 +36,7 @@ __global__ void UpdateSystemKernel(float *f,
 			foid[d] = f_old[id + d*foshift];
 		}
 			
-		float tu[_D_], tv[_D_], A = 15.0f;
+		float tu[_D_], tv[_D_], A = dev_Params._LANDSCALE;
 		T_u(A, rid[0], rid[1], tu);
 		T_v(A, rid[0], rid[1], tv);
 
