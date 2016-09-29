@@ -78,7 +78,7 @@ cudaError_t ParametersToDevice(WormsParameters &params){
 namespace DEFAULT {
 	namespace WORMS {
 		static const int	XDIM = 5;
-		static const int	YDIM = 5;
+		static const int	YDIM = 20;
 		static const int	ZDIM = 1;
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
@@ -96,7 +96,7 @@ namespace DEFAULT {
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
 		static const float	BUFFER = 3.0f;
-		static const float	LANDSCALE = 1.0f;
+		static const float	LANDSCALE = 0.0f;
 		static const float	Kx = 10.0f;
 		static const float	DCELL = 3.0f;
 		static const bool	RAD = false;
@@ -210,7 +210,7 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 				parameters->_BUFFER = std::strtof(argv[1 + i++], NULL);
 			}
 		}
-		else if (arg == "-landscale"){
+		else if (arg == "-A" || arg == "-landscale"){
 			if (i + 1 < argc){
 				parameters->_LANDSCALE = std::strtof(argv[1 + i++], NULL);
 			}

@@ -115,14 +115,13 @@ void NWSimulation::Run(){
 			this->worms->InternalForces();
 			this->worms->BendingForces();
 			this->worms->LJForces();
-			this->worms->AutoDriveForces(itime);
 			this->worms->QuickUpdate();
 		}
 
 		//.. finish time set with slow potential forces
 		//this->worms->ZeroForce();
-		//this->worms->AutoDriveForces(itime);
-		//this->worms->SlowUpdate();
+		this->worms->AutoDriveForces(itime);
+		this->worms->SlowUpdate();
 		this->XYZPrint(itime);
 		///this->worms->DisplayClocks(itime);
 		//this->DisplayErrors();
