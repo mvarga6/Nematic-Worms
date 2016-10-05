@@ -125,7 +125,7 @@ void NWSimulation::Run(){
 		this->XYZPrint(itime);
 		this->DisplayErrors();
 		
-		if (Amp < amp_max) Amp += (amp_max / 10000);  
+		if (Amp < amp_max) Amp += (amp_max / 50000);  
 		this->time += dt;
 	}
 	this->fxyz.close();
