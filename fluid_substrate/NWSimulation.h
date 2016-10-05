@@ -125,7 +125,7 @@ void NWSimulation::Run(){
 		this->XYZPrint(itime);
 		this->DisplayErrors();
 		
-		if (Amp < amp_max) Amp += (amp_max / 20.0);  // grows in 20 frames to full height
+		if (Amp < amp_max) Amp += (amp_max / 200.0);  // grows in 20 frames to full height
 		this->time += dt;
 	}
 	this->fxyz.close();
