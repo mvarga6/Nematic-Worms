@@ -123,6 +123,7 @@ void NWSimulation::Run(){
 		this->worms->AutoDriveForces(itime);
 		this->worms->SlowUpdate(Amp);
 		this->XYZPrint(itime);
+		this->DisplayErrors();
 		
 		if (Amp < amp_max) Amp += (amp_max / 20.0);  // grows in 20 frames to full height
 		this->time += dt;
