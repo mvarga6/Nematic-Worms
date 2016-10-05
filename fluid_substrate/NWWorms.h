@@ -542,7 +542,7 @@ void Worms::DisplayNList(){
 //-------------------------------------------------------------------------------------------
 void Worms::DisplayErrors(){
 	if (this->errorState.size() > 0){
-		printf("\nWORM ERRORS:\n");
+		printf("\n[ WORMS ] : ");
 		for (int i = 0; i < this->errorState.size(); i++) {
 			//printf("%i -- %s\n", i, cudaGetErrorString(this->errorState[i]));
 			ErrorHandler(this->errorState[i]);
