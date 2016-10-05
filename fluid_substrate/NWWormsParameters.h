@@ -93,7 +93,7 @@ namespace DEFAULT {
 		static const int	NP = 10;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
-		static const int	LISTSETGAP = 20;
+		static const int	LISTSETGAP = 50;
 		static const int	NMAX = 96;
 		static const float	EPSILON = 0.5f;
 		static const float	SIGMA = 1.0f;

@@ -114,18 +114,18 @@ void NWSimulation::Run(){
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
 			this->worms->InternalForces();
-			//this->worms->BendingForces();
+			this->worms->BendingForces();
 			//this->worms->LJForces();
 			this->worms->QuickUpdate(Amp);
 		}
 
 		//.. finish time set with slow potential forces
-		//this->worms->AutoDriveForces(itime);
-		//this->worms->SlowUpdate(Amp);
+		this->worms->AutoDriveForces(itime);
+		this->worms->SlowUpdate(Amp);
 		this->XYZPrint(itime);
 		this->DisplayErrors();
 		
-		if (Amp < amp_max) Amp += (amp_max / 200.0);  // grows in 20 frames to full height
+		if (Amp < amp_max) Amp += (amp_max / 10000);  
 		this->time += dt;
 	}
 	this->fxyz.close();
