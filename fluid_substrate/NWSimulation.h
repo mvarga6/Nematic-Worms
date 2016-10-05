@@ -96,6 +96,7 @@ void NWSimulation::Run(){
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
 	const float amp_max		 = this->params->_LANDSCALE;
+	const float sin_growth_t = 50000;
 
 	//.. check for errors before starting
 	this->DisplayErrors();
@@ -120,12 +121,12 @@ void NWSimulation::Run(){
 		}
 
 		//.. finish time set with slow potential forces
-		this->worms->AutoDriveForces();
+		this->worms->AutoDriveForces(itime, sin_growth_t);
 		this->worms->SlowUpdate(Amp);
 		this->XYZPrint(itime);
 		this->DisplayErrors();
 		
-		if (Amp < amp_max) Amp += (amp_max / 50000);  
+		if (Amp < amp_max) Amp += (amp_max / sin_growth_t);  
 		this->time += dt;
 	}
 	this->fxyz.close();
