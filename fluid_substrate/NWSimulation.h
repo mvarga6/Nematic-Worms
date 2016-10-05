@@ -88,7 +88,7 @@ NWSimulation::~NWSimulation(){
 //-------------------------------------------------------------------------------------------
 void NWSimulation::Run(){
 	
-	this->XYZPrint(0);
+	//this->XYZPrint(0);
 	//return;
 
 	//.. grab needed parameters
@@ -109,18 +109,18 @@ void NWSimulation::Run(){
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. setup neighbors for iteration
-		//this->worms->ResetNeighborsList(itime);
+		this->worms->ResetNeighborsList(itime);
 
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
 			this->worms->InternalForces();
 			this->worms->BendingForces();
-			//this->worms->LJForces();
+			this->worms->LJForces();
 			this->worms->QuickUpdate(Amp);
 		}
 
 		//.. finish time set with slow potential forces
-		//this->worms->AutoDriveForces();
+		this->worms->AutoDriveForces();
 		this->worms->SlowUpdate(Amp);
 		this->XYZPrint(itime);
 		this->DisplayErrors();
