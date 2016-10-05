@@ -95,7 +95,7 @@ namespace DEFAULT {
 		static const int	NPARTICLES = NP * NWORMS;
 		static const int	LISTSETGAP = 200;
 		static const int	NMAX = 96;
-		static const float	EPSILON = 0.2f;
+		static const float	EPSILON = 0.5f;
 		static const float	SIGMA = 1.0f;
 		static const float	DRIVE = 1.0f;
 		static const float	DRIVE_ROT = 0.0f;

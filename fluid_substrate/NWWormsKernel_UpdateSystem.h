@@ -10,7 +10,6 @@
 // -------------------------------------------------------------------------------------
 //.. Update positions and velocities of particles then save forces
 //	 Update list of cell positions for neighbor finding
-// NOT WORKING !!!! ????
 __global__ void UpdateSystemKernel(float *f,
 								   int fshift,
 								   float *f_old,
@@ -21,7 +20,8 @@ __global__ void UpdateSystemKernel(float *f,
 								   int rshift,
 								   int *cell,
 								   int cshift,
-								   float dt)
+								   float dt,
+								   float A = 0)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES)
@@ -36,7 +36,7 @@ __global__ void UpdateSystemKernel(float *f,
 			foid[d] = f_old[id + d*foshift];
 		}
 			
-		float tu[_D_], tv[_D_], A = dev_Params._LANDSCALE;
+		float tu[_D_], tv[_D_];
 		T_u(A, rid[0], rid[1], tu);
 		T_v(A, rid[0], rid[1], tv);
 

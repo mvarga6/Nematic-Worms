@@ -95,6 +95,7 @@ void NWSimulation::Run(){
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
+	const float amp_max		 = this->params->_LANDSCALE;
 
 	//.. check for errors before starting
 	this->DisplayErrors();
@@ -104,6 +105,7 @@ void NWSimulation::Run(){
 
 	//.. MAIN SIMULATION LOOP
 	this->worms->ZeroForce();
+	float Amp = 0;
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. setup neighbors for iteration
@@ -111,20 +113,18 @@ void NWSimulation::Run(){
 
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
-			//this->worms->ZeroForce();
 			this->worms->InternalForces();
 			this->worms->BendingForces();
 			this->worms->LJForces();
-			this->worms->QuickUpdate();
+			this->worms->QuickUpdate(Amp);
 		}
 
 		//.. finish time set with slow potential forces
-		//this->worms->ZeroForce();
 		this->worms->AutoDriveForces(itime);
-		this->worms->SlowUpdate();
+		this->worms->SlowUpdate(Amp);
 		this->XYZPrint(itime);
-		///this->worms->DisplayClocks(itime);
-		//this->DisplayErrors();
+		
+		if (Amp < amp_max) Amp += (amp_max / 20.0);  // grows in 20 frames to full height
 		this->time += dt;
 	}
 	this->fxyz.close();

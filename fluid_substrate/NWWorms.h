@@ -93,8 +93,8 @@ public:
 	void AutoDriveForces(int itime, int istart);
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
-	void SlowUpdate();
-	void QuickUpdate();
+	void SlowUpdate(float);
+	void QuickUpdate(float);
 	void CalculateThetaPhi();
 	void DataDeviceToHost();
 	void DataHostToDevice();
@@ -343,7 +343,7 @@ void Worms::LandscapeForces(){
 	);
 }
 //-------------------------------------------------------------------------------------------
-void Worms::SlowUpdate(){
+void Worms::SlowUpdate(float Amp){
 	DEBUG_MESSAGE("SlowUpdate");
 
 	UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -353,7 +353,7 @@ void Worms::SlowUpdate(){
 		this->dev_v, this->vshift, 
 		this->dev_r, this->rshift,
 		this->dev_cell, this->cshift,
-		this->envirn->_DT
+		this->envirn->_DT, Amp
 	);
 	/*
 	dim3 gridStruct(this->Blocks_Per_Kernel, _D_);
@@ -369,7 +369,7 @@ void Worms::SlowUpdate(){
 	);*/
 }
 //-------------------------------------------------------------------------------------------
-void Worms::QuickUpdate(){
+void Worms::QuickUpdate(float Amp){
 	DEBUG_MESSAGE("QuickUpdate");
 	const float increaseRatio = (float)this->envirn->_NSTEPS_INNER;
 	UpdateSystemKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
@@ -379,7 +379,8 @@ void Worms::QuickUpdate(){
 		this->dev_v, this->vshift,
 		this->dev_r, this->rshift,
 		this->dev_cell, this->cshift,
-		this->envirn->_DT / increaseRatio
+		this->envirn->_DT / increaseRatio,
+		Amp
 	);
 
 	/*
