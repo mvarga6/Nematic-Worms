@@ -755,7 +755,7 @@ void Worms::DistributeWormsOnHost(){
 		float rn[_D_], _r[_D_];
 		rn[0] = 0.25f*float(rand()) / float(RAND_MAX);
 		rn[1] = 0.25f*float(rand()) / float(RAND_MAX);
-		rn[0] = 0.0f;
+		rn[2] = 0.0f;
 		for_D_ _r[d] = r0[w + d*nworms] + p * s[d] + rn[d];
 		MovementBC(_r[0], xbox);
 		MovementBC(_r[1], ybox);
