@@ -84,7 +84,7 @@ namespace DEFAULT {
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
 		static const int	LISTSETGAP = 25;
-		static const int	NMAX = 96;
+		static const int	NMAX = 128;
 		static const float	EPSILON = 0.5f;
 		static const float	SIGMA = 1.0f;
 		static const float	DRIVE = 1.0f;
