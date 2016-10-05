@@ -320,7 +320,7 @@ void Worms::LJForces(){
 	//);
 }
 //-------------------------------------------------------------------------------------------
-void Worms::AutoDriveForces(int itime, int istart = 0){
+void Worms::AutoDriveForces(int itime = 0, int istart = 0){
 	DEBUG_MESSAGE("AutoDriveForces");
 	if (itime < istart) return;
 	//this->CalculateThetaPhi();
