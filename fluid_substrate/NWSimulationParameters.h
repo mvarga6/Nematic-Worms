@@ -245,6 +245,7 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		}
 		else if (arg == "-ncpu" || arg == "nlistoncpu"){
 			parameters->_CPUNLIST = true;
+			printf("\nUsing linked list on CPU for neighbors list.");
 		}
 	}
 }
