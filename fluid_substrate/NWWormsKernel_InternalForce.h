@@ -64,7 +64,7 @@ __global__ void InterForceKernel(float *f,
 			int p2 = id2 % dev_Params._NP;
 			int sep = abs(p2 - p);
 			if (sep <= 2) continue; //.. ignore 1st and 2nd neighbors
-			float rnab[3], dr[3];
+			float rnab[_D_], dr[_D_];
 			float rr, _f;
 			for_D_ rnab[d] = r[id2 + d*rshift];
 			rr = CalculateRR(rid, rnab, dr);
