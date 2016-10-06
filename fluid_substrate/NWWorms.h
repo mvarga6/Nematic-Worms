@@ -218,10 +218,10 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	//.. init linked list
 	this->dxcell = wormsParameters->_DCELL; // start with given
 	this->dycell = wormsParameters->_DCELL; 
-	int _nxcell = int(simParameters->_BOX[0] / dxcell); // how many full cells
-	int _nycell = int(simParameters->_BOX[1] / dycell);
-	this->dxcell = simParameters->_BOX[0] / _nxcell; // recall size with this num
-	this->dycell = simParameters->_BOX[1] / _nycell;
+	int _nxcell = int((simParameters->_BOX[0]+2*EPS) / dxcell); // how many full cells
+	int _nycell = int((simParameters->_BOX[1]+2*EPS)/ dycell);
+	this->dxcell = (simParameters->_BOX[0]+2*EPS) / _nxcell; // recall size with this num
+	this->dycell = (simParameters->_BOX[1]+2*EPS) / _nycell;
 	this->nxcell = _nxcell;
 	this->nycell = _nycell;
 	this->ncells = this->nxcell * this->nycell;
@@ -464,27 +464,27 @@ void Worms::ResetNeighborsList(){
 	return;
 
 	//.. reset list memory to -1
-	//if (pitched_memory) {
-	//	CheckSuccess(cudaMemset2D(this->dev_nlist,
-	//		this->nlpitch,
-	//		-1,
-	//		this->nparticles_int_alloc,
-	//		this->heightNMAX));
-	//}
-	//else {
-	//	CheckSuccess(cudaMemset(this->dev_nlist, -1, 
-	//		this->parameters->_NMAX * this->nparticles_int_alloc));
+	if (pitched_memory) {
+		CheckSuccess(cudaMemset2D(this->dev_nlist,
+			this->nlpitch,
+			-1,
+			this->nparticles_int_alloc,
+			this->heightNMAX));
+	}
+	else {
+		CheckSuccess(cudaMemset(this->dev_nlist, -1, 
+			this->parameters->_NMAX * this->nparticles_int_alloc));
 
-	//}
-	////ErrorHandler(cudaDeviceSynchronize());
+	}
+	//ErrorHandler(cudaDeviceSynchronize());
 
-	////.. assign neighbors
-	//SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	//(
-	//	this->dev_r, this->rshift,
-	//	this->dev_nlist, this->nlshift,
-	//	this->dev_cell, this->cshift
-	//);
+	//.. assign neighbors
+	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	(
+		this->dev_r, this->rshift,
+		this->dev_nlist, this->nlshift,
+		this->dev_cell, this->cshift
+	);
 
 	this->CheckSuccess(cudaGetLastError());
 }
@@ -1148,10 +1148,10 @@ void Worms::SetNeighborsCPU(){ // always just xy domains NOT WORKING
 	list_item item;
 	std::vector<list_item> list;
 	for (int i = 0; i < N; i++){
-		x = r[i + N * 0];
-		y = r[i + N * 1];
-		icell = int(x / dxcell);
-		jcell = int(y / dycell);
+		x = r[i + N * 0] + EPS;
+		y = r[i + N * 1] + EPS;
+		icell = int(floor(x / dxcell));
+		jcell = int(floor(y / dycell));
 		scell = icell + jcell*nxcell;
 
 		if (scell > ncells || scell < 0){

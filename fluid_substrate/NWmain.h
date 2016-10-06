@@ -18,6 +18,7 @@
 // The Current version of sim
 // ---------------------------------
 #define __NW_VERSION__ 2.1
+#define EPS 0.001f
 //----------------------------------
 // Uncomment to print debugging
 // information
