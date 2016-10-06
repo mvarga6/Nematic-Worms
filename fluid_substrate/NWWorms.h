@@ -460,8 +460,11 @@ void Worms::ResetNeighborsList(){
 	DEBUG_MESSAGE("ResetNeighborsList");
 	if (this->parameters->_NOINT) return; // stop if not needed
 
-	this->SetNeighborsCPU();
-	return;
+	//.. calculate nlist on cpu if desired
+	if (this->envirn->_CPUNLIST){
+		this->SetNeighborsCPU();
+		return;
+	}
 
 	//.. reset list memory to -1
 	if (pitched_memory) {

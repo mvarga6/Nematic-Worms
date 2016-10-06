@@ -34,7 +34,8 @@ typedef struct {
 		_PBC[_D_], // periodic boundary conditions
 		_SBC[_D_], // soft wall boundary conditions
 		_HBC[_D_], // hard wall boundary conditions
-		_SPHERE; // circular boundaries 2d, spherical in 3d
+		_SPHERE, // circular boundaries 2d, spherical in 3d
+		_CPUNLIST; // Calculate Neighbors list on cpu with linked cell method
 
 	//.. strength of wall potentials
 	float _Kw;
@@ -69,6 +70,7 @@ namespace DEFAULT {
 		static const float ZBOX = 0.0f;
 		static const std::string FILENAME = "output.xyz";
 		static const bool LMEM = false;
+		static const bool CPUNLIST = false;
 		static const bool PBC[_D_] = { true, true
 #if _D_ == 3 
 			, false // for 3rd dim
@@ -241,6 +243,9 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		else if (arg == "-spherical"){
 			parameters->_SPHERE = true;
 		}
+		else if (arg == "-ncpu" || arg == "nlistoncpu"){
+			parameters->_CPUNLIST = true;
+		}
 	}
 }
 //--------------------------------------------------------------------------
@@ -257,6 +262,7 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	parameters->_FRAMESPERFILE = DEFAULT::SIM::FRAMESPERFILE;
 	outfile = DEFAULT::SIM::FILENAME;
 	parameters->_LMEM = DEFAULT::SIM::LMEM;
+	parameters->_CPUNLIST = DEFAULT::SIM::CPUNLIST;
 	for_D_ parameters->_PBC[d] = DEFAULT::SIM::PBC[d];
 	for_D_ parameters->_HBC[d] = DEFAULT::SIM::HBC[d];
 	for_D_ parameters->_SBC[d] = DEFAULT::SIM::SBC[d];
