@@ -49,6 +49,10 @@ private:
 //-------------------------------------------------------------------------------------------
 NWSimulation::NWSimulation(int argc, char *argv[]){
 
+	int numDevices;
+	ErrorHandler(cudaGetDeviceCount(&numDevices));
+	printf("\n(%d) cuda-capable devices found.", numDevices);
+
 	//.. setup parameters (should be done with cmdline input)
 	this->params = new WormsParameters();
 	Init(this->params, argc, argv);

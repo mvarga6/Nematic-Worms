@@ -9,7 +9,7 @@
 #include "NWSimulationParameters.h"
 #include "NWParams.h"
 //-----------------------------------------------------------------------------------
-__device__ void BC_dr(float &dR, float L, const int dim)
+__host__ __device__ void BC_dr(float &dR, float L, const int dim)
 {
 	if (dev_simParams._PBC[dim]){
 		if (dR > L / 2.0f) dR -= L;
@@ -17,11 +17,11 @@ __device__ void BC_dr(float &dR, float L, const int dim)
 	}
 }
 //-----------------------------------------------------------------------------------
-__device__ void BC_dr(float _dR[_D_], float _box[_D_]){
+__host__ __device__ void BC_dr(float _dR[_D_], float _box[_D_]){
 	for_D_ BC_dr(_dR[d], _box[d], d);
 }
 //-----------------------------------------------------------------------------------
-__device__ void BC_r(float &F, float &R, float L, const int dim) // actually implements the BCs
+__host__ __device__ void BC_r(float &F, float &R, float L, const int dim) // actually implements the BCs
 {
 	if (dev_simParams._PBC[dim]){ // move to otherside of box
 		if (R > L) R -= L;
@@ -32,7 +32,7 @@ __device__ void BC_r(float &F, float &R, float L, const int dim) // actually imp
 	}
 }
 //-----------------------------------------------------------------------------------
-__device__ void BC_r(float _F[_D_], float _R[_D_], float _box[_D_]){
+__host__ __device__ void BC_r(float _F[_D_], float _R[_D_], float _box[_D_]){
 	for_D_ BC_r(_F[d], _R[d], _box[d], d);
 }
 //-----------------------------------------------------------------------------------

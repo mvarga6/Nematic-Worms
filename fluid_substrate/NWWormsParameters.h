@@ -80,10 +80,10 @@ namespace DEFAULT {
 		static const int	XDIM = 5;
 		static const int	YDIM = 20;
 		static const int	ZDIM = 1;
-		static const int	NP = 10;
+		static const int	NP = 20;
 		static const int	NWORMS = XDIM * YDIM * ZDIM;
 		static const int	NPARTICLES = NP * NWORMS;
-		static const int	LISTSETGAP = 25;
+		static const int	LISTSETGAP = 100;
 		static const int	NMAX = 128;
 		static const float	EPSILON = 0.5f;
 		static const float	SIGMA = 1.0f;

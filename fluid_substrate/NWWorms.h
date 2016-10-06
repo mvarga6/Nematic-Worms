@@ -10,6 +10,7 @@
 #include "NWSimulationParameters.h"
 #include "NWBoundaryFunctions.h"
 #include "NWErrorHandler.h"
+#include <numeric>
 //#include "NWKNN.h"
 // 2D
 class ForceXchanger;
@@ -26,10 +27,9 @@ class Worms {
 
 	//.. neighbors list within worms
 	int *dev_nlist, *host_nlist, *host_nlist_cntr; // stores id of neighbors
-	float *dev_ndist, *host_ndist; // stores distances to neighbor
 	int *dev_cell; // stores cell of particle
 
-	float dcell; // width of cell domains
+	float dxcell, dycell; // width of cell domains
 	int *heads; // linked list start markers for each cell
 	int *ptz; // linked list linkers
 	int ncells, nxcell, nycell;
@@ -47,8 +47,8 @@ class Worms {
 
 	//.. for pitched memory
 	bool pitched_memory;
-	size_t rpitch,vpitch,fpitch,fopitch,tppitch,nlpitch,ndpitch,cpitch;
-	size_t rshift,vshift,fshift,foshift,tpshift,nlshift,ndshift,cshift;
+	size_t rpitch,vpitch,fpitch,fopitch,tppitch,nlpitch,cpitch;
+	size_t rshift,vshift,fshift,foshift,tpshift,nlshift,cshift;
 
 	//.. pitch memory heights
 	size_t height3,height2,heightNMAX;
@@ -73,10 +73,17 @@ class Worms {
 	size_t nparticles_int_alloc;
 	size_t nparticles_float_alloc;
 
+	struct list_item {
+		int id, scell;
+		float x, y;
+	};
+
 public:
 	//.. on host (so print on host is easier)
 	float * r;
 	char * c;
+	float * f;
+	float * f_old;
 
 	//.. construct with block-thread structure
 	//Worms(int BPK, int TPB, GRNG &RNG, WormsParameters &wormsParameters);
@@ -104,9 +111,11 @@ public:
 	void ZeroForce();
 
 	//.. for Debugging
-	void DisplayNList();
+	void DisplayNList(std::vector<list_item>*);
 	void DislayThetaPhi();
 	void DisplayErrors();
+	void DisplayForces(std::vector<list_item>*);
+	void ForcesToHost();
 
 	//.. so force exchanger can do what i needs
 	friend class ForceXchanger;
@@ -207,10 +216,17 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	this->envirn = simParameters;
 
 	//.. init linked list
-	this->dcell = 2.5f * wormsParameters->_RCUT; // so lists do not need to be set often
-	this->nxcell = int(ceil(simParameters->_BOX[0] / dcell));
-	this->nycell = int(ceil(simParameters->_BOX[1] / dcell));
+	this->dxcell = wormsParameters->_DCELL; // start with given
+	this->dycell = wormsParameters->_DCELL; 
+	int _nxcell = int(simParameters->_BOX[0] / dxcell); // how many full cells
+	int _nycell = int(simParameters->_BOX[1] / dycell);
+	this->dxcell = simParameters->_BOX[0] / _nxcell; // recall size with this num
+	this->dycell = simParameters->_BOX[1] / _nycell;
+	this->nxcell = _nxcell;
+	this->nycell = _nycell;
 	this->ncells = this->nxcell * this->nycell;
+	printf("\nSystem divided into cells:\n%f x %f = %f\n%d x %d = %d",
+		dxcell, dycell, dxcell*dycell, nxcell, nycell, ncells);
 
 	//.. memory structure and host memory init
 	this->FigureBlockThreadStructure(threadsPerBlock);
@@ -444,30 +460,31 @@ void Worms::ResetNeighborsList(){
 	DEBUG_MESSAGE("ResetNeighborsList");
 	if (this->parameters->_NOINT) return; // stop if not needed
 
-	//this->SetNeighborsCPU();
+	this->SetNeighborsCPU();
+	return;
 
 	//.. reset list memory to -1
-	if (pitched_memory) {
-		CheckSuccess(cudaMemset2D(this->dev_nlist,
-			this->nlpitch,
-			-1,
-			this->nparticles_int_alloc,
-			this->heightNMAX));
-	}
-	else {
-		CheckSuccess(cudaMemset(this->dev_nlist, -1, 
-			this->parameters->_NMAX * this->nparticles_int_alloc));
+	//if (pitched_memory) {
+	//	CheckSuccess(cudaMemset2D(this->dev_nlist,
+	//		this->nlpitch,
+	//		-1,
+	//		this->nparticles_int_alloc,
+	//		this->heightNMAX));
+	//}
+	//else {
+	//	CheckSuccess(cudaMemset(this->dev_nlist, -1, 
+	//		this->parameters->_NMAX * this->nparticles_int_alloc));
 
-	}
-	//ErrorHandler(cudaDeviceSynchronize());
+	//}
+	////ErrorHandler(cudaDeviceSynchronize());
 
-	//.. assign neighbors
-	SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
-	(
-		this->dev_r, this->rshift,
-		this->dev_nlist, this->nlshift,
-		this->dev_cell, this->cshift
-	);
+	////.. assign neighbors
+	//SetNeighborList_N2Kernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
+	//(
+	//	this->dev_r, this->rshift,
+	//	this->dev_nlist, this->nlshift,
+	//	this->dev_cell, this->cshift
+	//);
 
 	this->CheckSuccess(cudaGetLastError());
 }
@@ -508,7 +525,9 @@ void Worms::DislayThetaPhi(){
 	delete[] thphi;
 }
 //-------------------------------------------------------------------------------------------
-void Worms::DisplayNList(){
+void Worms::DisplayNList(std::vector<list_item> * id2print = NULL){
+
+	printf("\n--- neighbor lists --- ");
 
 	size_t size = this->parameters->_NPARTICLES * this->parameters->_NMAX;
 	int * nlist = new int[size];
@@ -529,15 +548,30 @@ void Worms::DisplayNList(){
 			cudaMemcpyDeviceToHost));
 	};
 
-	for (int i = 0; i < parameters->_NPARTICLES; i++){
-		//printf("\nParticle %i\n", i);
+	bool alloc = false;
+	if (id2print == NULL){ // if no arg given setup default list
+		id2print = new std::vector<list_item>(parameters->_NPARTICLES);
+		list_item item;
+		for (int i = 0; i < parameters->_NPARTICLES; i++){
+			item.id = i;
+			id2print->at(i) = item;
+		}
+	
+		alloc = true;
+	}
+
+	std::vector<list_item>::iterator it = id2print->begin(), end = id2print->end();
+	for (; it != end; ++it){
+		printf("\n[ %d ] :", it->id);
 		for (int n = 0; n < parameters->_NMAX; n++){
-			//printf("\t%i == %i", n, nlist[i + n*this->parameters->_NPARTICLES]);
-			int p = nlist[i + n*this->parameters->_NPARTICLES];
-			if (p != -1) printf("\nParticle %i:\t%i", i, p);
+			int p = nlist[it->id + n*this->parameters->_NPARTICLES];
+			if (p == -1) break;
+			printf(" %d", p);
+			//if (p != -1) printf("\nParticle %i:\t%i", i, p);
 		}
 	}
 	delete[] nlist;
+	if (alloc) delete id2print;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::DisplayErrors(){
@@ -550,6 +584,68 @@ void Worms::DisplayErrors(){
 		this->errorState.empty();
 	}
 	//this->DislayThetaPhi();
+}
+//-------------------------------------------------------------------------------------------
+void Worms::DisplayForces(std::vector<list_item> * id2print = NULL){
+	printf("\n--- force vectors --- ");
+
+	const int N = parameters->_NPARTICLES;
+	size_t size = N * _D_;
+	this->ForcesToHost();
+
+	bool alloc = false;
+	if (id2print == NULL){ // if no arg given setup default list
+		id2print = new std::vector<list_item>(parameters->_NPARTICLES);
+		list_item item;
+		for (int i = 0; i < parameters->_NPARTICLES; i++){
+			item.id = i;
+			id2print->at(i) = item;
+		}
+
+		alloc = true;
+	}
+
+	std::vector<list_item>::iterator it = id2print->begin(), end = id2print->end();
+	for (; it != end; ++it){
+		int i = it - id2print->begin(); 
+		printf("\n[ %d ] :\t%f\t%f\t%f", it->id, f_old[i], f_old[i + N], f_old[i + 2 * N]);
+		printf("\n        ->\t%f\t%f\t%f", f[i], f[i + N], f[i + 2 * N]);
+	}
+}
+//-------------------------------------------------------------------------------------------
+void Worms::ForcesToHost(){
+
+	const int N = parameters->_NPARTICLES;
+	size_t size = N * _D_;
+
+	if (pitched_memory) {
+		CheckSuccess(cudaMemcpy2D(this->f,
+			this->nparticles_float_alloc,
+			this->dev_f,
+			this->fpitch,
+			this->nparticles_float_alloc,
+			_D_,
+			cudaMemcpyDeviceToHost));
+
+		CheckSuccess(cudaMemcpy2D(this->f_old,
+			this->nparticles_float_alloc,
+			this->dev_f_old,
+			this->fopitch,
+			this->nparticles_float_alloc,
+			_D_,
+			cudaMemcpyDeviceToHost));
+	}
+	else {
+		CheckSuccess(cudaMemcpy(this->f,
+			this->dev_f,
+			size * sizeof(float),
+			cudaMemcpyDeviceToHost));
+
+		CheckSuccess(cudaMemcpy(this->f_old,
+			this->dev_f_old,
+			size * sizeof(float),
+			cudaMemcpyDeviceToHost));
+	};
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroForce(){
@@ -583,17 +679,21 @@ void Worms::AddConstantForce(int dim, float force){
 void Worms::AllocateHostMemory(){
 	DEBUG_MESSAGE("AllocateHostMemory");
 	this->r = new float[_D_*this->parameters->_NPARTICLES];
+	this->f = new float[_D_*this->parameters->_NPARTICLES];
+	this->f_old = new float[_D_*this->parameters->_NPARTICLES];
 	this->c = new char[this->parameters->_NPARTICLES];
-	//this->heads = new int[this->ncells];
-	//this->ptz = new int[this->parameters->_NPARTICLES];
-	//this->host_nlist = new int[this->parameters->_NPARTICLES*this->parameters->_NMAX];
-	//this->host_nlist_cntr = new int[this->parameters->_NPARTICLES];
+	this->heads = new int[this->ncells];
+	this->ptz = new int[this->parameters->_NPARTICLES];
+	this->host_nlist = new int[this->parameters->_NPARTICLES*this->parameters->_NMAX];
+	this->host_nlist_cntr = new int[this->parameters->_NPARTICLES];
 	//this->host_ndist = new float[this->parameters->_NPARTICLES*this->parameters->_NMAX*_D_];
 }
 //-------------------------------------------------------------------------------------------
 void Worms::FreeHostMemory(){
 	DEBUG_MESSAGE("FreeHostMemory");
 	delete[] this->r;
+	delete[] this->f;
+	delete[] this->f_old;
 	delete[] this->c;
 }
 //-------------------------------------------------------------------------------------------
@@ -616,7 +716,6 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_f, _D_ * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_f_old, _D_ * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_nlist, this->parameters->_NMAX * this->nparticles_int_alloc));
-	//CheckSuccess(cudaMalloc((void**)&this->dev_ndist, this->parameters->_NMAX * this->nparticles_float_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_thphi, 2 * this->nparticles_float_alloc));
 	//CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 
@@ -673,11 +772,6 @@ void Worms::AllocateGPUMemory_Pitched(){
 								&this->tppitch,
 								widthN,
 								this->height2));
-
-	/*CheckSuccess(cudaMallocPitch(&this->dist_dev,
-								&this->dist_pitch,
-								this->max_nb_query_traited,
-								this->parameters->_NPARTICLES));*/
 
 	//CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 
@@ -944,7 +1038,6 @@ void Worms::ZeroGPU(){
 	CheckSuccess(cudaMemset((void**)this->dev_f_old, 0, _D_ * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_thphi, 0, 2 * this->nparticles_float_alloc));
 	CheckSuccess(cudaMemset((void**)this->dev_nlist, -1, this->parameters->_NMAX * this->nparticles_int_alloc));
-	//CheckSuccess(cudaMemset((void**)this->dev_ndist, 0, _D_*this->parameters->_NMAX * this->nparticles_float_alloc));
 	//CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 	printf("\nMemory zeroed");
 }
@@ -990,12 +1083,6 @@ void Worms::ZeroGPU_Pitched(){
 		this->nparticles_int_alloc,
 		this->heightNMAX));
 
-	//CheckSuccess(cudaMemset2D(this->dev_ndist,
-	//	this->nlpitch,
-	//	0,
-	//	this->nparticles_float_alloc,
-	//	this->heightNMAX*_D_));
-	//
 	//CheckSuccess(cudaMemset2D(this->dev_cell,
 	//	this->cpitch,
 	//	-1,
@@ -1031,80 +1118,95 @@ void Worms::SetNeighborsCPU(){ // always just xy domains NOT WORKING
 
 	const int N = this->parameters->_NPARTICLES;
 	const int nmax = this->parameters->_NMAX;
-	int * nlist = this->host_nlist;
-	int * nlist_cntr = this->host_nlist_cntr;
-	float * ndist = this->host_ndist;
+	const int np = this->parameters->_NP;
 	const int nd_shift = N*nmax;
 	const float hx = this->envirn->_BOX[0]; 
 	const float hxo2 = hx / 2.0f;
 	const float hy = this->envirn->_BOX[1];
 	const float hyo2 = hy / 2.0f;
 	const float rcut = this->parameters->_RCUT;
+	const float dcell = max(dxcell, dycell);
 
 	//.. get data
 	this->DataDeviceToHost();
+	ErrorHandler(cudaDeviceSynchronize());
 
-	//.. reset linked list
+	//.. init linked list
 	for (int i = 0; i < ncells; i++){
 		heads[i] = -1;
 	}
 
 	//.. and neighbors lists
 	for (int i = 0; i < N; i++){
-		nlist_cntr[i] = 0;
-		for (int n = 0; n < nmax; n++){
-			nlist[i + n*N] = -1;
-			for_D_ ndist[i + n*N + d*nd_shift] = 0.0f;
-		}
+		host_nlist_cntr[i] = 0;
+		for (int n = 0; n < nmax; n++) host_nlist[i + n*N] = -1;
 	}
 
 	//.. set linkage
 	int icell, jcell, scell;
 	float x, y, z;
+	list_item item;
+	std::vector<list_item> list;
 	for (int i = 0; i < N; i++){
 		x = r[i + N * 0];
 		y = r[i + N * 1];
-		//printf("{ %f, %f }\t", x, y);
-		icell = int(floor(x / dcell));
-		jcell = int(floor(y / dcell));
+		icell = int(x / dxcell);
+		jcell = int(y / dycell);
 		scell = icell + jcell*nxcell;
-		ptz[i] = heads[scell]; // point particle i to old head
-		heads[scell] = i; // set new head as particle i
+
+		if (scell > ncells || scell < 0){
+			item.id = i;
+			item.scell = scell;
+			item.x = x;
+			item.y = y;
+			list.push_back(item);
+		}
+		else{
+			ptz[i] = heads[scell]; // point particle i to old head
+			heads[scell] = i; // set new head as particle i
+		}
+	}
+
+	if (list.size() > 0){
+		std::vector<list_item>::iterator it = list.begin(), end = list.end();
+		for (; it != end; ++it) printf("\n[ ERROR ] : Particle %d @ {%f,%f} placed in cell %d", it->id, it->x, it->y, it->scell);
+		this->DisplayNList(&list);
+		//this->DisplayForces(&list);
+		ErrorHandler(cudaGetLastError());
+		exit(EXIT_FAILURE);
 	}
 
 	//.. construct neighbors list
-	const int dic[5] = { 0,  1, 1, 1, 0 };
-	const int djc[5] = { 0, -1, 0, 1, 1 };
-	int inc, jnc, snc, sc, ii, jj, icntr, jcntr;
+	const int dic[5] = { 0, 1, 1, 1, 0 };// , -1, -1, -1, 0};
+	const int djc[5] = { 0, -1, 0, 1, 1 }; // , 1, 0, -1, -1};
+	int inc, jnc, snc, sc, ii, wi, jj, wj, icntr, jcntr;
 	float dx, dy, dz, rr;
 	for (int ic = 0; ic < nxcell; ic++){ // loop cells i
 		for (int jc = 0; jc < nycell; jc++){ //loop cells j
 			sc = ic + jc*nxcell;
 			if (heads[sc] == -1) continue; // stop if emtpy cell
-			//printf("\n\nBOX %d ( %d, %d ) -----------------------------------------", sc, ic, jc);
 			for (int d = 0; d < 5; d++){ // look in 'neighbor cells
-				inc = ic + dic[d] % nxcell;
-				jnc = jc + djc[d] % nycell;
+				inc = (ic + dic[d]) % nxcell;
+				jnc = (jc + djc[d]) % nycell;
 				if (inc < 0) inc = (nxcell - 1);
 				if (jnc < 0) jnc = (nycell - 1);
 				snc = inc + jnc*nxcell;
-				//printf("\n\n   BOX %d ( %d, %d ) <- d[ %d, %d ] ", snc, inc, jnc, dic[d], djc[d]);
 				if (heads[snc] == -1) continue; // stop if this cell is empty
 				ii = heads[sc];
 				while (ii >= 0){
-					//printf("\n\n     PARTICLES (%d):", ii);
-					if (nlist_cntr[ii] >= nmax){
+					wi = ii / np;
+					if (host_nlist_cntr[ii] >= nmax){
 						ii = ptz[ii];
 						continue;
 					}
 					jj = heads[snc];
 					while (jj >= 0){
-						if (ii == jj){
+						wj = jj / np;
+						if (wi == wj){
 							jj = ptz[jj];
 							continue;
 						}
-						//printf("\t%d", jj);
-						if (nlist_cntr[jj] >= nmax){
+						if (host_nlist_cntr[jj] >= nmax){
 							jj = ptz[jj];
 							continue;
 						}
@@ -1116,24 +1218,21 @@ void Worms::SetNeighborsCPU(){ // always just xy domains NOT WORKING
 						if (dy > hyo2) dy -= hy;
 						else if (dy < -hyo2) dy += hy;
 						rr = dx*dx + dy*dy + dz*dz;
-						if (rr > dcell*dcell) {
+
+						if (rr >= dcell*dcell) {
 							jj = ptz[jj];
 							continue;
 						}
+
 						// ii particle
-						icntr = nlist_cntr[ii]; // previous neighbor count
-						nlist[ii + N*icntr] = jj; // save index
-						ndist[ii + N*icntr + nd_shift * 0] = -dx; // save disp comps
-						ndist[ii + N*icntr + nd_shift * 1] = -dy;
-						ndist[ii + N*icntr + nd_shift * 2] = -dz;
-						nlist_cntr[ii]++; // add to neighbor count
+						icntr = host_nlist_cntr[ii]; // previous neighbor count
+						host_nlist[ii + N*icntr] = jj; // save index
+						host_nlist_cntr[ii]++; // add to neighbor count
+						
 						// jj particle
-						jcntr = nlist_cntr[jj];
-						nlist[jj + N*jcntr] = ii;
-						ndist[jj + N*jcntr + nd_shift * 0] = dx;
-						ndist[jj + N*jcntr + nd_shift * 1] = dy;
-						ndist[jj + N*jcntr + nd_shift * 2] = dz;
-						nlist_cntr[jj]++;
+						jcntr = host_nlist_cntr[jj];
+						host_nlist[jj + N*jcntr] = ii;
+						host_nlist_cntr[jj]++;
 
 						jj = ptz[jj];
 					}
@@ -1143,21 +1242,14 @@ void Worms::SetNeighborsCPU(){ // always just xy domains NOT WORKING
 		}
 	}
 
-	/*for (int p = 0; p < N; p++){
-		printf("\n\nP %i @ { %f, %f, %f }", 
-			p, 
-			r[p + 0 * N], 
-			r[p + 1 * N], 
-			r[p + 2 * N]);
-		for (int n = 0; n < nlist_cntr[p]; n++){
-			printf("\n\n  N %d (%d) dr = { %f, %f, %f }", 
-				n, 
-				nlist[p + N*n], 
-				ndist[p + N*n + nd_shift * 0], 
-				ndist[p + N*n + nd_shift * 1], 
-				ndist[p + N*n + nd_shift * 2]);
-		}
-	}*/
+	//.. calculate average and max number of neighbors
+	int maxn = 0, aven = 0, cnt;
+	for (int i = 0; i < N; i++){
+		cnt = host_nlist_cntr[i];
+		maxn = max(cnt, maxn);
+		aven += cnt;
+	}
+	printf("\nMax neighbors: %d\nAve neighbors: %d\n", maxn, (int)ceil(float(aven) / N));
 
 	//.. copy data to gpu
 	CheckSuccess(cudaMemcpy2D(this->dev_nlist,
@@ -1167,14 +1259,7 @@ void Worms::SetNeighborsCPU(){ // always just xy domains NOT WORKING
 		this->nparticles_int_alloc,
 		nmax,
 	cudaMemcpyHostToDevice));
-
-	CheckSuccess(cudaMemcpy2D(this->dev_ndist,
-		this->ndpitch,
-		this->host_ndist,
-		this->nparticles_float_alloc,
-		this->nparticles_float_alloc,
-		nmax*_D_,
-		cudaMemcpyHostToDevice));
+	ErrorHandler(cudaDeviceSynchronize());
 }
 //-------------------------------------------------------------------------------------------
 #endif

@@ -13,7 +13,7 @@ __global__ void LennardJonesNListKernel(float *f,
 										float *r,
 										int rshift,
 										int *nlist,
-										int nshift )
+										int nshift)
 {
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (id < dev_Params._NPARTICLES){
@@ -69,10 +69,7 @@ __global__ void LennardJonesNListKernel(float *f,
 		//.. assign tmp to memory
 		for_D_ f[id + d*fshift] += fid[d];
 
-#ifdef __PRINT_FORCES__
-		if (id == __PRINT_INDEX__)
-			printf("\n\tLJ Kernel:\n\tf = { %f, %f, %f }", f[id], f[id + fshift], f[id + 2*fshift]);
-#endif
+		//printf("\n[ %d ] : { %f, %f, %f }", id, f[id], f[id + fshift], f[id + 2*fshift]);
 	}
 }
 //---------------------------------------------------------------------------------------------------
