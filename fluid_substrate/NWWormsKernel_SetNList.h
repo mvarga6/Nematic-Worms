@@ -27,7 +27,8 @@ __global__ void SetNeighborList_N2Kernel(float *r,
 		float dr[_D_], rnab[_D_], rid[_D_], _rr; // position vectors
 		for_D_ rid[d] = r[id + d*rshift]; // assign local from global
 
-		const float cutoff = dev_Params._R2CUT + dev_Params._BUFFER;
+		float cutoff = dev_Params._RCUT + dev_Params._BUFFER;
+		cutoff *= cutoff;
 		bool next;
 		for (int p2 = 0; p2 < dev_Params._NPARTICLES; p2++){
 			
