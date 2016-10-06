@@ -95,7 +95,7 @@ namespace DEFAULT {
 		static const float	KBT = 1.0f;
 		static const float	GAMMA = 2.0f;
 		static const float	DAMP = 3.0f;
-		static const float	BUFFER = 3.0f;
+		static const float	BUFFER = 2.0f;
 		static const float	LANDSCALE = 0.0f;
 		static const float	Kx = 10.0f;
 		static const float	DCELL = 3.0f;
