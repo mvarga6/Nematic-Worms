@@ -1246,13 +1246,13 @@ void Worms::SetNeighborsCPU(){ // always just xy domains NOT WORKING
 	}
 
 	//.. calculate average and max number of neighbors
-	int maxn = 0, aven = 0, cnt;
+	/*int maxn = 0, aven = 0, cnt;
 	for (int i = 0; i < N; i++){
 		cnt = host_nlist_cntr[i];
 		maxn = max(cnt, maxn);
 		aven += cnt;
 	}
-	printf("\nMax neighbors: %d\nAve neighbors: %d\n", maxn, (int)ceil(float(aven) / N));
+	printf("\nMax neighbors: %d\nAve neighbors: %d\n", maxn, (int)ceil(float(aven) / N));*/
 
 	//.. copy data to gpu
 	CheckSuccess(cudaMemcpy2D(this->dev_nlist,

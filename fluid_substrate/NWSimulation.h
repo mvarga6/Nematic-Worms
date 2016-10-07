@@ -167,7 +167,10 @@ void NWSimulation::XYZPrint(int itime){
 		//float x = worms->r[i], y = worms->r[i + N], z = 0.0f;
 		//char c = worms->c[i];
 		const char c = ptypes[t];
-		//if (abs(z) > 100.0f) nBlownUp++;
+		if (isnan(_r[0]) || isfinite(_r[0])){
+			printf("\n[ ERROR ] : Particle %d nan", i);
+			nBlownUp++;
+		}
 		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
 	}
 	this->fxyz << "F " << 0 << " " << 0 << " 0 " << std::endl;
@@ -176,8 +179,7 @@ void NWSimulation::XYZPrint(int itime){
 	this->fxyz << "F " << simparams->_XBOX << " " << simparams->_YBOX << " 0 " << std::endl;
 
 	//.. report blown up particles
-	if (nBlownUp > 0) printf("\n%i particles blown up", nBlownUp);
-	if (nBlownUp >= _LOSS_TOLERANCE) abort();
+	if (nBlownUp > 0) exit(EXIT_FAILURE);
 
 	//.. clocking
 	clock_t now = clock();
