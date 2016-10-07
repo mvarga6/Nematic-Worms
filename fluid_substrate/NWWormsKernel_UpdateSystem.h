@@ -28,7 +28,7 @@ __global__ void UpdateSystemKernel(float *f,
 	{
 		//.. local components
 		float dv[_D_], dr[_D_], rid[_D_];
-		float fid[_D_], foid[_D_], vid[_D_];
+		float fid[_D_], foid[_D_], foid_now[_D_], vid[_D_];
 		for_D_{
 			rid[d] = r[id + d*rshift];
 			vid[d] = v[id + d*vshift];
@@ -42,26 +42,26 @@ __global__ void UpdateSystemKernel(float *f,
 
 		for_D_{ // project force onto local tanget vectors in 3d
 			fid[d] = (fid[d] * tu[d] + fid[d] * tv[d]);
-			foid[d] = (foid[d] * tu[d] + foid[d] * tv[d]);
+			foid_now[d] = (foid[d] * tu[d] + foid[d] * tv[d]);
 		}
 
 		//.. boundary conditions
 		//BC_r(fid, rid, dev_simParams._BOX);
 
 		//.. change in velocity
-		for_D_ dv[d] = 0.5f * (fid[d] + foid[d]) * dt;
+		for_D_ dv[d] = 0.5f * (fid[d] + foid_now[d]) * dt;
 
 		//.. change in position
-		for_D_ dr[d] = vid[d] * dt + 0.5f * foid[d] * dt * dt;
+		for_D_ dr[d] = vid[d] * dt + 0.5f * foid_now[d] * dt * dt;
 
 		//.. save forces
 		for_D_ f_old[id + d*foshift] = fid[d];
 
 		//.. update positions 
 		//for_D_ r[id + d*rshift] += dr[d];
-		float x = rid[0], y = rid[1];
-		rid[0] += dr[0] * uxy_sinsin(A, x, y);
-		rid[1] += dr[1] * vxy_sinsin(A, x, y);
+		//float x = rid[0], y = rid[1];
+		rid[0] += dr[0]; //* uxy_sinsin(A, x, y);
+		rid[1] += dr[1]; //* vxy_sinsin(A, x, y);
 
 		BC_r(fid[0], rid[0], dev_simParams._BOX[0], 0);
 		BC_r(fid[1], rid[1], dev_simParams._BOX[1], 1);
