@@ -225,8 +225,11 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	this->nxcell = _nxcell;
 	this->nycell = _nycell;
 	this->ncells = this->nxcell * this->nycell;
-	printf("\nSystem divided into cells:\n%f x %f = %f\n%d x %d = %d",
-		dxcell, dycell, dxcell*dycell, nxcell, nycell, ncells);
+
+	if (simParameters->_CPUNLIST){
+		printf("\nSystem divided into cells:\n%f x %f = %f\n%d x %d = %d",
+			dxcell, dycell, dxcell*dycell, nxcell, nycell, ncells);
+	}
 
 	//.. memory structure and host memory init
 	this->FigureBlockThreadStructure(threadsPerBlock);

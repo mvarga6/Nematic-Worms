@@ -64,7 +64,7 @@ namespace DEFAULT {
 		static const int NSTEPS_INNER = 10;
 		static const int FRAMERATE = 1000;
 		static const int FRAMESPERFILE = 100;
-		static const float DT = 0.001f;
+		static const float DT = 0.005f;
 		static const float XBOX = 100.0f;
 		static const float YBOX = 100.0f;
 		static const float ZBOX = 0.0f;

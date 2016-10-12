@@ -28,7 +28,8 @@ __host__ __device__ void BC_r(float &F, float &R, float L, const int dim) // act
 		else if (R < 0) R += L;
 	}
 	else if (dev_simParams._SBC[dim]){ // apply force from soft wall
-		if (R > L || R < 0.0f) F -= dev_simParams._Kw * (R - L);
+		if (R > L) F -= dev_simParams._Kw * (R - L);
+		else if (R < 0.0f) F += dev_simParams._Kw * R;
 	}
 }
 //-----------------------------------------------------------------------------------

@@ -35,14 +35,22 @@ __global__ void UpdateSystemKernel(float *f,
 			fid[d] = f[id + d*fshift];
 			foid[d] = f_old[id + d*foshift];
 		}
-			
+		
+		//const float z0 = fxy_sinsin(A, rid[0], rid[1]);
+		//const float z = rid[2];
+		//const float kz = 1.0f;
+		//fid[2] -= kz*(z - z0);
+
 		float tu[_D_], tv[_D_];
 		T_u(A, rid[0], rid[1], tu);
 		T_v(A, rid[0], rid[1], tv);
 
 		for_D_{ // project force onto local tanget vectors in 3d
-			fid[d] = (fid[d] * tu[d] + fid[d] * tv[d]);
-			foid_now[d] = (foid[d] * tu[d] + foid[d] * tv[d]);
+			float td = (tu[d] + tv[d]);
+			fid[d] *= td;
+			foid_now[d] = foid[d] * td;
+			
+			//foid_now[d] = foid[d];
 		}
 
 		//.. boundary conditions
@@ -62,11 +70,13 @@ __global__ void UpdateSystemKernel(float *f,
 		//float x = rid[0], y = rid[1];
 		rid[0] += dr[0]; //* uxy_sinsin(A, x, y);
 		rid[1] += dr[1]; //* vxy_sinsin(A, x, y);
+		//rid[2] += dr[2];
 
 		BC_r(fid[0], rid[0], dev_simParams._BOX[0], 0);
 		BC_r(fid[1], rid[1], dev_simParams._BOX[1], 1);
 
 		rid[2] = fxy_sinsin(A, rid[0], rid[1]);
+		//rid[2] = 0.0f;
 
 		//.. boundary conditions and apply new pos
 		//BC_r(rid, dev_simParams._BOX);
