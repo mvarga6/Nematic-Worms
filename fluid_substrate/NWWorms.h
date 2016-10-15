@@ -848,7 +848,7 @@ void Worms::DistributeWormsOnHost(){
 	const float xbox = this->envirn->_XBOX;
 	const float ybox = this->envirn->_YBOX;
 	const float zbox = this->envirn->_ZBOX;
-	const float dC = this->parameters->_SIGMA + this->parameters->_BUFFER;
+	const float dC = this->parameters->_SIGMA + 0.5f; // this->parameters->_BUFFER;
 	const float spacing[3] = { // places worms in center of dimension
 		xbox / float(xdim + 1), // i.e. if zdim=1, z0=zbox/2
 		ybox / float(ydim + 1),
