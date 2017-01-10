@@ -64,6 +64,7 @@ __global__ void UpdateSystemKernel(float *f,
 // ---------------------------------------------------------------------------------------
 //.. Update positions and velocities of particles then save forces
 //	 Update list of cell positions for neighbor finding
+//	 If range = -1 then update on all particles, including flexible encapsilation.
 __global__ void FastUpdateKernel(float *f, int fshift,
 								 float *f_old, int foshift,
 								 float *v, int vshift,
