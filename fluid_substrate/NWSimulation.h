@@ -120,7 +120,7 @@ void NWSimulation::Run(){
 		//.. flexible encapsilation
 		
 		if (encap_l > 0.25f){
-			encap_l -= 0.00025;
+			encap_l -= 0.00005;
 			//printf("\n[ %f ] : Encapsulation bond length", encap_l);
 		}
 
