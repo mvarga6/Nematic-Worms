@@ -153,18 +153,6 @@ dev_f_old(NULL), dev_thphi(NULL) {
 	DEBUG_MESSAGE("Constructor");
 	//.. do necessities
 	srand(time(NULL));
-
-	//this->size_of_float = sizeof(float);
-	//this->size_of_int = sizeof(int);
-	//CUcontext cuContext;
-	//CUdevice  cuDevice = 0;
-	//cuCtxCreate(&cuContext, 0, cuDevice);
-	//cuMemGetInfo(&this->memory_free, &this->memory_total);
-	//cuCtxDetach(cuContext);
-	//this->K = 20;
-	//// Determine maximum number of query that can be treated
-	//max_nb_query_traited = (memory_free * MAX_PART_OF_FREE_MEMORY_USED - size_of_float * parameters->_NPARTICLES*_D_) / (size_of_float * (_D_ + parameters->_NPARTICLES) + size_of_int * K);
-	//max_nb_query_traited = min(parameters->_NPARTICLES, (max_nb_query_traited / 16) * 16);
 }
 //-------------------------------------------------------------------------------------------
 Worms::~Worms(){
