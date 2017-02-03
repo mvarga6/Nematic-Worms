@@ -197,7 +197,7 @@ void NWSimulation::XYZPrint(int itime){
 		char c = ptypes[t];
 		if (i >= this->params->_NPARTICLES) c = 'F';
 		if (isnan(_r[0]) || isinf(_r[0])) nBlownUp++;
-		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << " " << C << std::endl;
+		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
 	}
 	this->fxyz << "F " << 0 << " " << 0 << " 0 0" << std::endl;
 	this->fxyz << "F " << simparams->_XBOX << " " << 0 << " 0 0" << std::endl;
