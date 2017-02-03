@@ -54,6 +54,9 @@ __global__ void UpdateSystemKernel(float *f,
 
 		//.. update cell address
 		for_D_ cell[id + d*cshift] = (int)(rid[d] / dev_Params._DCELL);
+
+		//.. zero forces
+		for_D_ f[id + d*fshift] = 0.0f;
 	}
 }
 
@@ -61,6 +64,7 @@ __global__ void UpdateSystemKernel(float *f,
 // ---------------------------------------------------------------------------------------
 //.. Update positions and velocities of particles then save forces
 //	 Update list of cell positions for neighbor finding
+//	 If range = -1 then update on all particles, including flexible encapsilation.
 __global__ void FastUpdateKernel(float *f, int fshift,
 								 float *f_old, int foshift,
 								 float *v, int vshift,

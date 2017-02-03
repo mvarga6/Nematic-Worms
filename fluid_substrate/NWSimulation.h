@@ -105,19 +105,6 @@ void NWSimulation::Run(){
 	const int	nsteps		 = this->simparams->_NSTEPS;
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
-	const float xtarget		 = this->params->_XLINKERDENSITY;
-	const int	xstart		 = this->params->_XSTART;
-		  int	xhold		 = this->params->_XHOLD;
-	
-	//.. setup cross-linker ramping
-	float xdensity, xramp;
-	if (this->params->_XRAMP) xdensity = 0.0f; // if ramping, init to zero
-	else xdensity = xtarget; // if not, init to target
-	if (xhold < 0) xhold = nsteps; // default to end of simulation, 
-	//	else already set properly
-
-	//.. calculate ramping rate (defaults to 0.0f for no xlink options)
-	xramp = (xtarget - xdensity) / float(xhold - xstart);
 
 	//.. check for errors before starting
 	this->DisplayErrors();
@@ -127,45 +114,35 @@ void NWSimulation::Run(){
 
 	//.. MAIN SIMULATION LOOP
 	this->worms->ZeroForce();
-	float encap_l = 0.8f; int range;
+	float encap_l = 0.5f; int range;
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. flexible encapsilation
-		if (itime > (nsteps / 5)){
-			if (encap_l > 0.35f) encap_l *= 0.999995;
-			range = -1;
+		
+		if (encap_l > 0.25f){
+			encap_l -= 0.000025;
+			//printf("\n[ %f ] : Encapsulation bond length", encap_l);
 		}
-		else {
-			range = this->params->_NPARTICLES;
-		}
-
 
 		//.. setup neighbors for iteration
 		this->worms->ResetNeighborsList(itime);
 
 		//.. inner loop for high frequency potentials
 		for (int jtime = 0; jtime < nsteps_inner; jtime++){
-			//this->worms->ZeroForce();
 			this->worms->InternalForces(encap_l);
 			this->worms->BendingForces();
-			//this->worms->XLinkerForces(itime, xdensity);
 			this->worms->LJForces();
 			this->worms->QuickUpdate(range);
 		}
 
 		//.. finish time set with slow potential forces
-		//this->worms->ZeroForce();
 		this->worms->AutoDriveForces(itime);
-		//this->worms->LandscapeForces();
 		this->worms->SlowUpdate(range);
 		this->XYZPrint(itime);
 		this->worms->DisplayClocks(itime);
 		this->DisplayErrors();
 
 		//.. adjust tickers
-		if (itime > xstart && itime < xhold) // in ramping range 
-			xdensity += xramp; // no effect if not ramping
-
 		this->time += dt;
 	}
 	this->fxyz.close();
@@ -190,31 +167,48 @@ void NWSimulation::XYZPrint(int itime){
 	const char ptypes[maxTypes] = { 'A', 'B', 'C', 'D', 'E' };
 	const int N = params->_NPARTS_ADJ;
 	const int nworms = params->_NWORMS;
+	const int np = params->_NP;
+	const float Lx = simparams->_BOX[0];
+	const float Ly = simparams->_BOX[1];
 
 	int nBlownUp = 0;
 	this->fxyz << N + 4 << std::endl;
 	this->fxyz << nw::util::xyz::makeParameterLine(this->params, this->simparams, __NW_VERSION__);
 	for (int i = 0; i < N; i++){
-		const int w = i / params->_NP;
+		const int w = i / np;
+		const int n = i % np;
+		
+		float dx = worms->r[(i+1) + 0 * N] - worms->r[i + 0 * N];
+		float dy = worms->r[(i + 1) + 1 * N] - worms->r[i + 1 * N];
+		BC_dr(dx, Lx, 0);
+		BC_dr(dy, Ly, 1);
+
+		float C;
+		if (n < (np - 1)) C = (atan2(dy, dx) + PI)/ (2*PI);
+		if (i > params->_NPARTICLES) C = 0;
+
 		// choose 0 or 1,2,3,4 type
 		const int t = (w > nworms*ka_ratio ? 0 : w % (maxTypes - 1) + 1);
 		float _r[3] = { 0, 0, 0 }; // always 3d
 		for_D_ _r[d] = worms->r[i + d*N];
+
 		//float x = worms->r[i], y = worms->r[i + N], z = 0.0f;
 		//char c = worms->c[i];
 		char c = ptypes[t];
 		if (i >= this->params->_NPARTICLES) c = 'F';
-		
-		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
+		if (isnan(_r[0]) || isinf(_r[0])) nBlownUp++;
+		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << " " << C << std::endl;
 	}
-	this->fxyz << "F " << 0 << " " << 0 << " 0 " << std::endl;
-	this->fxyz << "F " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;
-	this->fxyz << "F " << 0 << " " << simparams->_YBOX << " 0 " << std::endl;
-	this->fxyz << "F " << simparams->_XBOX << " " << simparams->_YBOX << " 0 " << std::endl;
+	this->fxyz << "F " << 0 << " " << 0 << " 0 0" << std::endl;
+	this->fxyz << "F " << simparams->_XBOX << " " << 0 << " 0 0" << std::endl;
+	this->fxyz << "F " << 0 << " " << simparams->_YBOX << " 0 0" << std::endl;
+	this->fxyz << "F " << simparams->_XBOX << " " << simparams->_YBOX << " 0 0" << std::endl;
 
 	//.. report blown up particles
-	if (nBlownUp > 0) printf("\n%i particles blown up", nBlownUp);
-	if (nBlownUp >= _LOSS_TOLERANCE) abort();
+	if (nBlownUp > 0) {
+		printf("\n[ ERROR ] : %i particles blown up, aborting.", nBlownUp);
+		exit(EXIT_FAILURE);
+	}
 
 	//.. clocking
 	clock_t now = clock();
@@ -244,7 +238,7 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 		const int worm_n = wP->_NPARTICLES;
 		const float xbox = sP->_BOX[0];
 		const float ybox = sP->_BOX[1];
-		const float init_encap_l = 0.8f;
+		const float init_encap_l = 0.5f;
 
 		//.. make initial diameter of encaps corner to corner distance to
 		//	 ensure all inital positions of worms will fit inside enscapsilation

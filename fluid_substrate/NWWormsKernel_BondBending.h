@@ -85,7 +85,8 @@ __global__ void BondBendingForces(float *f,
 __global__ void BondBendingForces_Encap(float *f,
 	int fshift,
 	float *r,
-	int rshift){
+	int rshift,
+	int part){
 	int tid = threadIdx.x + blockDim.x * blockIdx.x;
 	int p1id = tid + dev_Params._NPARTICLES; // shift to encaps particles
 	if (p1id < dev_Params._NPARTS_ADJ){
@@ -133,18 +134,20 @@ __global__ void BondBendingForces_Encap(float *f,
 		for_D_{ // Apply only
 
 			//.. particle 1
-			//f1[d] = A[d] * (r23[d] - ((dot_r12_r23 / r12r12) * r12[d]));
-
+			if (part == 0){
+				f1[d] = A[d] * (r23[d] - ((dot_r12_r23 / r12r12) * r12[d]));
+				f[p1id + d * fshift] -= f1[d];
+			}
 			//.. particle 2
-			f2[d] = A[d] * (((dot_r12_r23 / r12r12) * r12[d]) - ((dot_r12_r23 / r23r23) * r23[d]) + r12[d] - r23[d]);
-
-			//.. particle 3
-			//f3[d] = A[d] * (((dot_r12_r23 / r23r23) * r23[d]) - r12[d]);
-
-			//.. apply forces to all 3 particles
-			//f[p1id + d * fshift] -= f1[d];
-			f[p2id + d * fshift] -= f2[d];
-			//f[p3id + d * fshift] -= f3[d];
+			else if (part == 2){
+				f3[d] = A[d] * (((dot_r12_r23 / r23r23) * r23[d]) - r12[d]);
+				f[p3id + d * fshift] -= f3[d];
+			}
+			else{
+				//.. particle 3
+				f2[d] = A[d] * (((dot_r12_r23 / r12r12) * r12[d]) - ((dot_r12_r23 / r23r23) * r23[d]) + r12[d] - r23[d]);
+				f[p2id + d * fshift] -= f2[d];
+			}
 		}
 	}
 }

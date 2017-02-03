@@ -247,19 +247,6 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	ErrorHandler(cudaDeviceSynchronize());
 }
 //-------------------------------------------------------------------------------------------
-void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
-	this->AllocateHostMemory();
-	this->ZeroHost();
-	this->AllocateGPUMemory();
-	this->ZeroGPU();
-
-	//.. Custom distribute here for all worms
-	for (int i = 0; i < parameters->_NWORMS; i++)
-		this->PlaceWormExplicit(i, headX[i], headY[i], wormAngle[i]);
-
-	this->DataHostToDevice();
-}
-//-------------------------------------------------------------------------------------------
 void Worms::InternalForces(const float l_encap = 1){
 	DEBUG_MESSAGE("InternalForces");
 	std::clock_t b4 = std::clock();
@@ -288,11 +275,14 @@ void Worms::BendingForces(){
 
 	if (this->envirn->_FLEX_ENCAPS) {
 		Blocks = 1 + ((parameters->_NPARTS_ADJ - parameters->_NPARTICLES) / this->Threads_Per_Block);
-		BondBendingForces_Encap <<<Blocks, this->Threads_Per_Block >>>
-		(
-			this->dev_f, this->fshift,
-			this->dev_r, this->rshift
-		);
+		for (int p = 0; p < 3; p++){
+			BondBendingForces_Encap << <Blocks, this->Threads_Per_Block >> >
+				(
+				this->dev_f, this->fshift,
+				this->dev_r, this->rshift,
+				p // deterines which of 3 particles gets the forces bending forces applied.  Could be better...
+				);
+		}
 	}
 }
 //-------------------------------------------------------------------------------------------
@@ -577,69 +567,6 @@ void Worms::ResetNeighborsList(int itime){
 		this->ResetNeighborsList();
 }
 //-------------------------------------------------------------------------------------------
-void Worms::DislayThetaPhi(){
-
-	float * thphi = new float[2 * this->parameters->_NPARTS_ADJ];
-
-	if (pitched_memory) {
-		CheckSuccess(cudaMemcpy2D(thphi,
-			this->nparticles_float_alloc,
-			this->dev_thphi,
-			this->tppitch,
-			this->nparticles_float_alloc,
-			this->height2,
-			cudaMemcpyDeviceToHost));
-	}
-	else {
-		CheckSuccess(cudaMemcpy(thphi,
-			this->dev_thphi,
-			2 * this->nparticles_float_alloc,
-			cudaMemcpyDeviceToHost));
-	}
-
-	//ErrorHandler(cudaDeviceSynchronize());
-	for (int i = 0; i < this->parameters->_NPARTS_ADJ; i++){
-		/*if (isnan(thphi[i]))
-			std::cout << "thphi[" << i << "] = NaN" << std::endl;
-		if (isnan(thphi[i + this->parameters->_NPARTICLES])) 
-			std::cout << "thphi[" << i << "] = NaN" << std::endl;*/
-		std::cout << "\nth = " << thphi[i] << "\tphi = " << thphi[i + this->parameters->_NPARTS_ADJ];
-	}
-	delete[] thphi;
-}
-//-------------------------------------------------------------------------------------------
-void Worms::DisplayNList(){
-
-	size_t size = this->parameters->_NPARTS_ADJ * this->parameters->_NMAX;
-	int * nlist = new int[size];
-
-	if (pitched_memory) {
-		CheckSuccess(cudaMemcpy2D(nlist,
-			this->nparticles_int_alloc,
-			this->dev_nlist,
-			this->nlpitch,
-			this->nparticles_int_alloc,
-			this->heightNMAX,
-			cudaMemcpyDeviceToHost));
-	}
-	else {
-		CheckSuccess(cudaMemcpy(nlist, 
-			this->dev_nlist, 
-			size * sizeof(int), 
-			cudaMemcpyDeviceToHost));
-	};
-
-	for (int i = 0; i < parameters->_NPARTS_ADJ; i++){
-		//printf("\nParticle %i\n", i);
-		for (int n = 0; n < parameters->_NMAX; n++){
-			//printf("\t%i == %i", n, nlist[i + n*this->parameters->_NPARTICLES]);
-			int p = nlist[i + n*this->parameters->_NPARTS_ADJ];
-			if (p != -1) printf("\nParticle %i:\t%i", i, p);
-		}
-	}
-	delete[] nlist;
-}
-//-------------------------------------------------------------------------------------------
 void Worms::DisplayErrors(){
 	if (this->errorState.size() > 0){
 		printf("\nWORM ERRORS:\n");
@@ -650,25 +577,6 @@ void Worms::DisplayErrors(){
 		this->errorState.empty();
 	}
 	//this->DislayThetaPhi();
-}
-//-------------------------------------------------------------------------------------------
-void Worms::DisplayClocks(int itime){
-
-	if (this->clock_rate == -1) return;
-	if (itime % this->clock_rate != 0) return;
-
-	printf("\n\nWorms Performance");
-	printf("\nLJ\t\t%d", this->LJ_clock / this->clock_rate);
-	printf("\nNoise\t\t%d", this->Noise_clock / this->clock_rate);
-	printf("\nInternal\t%d", this->Internal_clock / this->clock_rate);
-	printf("\nDrive\t\t%d", this->Drive_clock / this->clock_rate);
-	printf("\nDataTrans\t%d", this->DataTrans_clock / this->clock_rate);
-	printf("\nThPhi\t\t%d", this->ThPhi_clock / this->clock_rate);
-	printf("\nNlist\t\t%d", this->Nlist_clock / this->clock_rate);
-	printf("\nLand\t\t%d", this->Land_clock / this->clock_rate);
-	printf("\nUpdate\t\t%d\n", this->Update_clock / this->clock_rate);
-
-	this->ZeroClocks();
 }
 //-------------------------------------------------------------------------------------------
 void Worms::ZeroForce(){
@@ -695,17 +603,6 @@ void Worms::AddConstantForce(int dim, float force){
 		this->dev_f, this->fpitch,
 		dim, force
 	);
-}
-//-------------------------------------------------------------------------------------------
-void Worms::ColorXLinked(){
-	const int N = this->parameters->_NPARTICLES;
-	int * xlink = new int[N]; // create host copy of dev_xlink
-	CheckSuccess(cudaMemcpy(xlink, this->dev_xlink, this->nparticles_int_alloc, cudaMemcpyDeviceToHost));
-	for (int i = 0; i < N; i++){ // find linked particles
-		if (xlink[i] == -1) this->c[i] = 'A'; // type A if not linked
-		else this->c[i] = 'B'; // type B if linked
-	}
-	delete[] xlink; // delete local copy
 }
 // ------------------------------------------------------------------------------------------
 //	PRIVATE METHODS
@@ -848,7 +745,7 @@ void Worms::DistributeWormsOnHost(){
 	const float xbox = this->envirn->_XBOX;
 	const float ybox = this->envirn->_YBOX;
 	const float zbox = this->envirn->_ZBOX;
-	const float dC = this->parameters->_SIGMA + this->parameters->_BUFFER;
+	const float dC = this->parameters->_SIGMA + 0.5f; // this->parameters->_BUFFER;
 	const float spacing[3] = { // places worms in center of dimension
 		xbox / float(xdim + 1), // i.e. if zdim=1, z0=zbox/2
 		ybox / float(ydim + 1),
@@ -986,36 +883,6 @@ void Worms::AdjustDistribute(float target_percent){
 				for_D_ this->r[id + d*N] = save[(np - 1 - j) + d*np];
 			}
 		}
-	}
-}
-//-------------------------------------------------------------------------------------------
-void Worms::PlaceWormExplicit(int wormId, float headX, float headY, float wormAngle){
-	
-	//.. grab parameters
-	float l1 = this->parameters->_L1;
-	int np = this->parameters->_NP;
-	int nworms = this->parameters->_NWORMS;
-	int N = np * nworms;
-
-	if (wormId >= nworms || wormId < 0) return;
-
-	//.. get index of head particle
-	int head_id = wormId * np;
-
-	//.. calculate displacement based on angle
-	const float dx = l1 * cosf(wormAngle);
-	const float dy = l1 * sinf(wormAngle);
-
-	//.. place head particle first
-	this->r[head_id] = headX; 
-	this->r[head_id + N] = headY;
-
-	//.. place the rest at the previous pos plus dx,dy
-	for (int id = head_id + 1; id < (head_id + np); id++){
-		this->r[id] = this->r[(id - 1)] + dx;
-		this->r[id + N] = this->r[(id - 1) + N] + dy;
-		MovementBC(this->r[id], this->envirn->_XBOX);
-		MovementBC(this->r[id + N], this->envirn->_YBOX);
 	}
 }
 //-------------------------------------------------------------------------------------------
@@ -1196,18 +1063,6 @@ void Worms::ZeroGPU_Pitched(){
 	//CheckSuccess(cudaMemset((void**)this->dev_cell, -1, _D_ * this->nparticles_int_alloc));
 }
 //-------------------------------------------------------------------------------------------
-void Worms::ZeroClocks(){
-	this->LJ_clock = 0.0f;
-	this->Land_clock = 0.0f;
-	this->Nlist_clock = 0.0f;
-	this->Update_clock = 0.0f;
-	this->DataTrans_clock = 0.0f;
-	this->Drive_clock = 0.0f;
-	this->ThPhi_clock = 0.0f;
-	this->Noise_clock = 0.0f;
-	this->Internal_clock = 0.0f;
-}
-//-------------------------------------------------------------------------------------------
 void Worms::CheckSuccess(cudaError_t err){
 	if (err != cudaSuccess) {
 		this->errorState.push_back(err);
@@ -1231,4 +1086,155 @@ void Worms::FigureBlockThreadStructure(int tpb){
 		this->nparticles_int_alloc);
 }
 //-------------------------------------------------------------------------------------------
+// Non-Essential Functions
+//-------------------------------------------------------------------------------------------
+void Worms::CustomInit(float *headX, float *headY, float *wormAngle){
+	this->AllocateHostMemory();
+	this->ZeroHost();
+	this->AllocateGPUMemory();
+	this->ZeroGPU();
+
+	//.. Custom distribute here for all worms
+	for (int i = 0; i < parameters->_NWORMS; i++)
+		this->PlaceWormExplicit(i, headX[i], headY[i], wormAngle[i]);
+
+	this->DataHostToDevice();
+}
+//-------------------------------------------------------------------------------------------
+void Worms::DislayThetaPhi(){
+
+	float * thphi = new float[2 * this->parameters->_NPARTS_ADJ];
+
+	if (pitched_memory) {
+		CheckSuccess(cudaMemcpy2D(thphi,
+			this->nparticles_float_alloc,
+			this->dev_thphi,
+			this->tppitch,
+			this->nparticles_float_alloc,
+			this->height2,
+			cudaMemcpyDeviceToHost));
+	}
+	else {
+		CheckSuccess(cudaMemcpy(thphi,
+			this->dev_thphi,
+			2 * this->nparticles_float_alloc,
+			cudaMemcpyDeviceToHost));
+	}
+
+	//ErrorHandler(cudaDeviceSynchronize());
+	for (int i = 0; i < this->parameters->_NPARTS_ADJ; i++){
+		/*if (isnan(thphi[i]))
+		std::cout << "thphi[" << i << "] = NaN" << std::endl;
+		if (isnan(thphi[i + this->parameters->_NPARTICLES]))
+		std::cout << "thphi[" << i << "] = NaN" << std::endl;*/
+		std::cout << "\nth = " << thphi[i] << "\tphi = " << thphi[i + this->parameters->_NPARTS_ADJ];
+	}
+	delete[] thphi;
+}
+//-------------------------------------------------------------------------------------------
+void Worms::DisplayNList(){
+
+	size_t size = this->parameters->_NPARTS_ADJ * this->parameters->_NMAX;
+	int * nlist = new int[size];
+
+	if (pitched_memory) {
+		CheckSuccess(cudaMemcpy2D(nlist,
+			this->nparticles_int_alloc,
+			this->dev_nlist,
+			this->nlpitch,
+			this->nparticles_int_alloc,
+			this->heightNMAX,
+			cudaMemcpyDeviceToHost));
+	}
+	else {
+		CheckSuccess(cudaMemcpy(nlist,
+			this->dev_nlist,
+			size * sizeof(int),
+			cudaMemcpyDeviceToHost));
+	};
+
+	for (int i = 0; i < parameters->_NPARTS_ADJ; i++){
+		//printf("\nParticle %i\n", i);
+		for (int n = 0; n < parameters->_NMAX; n++){
+			//printf("\t%i == %i", n, nlist[i + n*this->parameters->_NPARTICLES]);
+			int p = nlist[i + n*this->parameters->_NPARTS_ADJ];
+			if (p != -1) printf("\nParticle %i:\t%i", i, p);
+		}
+	}
+	delete[] nlist;
+}
+//-------------------------------------------------------------------------------------------
+void Worms::DisplayClocks(int itime){
+
+	if (this->clock_rate == -1) return;
+	if (itime % this->clock_rate != 0) return;
+
+	printf("\n\nWorms Performance");
+	printf("\nLJ\t\t%d", this->LJ_clock / this->clock_rate);
+	printf("\nNoise\t\t%d", this->Noise_clock / this->clock_rate);
+	printf("\nInternal\t%d", this->Internal_clock / this->clock_rate);
+	printf("\nDrive\t\t%d", this->Drive_clock / this->clock_rate);
+	printf("\nDataTrans\t%d", this->DataTrans_clock / this->clock_rate);
+	printf("\nThPhi\t\t%d", this->ThPhi_clock / this->clock_rate);
+	printf("\nNlist\t\t%d", this->Nlist_clock / this->clock_rate);
+	printf("\nLand\t\t%d", this->Land_clock / this->clock_rate);
+	printf("\nUpdate\t\t%d\n", this->Update_clock / this->clock_rate);
+
+	this->ZeroClocks();
+}
+//-------------------------------------------------------------------------------------------
+void Worms::ZeroClocks(){
+	this->LJ_clock = 0.0f;
+	this->Land_clock = 0.0f;
+	this->Nlist_clock = 0.0f;
+	this->Update_clock = 0.0f;
+	this->DataTrans_clock = 0.0f;
+	this->Drive_clock = 0.0f;
+	this->ThPhi_clock = 0.0f;
+	this->Noise_clock = 0.0f;
+	this->Internal_clock = 0.0f;
+}
+//-------------------------------------------------------------------------------------------
+void Worms::ColorXLinked(){
+	const int N = this->parameters->_NPARTICLES;
+	int * xlink = new int[N]; // create host copy of dev_xlink
+	CheckSuccess(cudaMemcpy(xlink, this->dev_xlink, this->nparticles_int_alloc, cudaMemcpyDeviceToHost));
+	for (int i = 0; i < N; i++){ // find linked particles
+		if (xlink[i] == -1) this->c[i] = 'A'; // type A if not linked
+		else this->c[i] = 'B'; // type B if linked
+	}
+	delete[] xlink; // delete local copy
+}
+//-------------------------------------------------------------------------------------------
+void Worms::PlaceWormExplicit(int wormId, float headX, float headY, float wormAngle){
+
+	//.. grab parameters
+	float l1 = this->parameters->_L1;
+	int np = this->parameters->_NP;
+	int nworms = this->parameters->_NWORMS;
+	int N = np * nworms;
+
+	if (wormId >= nworms || wormId < 0) return;
+
+	//.. get index of head particle
+	int head_id = wormId * np;
+
+	//.. calculate displacement based on angle
+	const float dx = l1 * cosf(wormAngle);
+	const float dy = l1 * sinf(wormAngle);
+
+	//.. place head particle first
+	this->r[head_id] = headX;
+	this->r[head_id + N] = headY;
+
+	//.. place the rest at the previous pos plus dx,dy
+	for (int id = head_id + 1; id < (head_id + np); id++){
+		this->r[id] = this->r[(id - 1)] + dx;
+		this->r[id + N] = this->r[(id - 1) + N] + dy;
+		MovementBC(this->r[id], this->envirn->_XBOX);
+		MovementBC(this->r[id + N], this->envirn->_YBOX);
+	}
+}
+//-------------------------------------------------------------------------------------------
+
 #endif
