@@ -8,7 +8,7 @@
 #include "NWWormsParameters.h"
 #include "NWSimulationParameters.h"
 //-----------------------------------------------------------------------------------
-__device__ void BC_dr(float &dR, float L, const int dim)
+__host__ __device__ void BC_dr(float &dR, float L, const int dim)
 {
 	if (dev_simParams._PBC[dim]){
 		if (dR > L / 2.0f) dR -= L;
@@ -16,7 +16,7 @@ __device__ void BC_dr(float &dR, float L, const int dim)
 	}
 }
 //-----------------------------------------------------------------------------------
-__device__ void BC_dr(float _dR[_D_], float _box[_D_]){
+__host__ __device__ void BC_dr(float _dR[_D_], float _box[_D_]){
 	for_D_ BC_dr(_dR[d], _box[d], d);
 }
 //-----------------------------------------------------------------------------------
