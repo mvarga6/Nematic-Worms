@@ -118,10 +118,12 @@ void NWSimulation::Run(){
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. flexible encapsilation
-		
-		if (encap_l > 0.25f){
-			encap_l -= 0.00005;
-			//printf("\n[ %f ] : Encapsulation bond length", encap_l);
+		if (itime >= (nsteps / 10)){
+			if (encap_l > 0.25f) encap_l -= 0.00005; // shrink encap if needed
+			range = this->params->_NPARTS_ADJ; // update encap
+		}
+		else{
+			range = this->params->_NPARTICLES; // update only worms
 		}
 
 		//.. setup neighbors for iteration
