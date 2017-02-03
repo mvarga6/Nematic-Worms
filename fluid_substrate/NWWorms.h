@@ -831,7 +831,7 @@ void Worms::DistributeWormsOnHost(){
 		const float adj_ybox = this->envirn->_BOX_ADJ[1];
 		const float cx = adj_xbox / 2.0f; // center of box
 		const float cy = adj_ybox / 2.0f;
-		const float R = (adj_xbox + adj_ybox) / 8.0f; 
+		const float R = (adj_xbox + adj_ybox) / 32.0f; 
 		//const float R = sqrt(xbox*xbox + ybox*ybox) / 2.0f;
 		const int encap_n = this->parameters->_NPARTS_ADJ - nparts;
 		const float ang_per_encap_part = (2.0 * M_PI) / double(encap_n);

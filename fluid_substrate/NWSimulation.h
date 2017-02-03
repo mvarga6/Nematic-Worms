@@ -242,9 +242,9 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 		const float ybox = sP->_BOX[1];
 		const float init_encap_l = 0.5f;
 
-		//.. make initial diameter of encaps corner to corner distance to
+		//.. make initial diameter of encaps to
 		//	 ensure all inital positions of worms will fit inside enscapsilation
-		const float encap_d = (xbox+ybox) / 4.0f;
+		const float encap_d = (xbox+ybox) / 16.0f;
 		
 		//.. determine number of particles to add to fill the circumference
 		const int encap_n = int((M_PI * encap_d) / init_encap_l);
