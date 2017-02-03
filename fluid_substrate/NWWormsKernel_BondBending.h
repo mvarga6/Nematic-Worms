@@ -91,7 +91,7 @@ __global__ void BondBendingForces_Encap(float *f,
 	int p1id = tid + dev_Params._NPARTICLES; // shift to encaps particles
 	if (p1id < dev_Params._NPARTS_ADJ){
 
-		const float k_a = 15.0f;
+		const float k_a = dev_Params._Kx;
 		const int nparts = dev_Params._NPARTICLES;
 		const int ntotal = dev_Params._NPARTS_ADJ;
 		const int nencap = ntotal - nparts;

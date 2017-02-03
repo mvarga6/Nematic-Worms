@@ -277,11 +277,11 @@ void Worms::BendingForces(){
 		Blocks = 1 + ((parameters->_NPARTS_ADJ - parameters->_NPARTICLES) / this->Threads_Per_Block);
 		for (int p = 0; p < 3; p++){
 			BondBendingForces_Encap << <Blocks, this->Threads_Per_Block >> >
-				(
+			(
 				this->dev_f, this->fshift,
 				this->dev_r, this->rshift,
 				p // deterines which of 3 particles gets the forces bending forces applied.  Could be better...
-				);
+			);
 		}
 	}
 }
