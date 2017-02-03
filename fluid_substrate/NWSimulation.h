@@ -118,10 +118,12 @@ void NWSimulation::Run(){
 	for (int itime = 0; itime < nsteps; itime++){
 		
 		//.. flexible encapsilation
-		
-		if (encap_l > 0.25f){
-			encap_l -= 0.00005;
-			//printf("\n[ %f ] : Encapsulation bond length", encap_l);
+		if (itime >= (nsteps / 10)){
+			if (encap_l > 0.25f) encap_l -= 0.00005; // shrink encap if needed
+			range = this->params->_NPARTS_ADJ; // update encap
+		}
+		else{
+			range = this->params->_NPARTICLES; // update only worms
 		}
 
 		//.. setup neighbors for iteration
@@ -240,9 +242,9 @@ void NWSimulation::ReconsileParameters(SimulationParameters *sP, WormsParameters
 		const float ybox = sP->_BOX[1];
 		const float init_encap_l = 0.5f;
 
-		//.. make initial diameter of encaps corner to corner distance to
+		//.. make initial diameter of encaps to
 		//	 ensure all inital positions of worms will fit inside enscapsilation
-		const float encap_d = (xbox+ybox) / 4.0f;
+		const float encap_d = (xbox+ybox) / 16.0f;
 		
 		//.. determine number of particles to add to fill the circumference
 		const int encap_n = int((M_PI * encap_d) / init_encap_l);
