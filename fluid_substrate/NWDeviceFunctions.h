@@ -28,7 +28,8 @@ __host__ __device__ void BC_r(float &F, float &R, float L, const int dim) // act
 		else if (R < 0) R += L;
 	}
 	else if (dev_simParams._SBC[dim]){ // apply force from soft wall
-		if (R > L || R < 0.0f) F -= dev_simParams._Kw * (R - L);
+		if (R > L) F -= dev_simParams._Kw * (R - L);
+		else if (R < 0.0f) F += dev_simParams._Kw * R;
 	}
 }
 //-----------------------------------------------------------------------------------
@@ -96,23 +97,30 @@ __device__ void Rotate2D(float _v[2], const float theta){
 }
 //----------------------------------------------------------------------------------
 __device__ float fxy_sinsin(float &_A, float &_x, float &_y){
-	float qx = (_2PI) / dev_simParams._BOX[0];
-	float qy = (_2PI) / dev_simParams._BOX[1];
+	//float qx = (_2PI*dev_simParams._N_WAVES[0]) / dev_simParams._BOX[0];
+	//float qy = (_2PI*dev_simParams._N_WAVES[1]) / dev_simParams._BOX[1];
+	const float qx = dev_simParams._Q[0];
+	const float qy = dev_simParams._Q[1];
 	return (_A*sinf(qx*_x)*sinf(qy*_y));
 }
+
 __device__ float uxy_sinsin(float &_A, float &_x, float &_y){
-	float qx = (_2PI) / dev_simParams._BOX[0];
-	float qy = (_2PI) / dev_simParams._BOX[1];
+	//float qx = (_2PI*dev_simParams._N_WAVES[0]) / dev_simParams._BOX[0];
+	//float qy = (_2PI*dev_simParams._N_WAVES[1]) / dev_simParams._BOX[1];
+	const float qx = dev_simParams._Q[0];
+	const float qy = dev_simParams._Q[1];
 	return (1/ sqrtf(1 + (_A*_A*qx*qx*cosf(qx*_x)*sinf(qy*_y))));
 }
 __device__ float vxy_sinsin(float &_A, float &_x, float &_y){
-	float qx = (_2PI) / dev_simParams._BOX[0];
-	float qy = (_2PI) / dev_simParams._BOX[1];
+	float qx = (_2PI*dev_simParams._N_WAVES[0]) / dev_simParams._BOX[0];
+	float qy = (_2PI*dev_simParams._N_WAVES[1]) / dev_simParams._BOX[1];
 	return (1 / sqrtf(1 + (_A*_A*qy*qy*sinf(qx*_x)*cosf(qy*_y))));
 }
 __device__ void T_u(float &_A, float &_x,float &_y, float _tu[3]){
-	float qx = (_2PI) / dev_simParams._BOX[0];
-	float qy = (_2PI) / dev_simParams._BOX[1];
+	//float qx = (_2PI) / dev_simParams._BOX[0];
+	//float qy = (_2PI) / dev_simParams._BOX[1];
+	const float qx = dev_simParams._Q[0];
+	const float qy = dev_simParams._Q[1];
 	_tu[0] = 1; 
 	_tu[1] = 0;
 	_tu[2] = _A*qx*cosf(qx*_x)*sinf(qy*_y);
@@ -121,8 +129,10 @@ __device__ void T_u(float &_A, float &_x,float &_y, float _tu[3]){
 
 }
 __device__ void T_v(float &_A, float &_x, float &_y, float _tv[3]){
-	float qx = (_2PI) / dev_simParams._BOX[0];
-	float qy = (_2PI) / dev_simParams._BOX[1];
+	//float qx = (_2PI) / dev_simParams._BOX[0];
+	//float qy = (_2PI) / dev_simParams._BOX[1];
+	const float qx = dev_simParams._Q[0];
+	const float qy = dev_simParams._Q[1];
 	_tv[0] = 0;
 	_tv[1] = 1;
 	_tv[2] = _A*qy*sinf(qx*_x)*cosf(qy*_y);

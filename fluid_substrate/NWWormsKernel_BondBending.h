@@ -15,13 +15,30 @@ __global__ void BondBendingForces(float *f,
 	int wid = threadIdx.x + blockDim.x * blockIdx.x;
 	int nworms = dev_Params._NWORMS;
 	int np = dev_Params._NP;
-	const float ka = dev_Params._Ka;
+	float ka = dev_Params._Ka;
+	float L = dev_simParams._BOX[0];
 	if (wid < nworms){
 
 		//.. loop through particles in worm (excluding last)
 		int p2id, p3id;
 		float r1[_D_], r2[_D_], r3[_D_], f1[_D_], f2[_D_], f3[_D_];
 		float r12[_D_], r23[_D_];
+
+		//.. set bending mod based on sinasoidal 
+		//	 variation in space ka -> 3ka
+		//ka *= 2*(1 + sin((4 * M_PI * r[wid*np + np/2]) / L)) + 1;
+		//
+		// -- or --
+		//
+		//.. divide xdim into strips of high and low ka
+		//int stripe = int((2.0f*r[wid*np + np / 2]) / L) + 1;
+		//if (stripe % 2 == 0) ka = 2.0f; // if in even stripe, low bending
+		//
+		// -- or -- 
+		//
+		//.. continuous variation of ka across box
+		//ka *= (r[wid*np + np / 2] / L);
+
 		//float BOX[] = { dev_simParams._XBOX, dev_simParams._YBOX };
 		for (int p1id = wid * np; p1id < ((wid + 1)*np) - 2; p1id++){
 
