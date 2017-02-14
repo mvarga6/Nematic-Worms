@@ -61,6 +61,11 @@ __host__ void ClockWorks(int &,std::clock_t &, std::clock_t &, std::clock_t &);
 __host__ void PrintXYZ(float *wx, float *wy, float *flx, float *fly, int *xlist);
 __host__ void SaveSimulationConfiguration(void);
 
+//.. sin sin function
+__host__ float fxy(float &A, float &x, float &y, float &qx, float &qy){
+	return (A*sinf(qx*x)*sinf(qy*y));
+}
+
 void DEBUG_MESSAGE(const char *s)
 {
 #ifdef __DEBUG__

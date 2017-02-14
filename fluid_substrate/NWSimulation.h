@@ -40,7 +40,7 @@ public:
 	void Run();
 
 private:
-	void XYZPrint(int itime);
+	void XYZPrint(int itime, float A);
 	void DisplayErrors();
 
 };
@@ -128,7 +128,7 @@ void NWSimulation::Run(){
 		//.. finish time set with slow potential forces
 		this->worms->AutoDriveForces(itime, sin_growth_t);
 		this->worms->SlowUpdate(Amp);
-		this->XYZPrint(itime);
+		this->XYZPrint(itime, Amp);
 		this->DisplayErrors();
 		
 		if (Amp < amp_max) Amp += (amp_max / sin_growth_t);  
@@ -137,7 +137,7 @@ void NWSimulation::Run(){
 	this->fxyz.close();
 }
 //-------------------------------------------------------------------------------------------
-void NWSimulation::XYZPrint(int itime){
+void NWSimulation::XYZPrint(int itime, float A){
 	//.. only print when it itime == 0
 	if (itime % simparams->_FRAMERATE != 0) return;
 
@@ -149,16 +149,24 @@ void NWSimulation::XYZPrint(int itime){
 	this->worms->DataDeviceToHost();
 	//this->worms->ColorXLinked();
 
+	//.. lay down surface layer of particles
+	const int nx = int(simparams->_XBOX / 2);
+	const int ny = int(simparams->_YBOX / 2);
+	const int n = nx*ny;
+
 	//.. print to ntypes
 	const int maxTypes = 5;
+	int nBlownUp = 0;
 	//const int ntypes = (ka_ratio < 1.0f ? 2 : maxTypes);
 	const char ptypes[maxTypes] = { 'A', 'B', 'C', 'D', 'E' };
 	const int N = params->_NPARTICLES;
 	const int nworms = params->_NWORMS;
 
-	int nBlownUp = 0;
-	this->fxyz << N + 4 << std::endl;
+	// frame header
+	this->fxyz << N + n + 4 << std::endl;
 	this->fxyz << nw::util::xyz::makeParameterLine(this->params, this->simparams, __NW_VERSION__);
+
+	// print particle positions
 	for (int i = 0; i < params->_NPARTICLES; i++){
 		const int w = i / params->_NP;
 		// choose 0 or 1,2,3,4 type
@@ -174,6 +182,19 @@ void NWSimulation::XYZPrint(int itime){
 		}
 		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
 	}
+
+	// surface particles
+	float qx = this->simparams->_Q[0];
+	float qy = this->simparams->_Q[0];
+	for (int i = 0; i < nx; i++){
+		for (int j = 0; j < ny; j++){
+			float x = i*2;
+			float y = j*2;
+			this->fxyz << "F " << x << " " << y << " " << fxy(A, x, y, qx, qy) - 2 << std::endl;
+		}
+	}
+
+	// corner particles
 	this->fxyz << "F " << 0 << " " << 0 << " 0 " << std::endl;
 	this->fxyz << "F " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;
 	this->fxyz << "F " << 0 << " " << simparams->_YBOX << " 0 " << std::endl;

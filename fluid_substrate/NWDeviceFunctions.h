@@ -103,6 +103,7 @@ __device__ float fxy_sinsin(float &_A, float &_x, float &_y){
 	const float qy = dev_simParams._Q[1];
 	return (_A*sinf(qx*_x)*sinf(qy*_y));
 }
+
 __device__ float uxy_sinsin(float &_A, float &_x, float &_y){
 	//float qx = (_2PI*dev_simParams._N_WAVES[0]) / dev_simParams._BOX[0];
 	//float qy = (_2PI*dev_simParams._N_WAVES[1]) / dev_simParams._BOX[1];
