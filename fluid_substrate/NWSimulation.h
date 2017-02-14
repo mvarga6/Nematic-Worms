@@ -100,7 +100,7 @@ void NWSimulation::Run(){
 	const int	nsteps_inner = this->simparams->_NSTEPS_INNER;
 	const float dt			 = this->simparams->_DT;
 	const float amp_max		 = this->params->_LANDSCALE;
-	const float sin_growth_t = 10000;
+	const float sin_growth_t = 20000;
 
 	//.. check for errors before starting
 	this->DisplayErrors();

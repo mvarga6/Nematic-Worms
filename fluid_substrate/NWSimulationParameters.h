@@ -6,6 +6,7 @@
 #include <string>
 #include <cstdlib>
 #include "NWmain.h"
+#include "NWParams.h"
 /* ------------------------------------------------------------------------
 *	Data structure containing the parameters needed to run a simulation.  
 *	Intended to exist inside a simulaltion object, NOT taken by reference
@@ -28,6 +29,8 @@ typedef struct {
 	//..system physical size
 	float _XBOX, _YBOX, _ZBOX;
 	float _BOX[_D_];
+	int _N_WAVES[_D_]; // n-wavelengths per dimension
+	float _Q[_D_]; // wave vector
 
 	//.. flags for sim prodecures
 	bool _LMEM, // linear memory on gpu 
@@ -71,21 +74,26 @@ namespace DEFAULT {
 		static const std::string FILENAME = "output.xyz";
 		static const bool LMEM = false;
 		static const bool CPUNLIST = false;
+		static const int N_WAVES[_D_] = { 1, 1
+		#if _D_ == 3
+			, 1
+		#endif
+		};
 		static const bool PBC[_D_] = { true, true
-#if _D_ == 3 
+		#if _D_ == 3 
 			, false // for 3rd dim
-#endif
+		#endif
 		};
 		static const bool SBC[_D_] = { false, false
-#if _D_ == 3
+		#if _D_ == 3
 			, false
-#endif
+		#endif
 		};
 		static const float KWALL = 5.0f;
 		static const bool HBC[_D_] = { false, false
-#if _D_ == 3
+		#if _D_ == 3
 			, false
-#endif
+		#endif
 		};
 		static const bool SPHERE = false;
 		static const float Kw = 5.0f;
@@ -166,6 +174,23 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 				parameters->_ZBOX = (int)std::strtof(argv[1 + i++], NULL);
 				if (_D_ != 3) 
 					printf("\n[ ERROR ] : Can not assign size of 3rd dimension in 2D simulation");
+			}
+		}
+		else if (arg == "-lamx"){
+			if (i + 1 < argc){
+				parameters->_N_WAVES[0] = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-lamy"){
+			if (i + 1 < argc){
+				parameters->_N_WAVES[1] = (int)std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-lamz"){
+			if (i + 1 < argc){
+				if (_D_ != 3)
+					printf("\n[ ERROR ] : Can not assign size of 3rd dimension in 2D simulation");
+				else parameters->_N_WAVES[2] = (int)std::strtof(argv[1 + i++], NULL);
 			}
 		}
 		else if (arg == "-nsteps"){
@@ -267,6 +292,7 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	for_D_ parameters->_PBC[d] = DEFAULT::SIM::PBC[d];
 	for_D_ parameters->_HBC[d] = DEFAULT::SIM::HBC[d];
 	for_D_ parameters->_SBC[d] = DEFAULT::SIM::SBC[d];
+	for_D_ parameters->_N_WAVES[d] = DEFAULT::SIM::N_WAVES[d];
 	parameters->_SPHERE = DEFAULT::SIM::SPHERE;
 	parameters->_Kw = DEFAULT::SIM::Kw;
 
@@ -276,6 +302,8 @@ void Init(SimulationParameters * parameters, int argc, char *argv[], std::string
 	//.. calculate parameters
 	const float box[3] = { parameters->_XBOX, parameters->_YBOX, parameters->_ZBOX };
 	for_D_ parameters->_BOX[d] = box[d];
+	for_D_ parameters->_Q[0] = (_2PI*parameters->_N_WAVES[0]) / box[0];
+	for_D_ parameters->_Q[1] = (_2PI*parameters->_N_WAVES[1]) / box[1];
 
 	//.. put on GPU and check for error
 	cudaError_t err;
