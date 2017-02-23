@@ -150,9 +150,9 @@ void NWSimulation::XYZPrint(int itime, float A){
 	//this->worms->ColorXLinked();
 
 	//.. lay down surface layer of particles
-	const int nx = int(simparams->_XBOX / 2);
-	const int ny = int(simparams->_YBOX / 2);
-	const int n = nx*ny;
+	//const int nx = int(simparams->_XBOX / 2);
+	//const int ny = int(simparams->_YBOX / 2);
+	//const int n = nx*ny;
 
 	//.. print to ntypes
 	const int maxTypes = 5;
@@ -163,7 +163,7 @@ void NWSimulation::XYZPrint(int itime, float A){
 	const int nworms = params->_NWORMS;
 
 	// frame header
-	this->fxyz << N + n + 4 << std::endl;
+	this->fxyz << N /*+ n*/ + 4 << std::endl;
 	this->fxyz << nw::util::xyz::makeParameterLine(this->params, this->simparams, __NW_VERSION__);
 
 	// print particle positions
@@ -184,7 +184,7 @@ void NWSimulation::XYZPrint(int itime, float A){
 	}
 
 	// surface particles
-	float qx = this->simparams->_Q[0];
+	/*float qx = this->simparams->_Q[0];
 	float qy = this->simparams->_Q[0];
 	for (int i = 0; i < nx; i++){
 		for (int j = 0; j < ny; j++){
@@ -192,7 +192,7 @@ void NWSimulation::XYZPrint(int itime, float A){
 			float y = j*2;
 			this->fxyz << "F " << x << " " << y << " " << fxy(A, x, y, qx, qy) - 2 << std::endl;
 		}
-	}
+	}*/
 
 	// corner particles
 	this->fxyz << "F " << 0 << " " << 0 << " 0 " << std::endl;
