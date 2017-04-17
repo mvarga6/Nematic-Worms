@@ -7,10 +7,9 @@
 #include "NWParams.h"
 #include "NWWormsParameters.h"
 // -----------------------------------------------------------------------------------------
-__global__ void DriveForceKernel(float *f,
-								 int fshift,
-								 float *r,
-								 int rshift){
+__global__ void DriveForceKernel(float *f, int fshift,
+								 float *r, int rshift,
+								 bool * al, int alshift){
 	int id = threadIdx.x + blockDim.x * blockIdx.x;
 	if (!dev_Params._EXTENSILE){
 		if (id < dev_Params._NPARTICLES){
@@ -22,8 +21,9 @@ __global__ void DriveForceKernel(float *f,
 			sinf(thphi[id]) * sinphi,
 			cosf(thphi[id + tshift])
 			};*/
+			const int w = id / dev_Params._NP; // worm id
 			const int p = id % dev_Params._NP; // particle in chain
-			if (p < dev_Params._NP - 1){ // if not head
+			if ((al[w]) && (p < dev_Params._NP - 1)){ // if not head and alive
 				float u[_D_], dr[_D_], rid[_D_], rnab[_D_], umag;
 				for_D_ rid[d] = r[id + d*rshift]; // get pos of id particle
 				for_D_ rnab[d] = r[(id + 1) + d*rshift]; // get pos of next in chain

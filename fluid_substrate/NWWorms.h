@@ -32,6 +32,7 @@ class Worms {
 	int * dev_xlink;
 	int * dev_cell;
 	int * dev_xcount;
+	bool * dev_alive;
 
 	//.. for pitched memory
 	bool pitched_memory;
@@ -42,6 +43,7 @@ class Worms {
 	size_t tppitch;
 	size_t nlpitch;
 	size_t cpitch;
+	size_t apitch;
 
 	size_t rshift;
 	size_t vshift;
@@ -50,6 +52,7 @@ class Worms {
 	size_t tpshift;
 	size_t nlshift;
 	size_t cshift;
+	size_t ashift;
 
 	//.. pitch memory heights
 	size_t height3;

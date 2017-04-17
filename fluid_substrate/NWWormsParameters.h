@@ -58,6 +58,9 @@ typedef struct {
 	//.. buffer length when setting neighbors lists
 	float _BUFFER;
 
+	//.. the percentage of alive cells
+	float _ALIVE;
+
 	//.. cell size for neighbor finding
 	float _DCELL;
 
@@ -112,6 +115,7 @@ namespace DEFAULT {
 		static const float	XLINKERDENSITY = 0.0f;
 		static const float	Kx = 10.0f;
 		static const float  Lx = L2;
+		static const float	ALIVE = 1.0f;
 		static const int	XSTART = 0;
 		static const int	XHOLD = -1; // needs to default to end
 		static const bool	XRAMP = false;
@@ -305,6 +309,12 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 				printf("\nlx changed: %f", parameters->_Lx);
 			}
 		}
+		else if (arg == "-a" || arg == "--alive"){
+			if (i + 1 < argc){
+				parameters->_ALIVE = std::strtof(argv[1 + i++], NULL);
+				printf("\nalive % changed: %f", parameters->_ALIVE);
+			}
+		}
 		else if (arg == "-wca"){
 			wca = true;
 			printf("\nUsing Weeks-Chandler-Anderson potential");
@@ -364,7 +374,9 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_XHOLD = DEFAULT::WORMS::XHOLD;
 	parameters->_DCELL = DEFAULT::WORMS::DCELL;
 	parameters->_RAD = DEFAULT::WORMS::RAD;
-	
+	parameters->_ALIVE = DEFAULT::WORMS::ALIVE;
+	printf("\nDefault parameters assigned");
+
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);
 
