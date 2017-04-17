@@ -1144,7 +1144,7 @@ void Worms::ChooseAliveWorms(const float percent_alive){
 			tmp[i] = true;
 		else tmp[i] = false;
 	}
-	CheckSuccess(cudaMemcpy(this->dev_alive, tmp, sizeof(bool)*nworms, cudaMemcpyHostToDevice)));
+	CheckSuccess(cudaMemcpy(this->dev_alive, tmp, sizeof(bool)*nworms, cudaMemcpyHostToDevice));
 	delete[] tmp;
 }
 
