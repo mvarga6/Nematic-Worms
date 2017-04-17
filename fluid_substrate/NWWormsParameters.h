@@ -91,14 +91,14 @@ namespace DEFAULT {
 		static const int	NPARTICLES = NP * NWORMS;
 		static const int	LISTSETGAP = 10;
 		static const int	NMAX = 128;
-		static const float	EPSILON = 0.2f;
+		static const float	EPSILON = 0.5f;
 		static const float	SIGMA = 1.0f;
 		static const float	DRIVE = 1.0f;
 		static const float	DRIVE_ROT = 0.0f;
 		static const float	K1 = 57.146f;
 		static const float	K2 = 10.0f * K1;
 		static const float	K3 = 2.0f * K2 / 3.0f;
-		static const float	Ka = 5.0f;
+		static const float	Ka = 25.0f;
 		static const float  Ka2 = Ka;
 		static const float  Ka_RATIO = 1.0f;
 		static const float	L1 = 0.8f;
