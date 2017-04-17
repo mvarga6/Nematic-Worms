@@ -43,7 +43,6 @@ class Worms {
 	size_t tppitch;
 	size_t nlpitch;
 	size_t cpitch;
-	size_t apitch;
 
 	size_t rshift;
 	size_t vshift;
@@ -52,7 +51,6 @@ class Worms {
 	size_t tpshift;
 	size_t nlshift;
 	size_t cshift;
-	size_t ashift;
 
 	//.. pitch memory heights
 	size_t height3;
@@ -153,6 +151,7 @@ private:
 	void RandomAdheringDistribute();
 	void CheckSuccess(cudaError_t err);
 	void FigureBlockThreadStructure(int threadsPerBlock);
+	void ChooseAliveWorms(const float percent_alive);
 };
 // ------------------------------------------------------------------------------------------
 //	PUBLIC METHODS
@@ -246,6 +245,7 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 
 	//.. transfer to GPU and prep for run
 	this->DataHostToDevice();
+	this->ChooseAliveWorms(this->parameters->_ALIVE);
 	this->CalculateThetaPhi();
 	this->ResetNeighborsList();
 	ErrorHandler(cudaDeviceSynchronize());
@@ -343,8 +343,8 @@ void Worms::AutoDriveForces(int itime, int istart = 0){
 	DriveForceKernel <<< this->Blocks_Per_Kernel, this->Threads_Per_Block >>>
 	(
 		this->dev_f, this->fshift, 
-		/*this->dev_thphi, this->tpshift*/
-		this->dev_r, this->rshift
+		this->dev_r, this->rshift,
+		this->dev_alive
 	);
 	ErrorHandler(cudaGetLastError());
 	this->Drive_clock += std::clock() - b4;
@@ -730,6 +730,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
+	CheckSuccess(cudaMalloc((void**)&this->dev_alive, sizeof(bool)*this->parameters->_NWORMS));
 
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("Allocated");
@@ -783,6 +784,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_xlink, this->nparticles_int_alloc));
 	//CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
+	CheckSuccess(cudaMalloc((void**)&this->dev_alive, sizeof(bool)*this->parameters->_NWORMS));
 
 	//.. calculate and assign shifts
 	this->fshift = this->fpitch / sizeof(float);
@@ -1134,4 +1136,16 @@ void Worms::FigureBlockThreadStructure(int tpb){
 		this->nparticles_int_alloc);
 }
 //-------------------------------------------------------------------------------------------
+void Worms::ChooseAliveWorms(const float percent_alive){
+	const int nworms = this->parameters->_NWORMS;
+	bool * tmp = new bool[nworms];
+	for (int i = 0; i < nworms; i++){
+		if ((float(rand()) / float(RAND_MAX)) < this->parameters->_ALIVE)
+			tmp[i] = true;
+		else tmp[i] = false;
+	}
+	CheckSuccess(cudaMemcpy(this->dev_alive, tmp, sizeof(bool)*nworms, cudaMemcpyHostToDevice)));
+	delete[] tmp;
+}
+
 #endif
