@@ -96,7 +96,7 @@ namespace DEFAULT {
 		static const int	NMAX = 128;
 		static const float	EPSILON = 0.5f;
 		static const float	SIGMA = 1.0f;
-		static const float	DRIVE = 1.0f;
+		static const float	DRIVE = 5.0f;
 		static const float	DRIVE_ROT = 0.0f;
 		static const float	K1 = 57.146f;
 		static const float	K2 = 10.0f * K1;
@@ -108,7 +108,7 @@ namespace DEFAULT {
 		static const float	L2 = 1.6f;
 		static const float	L3 = 2.4f;
 		static const float	KBT = 0.25f;
-		static const float	GAMMA = 2.0f;
+		static const float	GAMMA = 10.0f;
 		static const float	DAMP = 3.0f;
 		static const float	BUFFER = 1.0f;
 		static const float	LANDSCALE = 1.0f;
