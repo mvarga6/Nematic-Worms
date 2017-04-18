@@ -1,7 +1,7 @@
 
 #ifndef __WORMS_PARAMETERS_H__
 #define __WORMS_PARAMETERS_H__
-// 2D
+// 2D change
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "NWConstants.h"
