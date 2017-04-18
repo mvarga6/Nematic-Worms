@@ -174,19 +174,21 @@ void NWSimulation::XYZPrint(int itime){
 	for (int i = 0; i < params->_NPARTICLES; i++){
 		const int w = i / params->_NP;
 		// choose 0 or 1,2,3,4 type
-		const int t = (w > nworms*ka_ratio ? 0 : w % (maxTypes - 1) + 1);
+		//const int t = (w > nworms*ka_ratio ? 0 : w % (maxTypes - 1) + 1);
 		float _r[3] = { 0, 0, 0 }; // always 3d
 		for_D_ _r[d] = worms->r[i + d*N];
 		//float x = worms->r[i], y = worms->r[i + N], z = 0.0f;
 		//char c = worms->c[i];
-		const char c = ptypes[t];
+		char c;
+		if (worms->alive[w]) c = 'A';
+		else c = 'B';
 		//if (abs(z) > 100.0f) nBlownUp++;
 		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
 	}
-	this->fxyz << "F " << 0 << " " << 0 << " 0 " << std::endl;
-	this->fxyz << "F " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;
-	this->fxyz << "F " << 0 << " " << simparams->_YBOX << " 0 " << std::endl;
-	this->fxyz << "F " << simparams->_XBOX << " " << simparams->_YBOX << " 0 " << std::endl;
+	this->fxyz << "C " << 0 << " " << 0 << " 0 " << std::endl;
+	this->fxyz << "C " << simparams->_XBOX << " " << 0 << " 0 " << std::endl;
+	this->fxyz << "C " << 0 << " " << simparams->_YBOX << " 0 " << std::endl;
+	this->fxyz << "C " << simparams->_XBOX << " " << simparams->_YBOX << " 0 " << std::endl;
 
 	//.. report blown up particles
 	if (nBlownUp > 0) printf("\n%i particles blown up", nBlownUp);
