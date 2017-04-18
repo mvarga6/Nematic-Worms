@@ -312,7 +312,7 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-a" || arg == "--alive"){
 			if (i + 1 < argc){
 				parameters->_ALIVE = std::strtof(argv[1 + i++], NULL);
-				printf("\nalive % changed: %f", parameters->_ALIVE);
+				printf("\nalive changed: %f", parameters->_ALIVE);
 			}
 		}
 		else if (arg == "-wca"){

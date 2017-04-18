@@ -93,6 +93,7 @@ public:
 	//.. on host (so print on host is easier)
 	float * r;
 	char * c;
+	bool * alive;
 
 	//.. construct with block-thread structure
 	//Worms(int BPK, int TPB, GRNG &RNG, WormsParameters &wormsParameters);
@@ -179,6 +180,7 @@ void Worms::ClearAll(){
 	this->FreeHostMemory();
 	this->r = NULL;
 	this->c = NULL;
+	this->alive = NULL;
 
 	//.. device
 	this->FreeGPUMemory();
@@ -699,12 +701,14 @@ void Worms::AllocateHostMemory(){
 	DEBUG_MESSAGE("AllocateHostMemory");
 	this->r = new float[_D_*this->parameters->_NPARTICLES];
 	this->c = new char[this->parameters->_NPARTICLES];
+	this->alive = new bool[this->parameters->_NWORMS];
 }
 //-------------------------------------------------------------------------------------------
 void Worms::FreeHostMemory(){
 	DEBUG_MESSAGE("FreeHostMemory");
 	delete[] this->r;
 	delete[] this->c;
+	delete[] this->alive;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::AllocateGPUMemory(){
@@ -1143,6 +1147,7 @@ void Worms::ChooseAliveWorms(const float percent_alive){
 		if ((float(rand()) / float(RAND_MAX)) < this->parameters->_ALIVE)
 			tmp[i] = true;
 		else tmp[i] = false;
+		this->alive[i] = tmp[i];
 	}
 	CheckSuccess(cudaMemcpy(this->dev_alive, tmp, sizeof(bool)*nworms, cudaMemcpyHostToDevice));
 	delete[] tmp;
