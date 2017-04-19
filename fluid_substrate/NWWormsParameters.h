@@ -32,6 +32,9 @@ typedef struct {
 	//.. steric interaction on/off
 	bool _NOINT;
 
+	//.. print with velocities
+	bool _PRINTV;
+
 	//.. drive type
 	bool _EXTENSILE;
 
@@ -112,6 +115,7 @@ namespace DEFAULT {
 		static const bool	RAD = false;
 		static const bool   EXTENSILE = false;
 		static const bool	NOINT = false;
+		static const bool	PRINTV = false;
 	}
 }
 //----------------------------------------------------------------------------
@@ -141,51 +145,61 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		if (arg == "-xdim"){
 			if (i + 1 < argc){
 				parameters->_XDIM = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nXDIM changed: %d", parameters->_XDIM);
 			}
 		}
 		else if (arg == "-ydim"){
 			if (i + 1 < argc){
 				parameters->_YDIM = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nYDIM changed: %d", parameters->_YDIM);
 			}
 		}
 		else if (arg == "-zdim"){
 			if (i + 1 < argc){
 				parameters->_ZDIM = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nZDIM changed: %d", parameters->_ZDIM);
 			}
 		}
 		else if (arg == "-np"){
 			if (i + 1 < argc){
 				parameters->_NP = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nNP changed: %d", parameters->_NP);
 			}
 		}
 		else if (arg == "-listsetgap"){
 			if (i + 1 < argc){
 				parameters->_LISTSETGAP = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nLISTSETGAP changed: %d", parameters->_LISTSETGAP);
 			}
 		}
 		else if (arg == "-nmax"){
 			if (i + 1 < argc){
 				parameters->_NMAX = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nNMAX changed: %d", parameters->_NMAX);
 			}
 		}
 		else if (arg == "-epsilon"){
 			if (i + 1 < argc){
 				parameters->_EPSILON = std::strtof(argv[1 + i++], NULL);
+				printf("\nEPSILON changed: %d", parameters->_EPSILON);
 			}
 		}
 		else if (arg == "-sigma"){
 			if (i + 1 < argc){
 				parameters->_SIGMA = std::strtof(argv[1 + i++], NULL);
+				printf("\nSIGMA changed: %f", parameters->_SIGMA);
 			}
 		}
 		else if (arg == "-drive"){
 			if (i + 1 < argc){
 				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
+				printf("\nDRIVE changed: %f", parameters->_DRIVE);
 			}
 		}
 		else if (arg == "-k1"){
 			if (i + 1 < argc){
 				parameters->_K1 = std::strtof(argv[1 + i++], NULL);
+				printf("\nK1 changed: %f", parameters->_K1);
 			}
 		}
 		else if (arg == "-ka"){
@@ -197,6 +211,7 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-l1"){
 			if (i + 1 < argc){
 				parameters->_L1 = std::strtof(argv[1 + i++], NULL);
+				printf("\nL1 changed: %f", parameters->_L1);
 			}
 		}
 		else if (arg == "-kbt"){
@@ -208,21 +223,25 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-gamma"){
 			if (i + 1 < argc){
 				parameters->_GAMMA = std::strtof(argv[1 + i++], NULL);
+				printf("\nGAMMA changed: %f", parameters->_GAMMA);
 			}
 		}
 		else if (arg == "-damp"){
 			if (i + 1 < argc){
 				parameters->_DAMP = std::strtof(argv[1 + i++], NULL);
+				printf("\nDAMP changed: %f", parameters->_DAMP);
 			}
 		}
 		else if (arg == "-buffer"){
 			if (i + 1 < argc){
 				parameters->_BUFFER = std::strtof(argv[1 + i++], NULL);
+				printf("\nBUFFER changed: %f", parameters->_BUFFER);
 			}
 		}
 		else if (arg == "-A" || arg == "-landscale"){
 			if (i + 1 < argc){
 				parameters->_LANDSCALE = std::strtof(argv[1 + i++], NULL);
+				printf("\nLANDSCALE changed: %f", parameters->_LANDSCALE);
 			}
 		}
 		else if (arg == "-wca"){
@@ -240,6 +259,10 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-noint"){
 			parameters->_NOINT = true;
 			printf("\nExcluding steric interaction between worms");
+		}
+		else if (arg == "-vel" || arg == "--printv"){
+			parameters->_PRINTV = true;
+			printf("\nPrinting as *.xyzv file including velocities");
 		}
 	}
 }
@@ -268,6 +291,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_LANDSCALE = DEFAULT::WORMS::LANDSCALE;
 	parameters->_DCELL = DEFAULT::WORMS::DCELL;
 	parameters->_RAD = DEFAULT::WORMS::RAD;
+	parameters->_PRINTV = DEFAULT::WORMS::PRINTV;
 	
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
 	CalculateParameters(parameters, WCA);

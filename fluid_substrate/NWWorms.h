@@ -81,6 +81,7 @@ class Worms {
 public:
 	//.. on host (so print on host is easier)
 	float * r;
+	float * v;
 	char * c;
 	float * f;
 	float * f_old;
@@ -432,6 +433,14 @@ void Worms::DataDeviceToHost(){
 			_D_ * this->nparticles_float_alloc,
 			cudaMemcpyDeviceToHost));
 		ErrorHandler(cudaGetLastError());
+
+		if (parameters->_PRINTV){
+			CheckSuccess(cudaMemcpy(this->v,
+				this->dev_v,
+				_D_ * this->nparticles_float_alloc,
+				cudaMemcpyDeviceToHost));
+			ErrorHandler(cudaGetLastError());
+		}
 	}
 }
 //-------------------------------------------------------------------------------------------
@@ -673,6 +682,7 @@ void Worms::AddConstantForce(int dim, float force){
 void Worms::AllocateHostMemory(){
 	DEBUG_MESSAGE("AllocateHostMemory");
 	this->r = new float[_D_*this->parameters->_NPARTICLES];
+	this->v = new float[_D_*this->parameters->_NPARTICLES];
 	this->f = new float[_D_*this->parameters->_NPARTICLES];
 	this->f_old = new float[_D_*this->parameters->_NPARTICLES];
 	this->c = new char[this->parameters->_NPARTICLES];
@@ -686,6 +696,7 @@ void Worms::AllocateHostMemory(){
 void Worms::FreeHostMemory(){
 	DEBUG_MESSAGE("FreeHostMemory");
 	delete[] this->r;
+	delete[] this->v;
 	delete[] this->f;
 	delete[] this->f_old;
 	delete[] this->c;
@@ -1009,6 +1020,16 @@ void Worms::DataDeviceToHost_Pitched(){
 		this->nparticles_float_alloc,
 		_D_,
 		cudaMemcpyDeviceToHost));
+	
+	if (parameters->_PRINTV){
+		CheckSuccess(cudaMemcpy2D(this->v,
+			this->nparticles_float_alloc,
+			this->dev_v,
+			this->vpitch,
+			this->nparticles_float_alloc,
+			_D_,
+			cudaMemcpyDeviceToHost));
+	}
 	ErrorHandler(cudaGetLastError());
 }
 //-------------------------------------------------------------------------------------------

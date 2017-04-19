@@ -1,6 +1,6 @@
 #ifndef __SIMULATION_PARAMETERS_H__
 #define __SIMULATION_PARAMETERS_H__
-// 2D
+
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include <string>
@@ -157,16 +157,19 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		if (arg == "-dt"){
 			if (i + 1 < argc){
 				parameters->_DT = std::strtof(argv[1 + i++], NULL);
+				printf("\nDT changed: %f", parameters->_DT);
 			}
 		}
 		else if (arg == "-xbox"){
 			if (i + 1 < argc){
 				parameters->_XBOX = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nXBOX changed: %f", parameters->_XBOX);
 			}
 		}
 		else if (arg == "-ybox"){
 			if (i + 1 < argc){
 				parameters->_YBOX = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nYBOX changed: %f", parameters->_YBOX);
 			}
 		}
 		else if (arg == "-zbox"){
@@ -174,16 +177,21 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 				parameters->_ZBOX = (int)std::strtof(argv[1 + i++], NULL);
 				if (_D_ != 3) 
 					printf("\n[ ERROR ] : Can not assign size of 3rd dimension in 2D simulation");
+				else{
+					printf("\nZBOX changed: %f", parameters->_ZBOX);
+				}
 			}
 		}
 		else if (arg == "-lamx"){
 			if (i + 1 < argc){
 				parameters->_N_WAVES[0] = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nN_WAVES[x] changed: %d", parameters->_N_WAVES[0]);
 			}
 		}
 		else if (arg == "-lamy"){
 			if (i + 1 < argc){
 				parameters->_N_WAVES[1] = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nN_WAVES[y] changed: %d", parameters->_N_WAVES[1]);
 			}
 		}
 		else if (arg == "-lamz"){
@@ -196,21 +204,25 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		else if (arg == "-nsteps"){
 			if (i + 1 < argc){
 				parameters->_NSTEPS = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nNSTPES changed: %d", parameters->_NSTEPS);
 			}
 		}
 		else if (arg == "-nsteps-inner"){
 			if (i + 1 < argc){
 				parameters->_NSTEPS_INNER = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nNSTPES_INNER changed: %d", parameters->_NSTEPS_INNER);
 			}
 		}
 		else if (arg == "-framerate"){
 			if (i + 1 < argc){
 				parameters->_FRAMERATE = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nFRAMERATE changed: %d", parameters->_FRAMERATE);
 			}
 		}
 		else if (arg == "-framesperfile"){
 			if (i + 1 < argc){
 				parameters->_FRAMESPERFILE = (int)std::strtof(argv[1 + i++], NULL);
+				printf("\nFRAMESPERFILE changed: %d", parameters->_FRAMESPERFILE);
 			}
 		}
 		else if (arg == "-o" || arg == "--output"){
@@ -220,6 +232,7 @@ void GrabParameters(SimulationParameters * parameters, int argc, char *argv[], s
 		}
 		else if (arg == "-lmem"){
 			parameters->_LMEM = true;
+			printf("\nUsing LINEAR memory on GPU.");
 		}
 		else if (arg == "-softwalls"){
 			if (i + 1 < argc){
