@@ -49,6 +49,7 @@ private:
 //-------------------------------------------------------------------------------------------
 NWSimulation::NWSimulation(int argc, char *argv[]){
 
+	this->time = 0.0f;
 	int numDevices;
 	ErrorHandler(cudaGetDeviceCount(&numDevices));
 	printf("\n(%d) cuda-capable devices found.", numDevices);
@@ -62,7 +63,7 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	Init(this->simparams, argc, argv, this->outputfile);
 
 	//.. show parameters on device
-	CheckParametersOnDevice <<< 1, 1 >>>();
+	//CheckParametersOnDevice <<< 1, 1 >>>();
 	ErrorHandler(cudaDeviceSynchronize());
 
 	//.. setup random number generator
@@ -72,10 +73,10 @@ NWSimulation::NWSimulation(int argc, char *argv[]){
 	this->worms = new Worms();
 
 	//.. initial worms object
-	this->time = 0.0f;
 	this->worms->Init(this->rng, this->params, this->simparams, !this->simparams->_LMEM, 512);
 
 	//.. outputfile
+	if (params->_PRINTV) this->outputfile += "v";
 	this->fxyz.open(this->outputfile.c_str());
 	if (!this->fxyz.is_open())
 		printf("\n***\nError opening output file: %s!\n***", this->outputfile.c_str());
@@ -180,7 +181,13 @@ void NWSimulation::XYZPrint(int itime, float A){
 			printf("\n[ ERROR ] : Particle %d nan", i);
 			nBlownUp++;
 		}
-		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2] << std::endl;
+		this->fxyz << c << " " << _r[0] << " " << _r[1] << " " << _r[2];
+		if (params->_PRINTV){
+			float _v[3] = { 0, 0, 0 };
+			for_D_ _v[d] = worms->v[i + d*N];
+			this->fxyz << " " << _v[0] << " " << _v[1] << " " << _v[2];
+		}
+		this->fxyz << std::endl;
 	}
 
 	// surface particles
