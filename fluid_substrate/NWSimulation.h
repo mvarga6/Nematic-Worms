@@ -160,6 +160,11 @@ void NWSimulation::XYZPrint(int itime){
 	this->worms->DataDeviceToHost();
 	//this->worms->ColorXLinked();
 
+	//.. flip worms { P = 1 - e^(-T_frame / TAUREV) }
+	const float scaled_tao_rev = this->simparams->_FRAMERATE * this->simparams->_DT * this->params->_TAOREV;
+	const float rev_prob = 1 - expf(-1.0f / scaled_tao_rev);
+	this->worms->ApplyNewDriveDirections(rev_prob);
+
 	//.. print to ntypes
 	const int maxTypes = 5;
 	const float ka_ratio = this->params->_Ka_RATIO;
