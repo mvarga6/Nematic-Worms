@@ -122,7 +122,7 @@ namespace DEFAULT {
 		static const float	Kx = 10.0f;
 		static const float  Lx = L2;
 		static const float	ALIVE = 1.0f;
-		static const float	TAOREV = FLT_MAX / 2.0f;
+		static const float	TAOREV = 1.0e+38f;
 		static const int	XSTART = 0;
 		static const int	XHOLD = -1; // needs to default to end
 		static const bool	XRAMP = false;
