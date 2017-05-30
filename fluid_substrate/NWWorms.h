@@ -32,6 +32,7 @@ class Worms {
 	int * dev_xlink;
 	int * dev_cell;
 	int * dev_xcount;
+	int * dev_actdir;
 	bool * dev_alive;
 
 	//.. for pitched memory
@@ -108,6 +109,7 @@ public:
 	void NoiseForces();
 	void LJForces();
 	void AutoDriveForces(int itime, int istart);
+	void ApplyNewDriveDirections(const float reverse_probability);
 	void LandscapeForces();
 	void AddConstantForce(int dim, float force);
 	void XLinkerForces(int itime, float xtargetPercent);
@@ -153,6 +155,7 @@ private:
 	void CheckSuccess(cudaError_t err);
 	void FigureBlockThreadStructure(int threadsPerBlock);
 	void ChooseAliveWorms(const float percent_alive);
+	
 };
 // ------------------------------------------------------------------------------------------
 //	PUBLIC METHODS
@@ -190,6 +193,7 @@ void Worms::ClearAll(){
 	this->dev_xlink = NULL;
 	this->dev_cell = NULL;
 	this->dev_thphi = NULL;
+	this->dev_actdir = NULL;
 	this->rng = NULL;
 	this->parameters = NULL;
 	this->envirn = NULL;
@@ -227,14 +231,6 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	this->ZeroHost();
 	this->ZeroClocks();
 
-	//.. choose distribute method (on host)
-	if (wormsParameters->_RAD) 
-		this->RandomAdheringDistribute();
-	else{
-		this->DistributeWormsOnHost();
-		this->AdjustDistribute(0.5f);
-	}
-
 	//.. choose memory allocation methods
 	if (usePitchedMemory){
 		this->AllocateGPUMemory_Pitched();
@@ -243,6 +239,14 @@ void Worms::Init(GRNG * gaussianRandomNumberGenerator,
 	else {
 		this->AllocateGPUMemory();
 		this->ZeroGPU();
+	}
+
+	//.. choose distribute method (on host)
+	if (wormsParameters->_RAD)
+		this->RandomAdheringDistribute();
+	else{
+		this->DistributeWormsOnHost();
+		this->AdjustDistribute(0.5f);
 	}
 
 	//.. transfer to GPU and prep for run
@@ -346,11 +350,28 @@ void Worms::AutoDriveForces(int itime, int istart = 0){
 	(
 		this->dev_f, this->fshift, 
 		this->dev_r, this->rshift,
-		this->dev_alive
+		this->dev_alive, this->dev_actdir
 	);
 	ErrorHandler(cudaGetLastError());
 	this->Drive_clock += std::clock() - b4;
 	
+}
+//-------------------------------------------------------------------------------------------
+void Worms::ApplyNewDriveDirections(const float reverse_probability){
+	const int nworms = this->parameters->_NWORMS;
+
+	// copy current directions back
+	int * dir = new int[nworms];
+	CheckSuccess(cudaMemcpy(dir, this->dev_actdir, sizeof(int)*nworms, cudaMemcpyDeviceToHost));
+
+	// attempt flips (to alive)
+	for (int i = 0; i < nworms; i++){
+		if (this->alive[i] && (float(rand()) / float(RAND_MAX)) < reverse_probability){
+			dir[i] = -dir[i];
+		}
+	}
+	CheckSuccess(cudaMemcpy(this->dev_actdir, dir, sizeof(int)*nworms, cudaMemcpyHostToDevice));
+	delete[] dir;
 }
 //-------------------------------------------------------------------------------------------
 void Worms::LandscapeForces(){
@@ -735,6 +756,7 @@ void Worms::AllocateGPUMemory(){
 	CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 	CheckSuccess(cudaMalloc((void**)&this->dev_alive, sizeof(bool)*this->parameters->_NWORMS));
+	CheckSuccess(cudaMalloc((void**)&this->dev_actdir, sizeof(int)*this->parameters->_NWORMS));
 
 	ErrorHandler(cudaDeviceSynchronize());
 	printf("Allocated");
@@ -789,6 +811,7 @@ void Worms::AllocateGPUMemory_Pitched(){
 	//CheckSuccess(cudaMalloc((void**)&this->dev_cell, _D_ * this->nparticles_int_alloc));
 	CheckSuccess(cudaMalloc((void**)&this->dev_xcount, sizeof(int)));
 	CheckSuccess(cudaMalloc((void**)&this->dev_alive, sizeof(bool)*this->parameters->_NWORMS));
+	CheckSuccess(cudaMalloc((void**)&this->dev_actdir, sizeof(int)*this->parameters->_NWORMS));
 
 	//.. calculate and assign shifts
 	this->fshift = this->fpitch / sizeof(float);
@@ -1142,6 +1165,8 @@ void Worms::FigureBlockThreadStructure(int tpb){
 //-------------------------------------------------------------------------------------------
 void Worms::ChooseAliveWorms(const float percent_alive){
 	const int nworms = this->parameters->_NWORMS;
+
+	// pick which worms are alive
 	bool * tmp = new bool[nworms];
 	for (int i = 0; i < nworms; i++){
 		if ((float(rand()) / float(RAND_MAX)) < this->parameters->_ALIVE)
@@ -1151,6 +1176,15 @@ void Worms::ChooseAliveWorms(const float percent_alive){
 	}
 	CheckSuccess(cudaMemcpy(this->dev_alive, tmp, sizeof(bool)*nworms, cudaMemcpyHostToDevice));
 	delete[] tmp;
+
+	// choose initial drive directions
+	int * dir = new int[nworms];
+	for (int i = 0; i < nworms; i++){
+		dir[i] = 2*(rand() % 2) - 1; // +/- 1
+	}
+	CheckSuccess(cudaMemcpy(this->dev_actdir, dir, sizeof(int)*nworms, cudaMemcpyHostToDevice));
+	delete[] tmp;
 }
+
 
 #endif

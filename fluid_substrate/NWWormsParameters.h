@@ -61,6 +61,12 @@ typedef struct {
 	//.. the percentage of alive cells
 	float _ALIVE;
 
+	//.. the percentage that change drive direction every print
+	// _TAOREV = 0 --> all worms flip every frame
+	// _TAOREV = 1 --> 66% worms flip every frame
+	// _TAOREV = 2 --> 39% worms flip every frame
+	float _TAOREV;
+
 	//.. cell size for neighbor finding
 	float _DCELL;
 
@@ -116,6 +122,7 @@ namespace DEFAULT {
 		static const float	Kx = 10.0f;
 		static const float  Lx = L2;
 		static const float	ALIVE = 1.0f;
+		static const float	TAOREV = FLT_MAX / 2.0f;
 		static const int	XSTART = 0;
 		static const int	XHOLD = -1; // needs to default to end
 		static const bool	XRAMP = false;
@@ -198,6 +205,12 @@ void GrabParameters(WormsParameters * parameters, int argc, char *argv[], bool &
 		else if (arg == "-drive"){
 			if (i + 1 < argc){
 				parameters->_DRIVE = std::strtof(argv[1 + i++], NULL);
+			}
+		}
+		else if (arg == "-taorev"){
+			if (i + 1 < argc){
+				parameters->_TAOREV = std::strtof(argv[1 + i++], NULL);
+				printf("\nTaoRev changed: %f", parameters->_TAOREV);
 			}
 		}
 		else if (arg == "-driverot"){
@@ -375,6 +388,7 @@ void Init(WormsParameters * parameters, int argc, char *argv[]){
 	parameters->_DCELL = DEFAULT::WORMS::DCELL;
 	parameters->_RAD = DEFAULT::WORMS::RAD;
 	parameters->_ALIVE = DEFAULT::WORMS::ALIVE;
+	parameters->_TAOREV = DEFAULT::WORMS::TAOREV;
 	printf("\nDefault parameters assigned");
 
 	GrabParameters(parameters, argc, argv, WCA, XRAMP);
