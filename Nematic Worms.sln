@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fluid_substrate", "fluid_substrate\fluid_substrate.vcxproj", "{AFB9EADE-CCC6-4839-94C5-9B764B55658B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NematicWormsV2", "NematicWormsV2\NematicWormsV2.vcxproj", "{E0215E83-3BA3-4BC2-B021-22698259984D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,8 +23,19 @@ Global
 		{AFB9EADE-CCC6-4839-94C5-9B764B55658B}.Release|Win32.Build.0 = Release|Win32
 		{AFB9EADE-CCC6-4839-94C5-9B764B55658B}.Release|x64.ActiveCfg = Release|x64
 		{AFB9EADE-CCC6-4839-94C5-9B764B55658B}.Release|x64.Build.0 = Release|x64
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Debug|Win32.Build.0 = Debug|Win32
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Debug|x64.ActiveCfg = Debug|x64
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Debug|x64.Build.0 = Debug|x64
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Release|Win32.ActiveCfg = Release|Win32
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Release|Win32.Build.0 = Release|Win32
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Release|x64.ActiveCfg = Release|x64
+		{E0215E83-3BA3-4BC2-B021-22698259984D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6272BA5F-2877-4B78-86C9-D313555B170D}
 	EndGlobalSection
 EndGlobal
