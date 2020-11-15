@@ -37,3 +37,13 @@ void FilamentBackboneForceKernel(ptype *position, ptype *force, int n_filaments,
         }
     }
 }
+
+__global__
+void ApplyPositionFunctionKernel(PositionFunction func, ptype *position, int n_particles, float3 box)
+{
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    if (i < n_particles)
+    {
+        (*func)(box, &position[i]);
+    }
+}
