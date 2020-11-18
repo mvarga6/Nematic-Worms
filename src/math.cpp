@@ -1,4 +1,5 @@
 #include "math.cuh"
+#include "io.h"
 
 
 __host__ __device__
@@ -115,4 +116,31 @@ __host__ __device__ void apply_pbc_z(float3 box, float3* p)
 {
     if (p->z > box.z) p->z -= box.z;
     else if (p->z < 0.0f) p->z += box.z;
+}
+
+
+__device__ PositionFunction p_apply_pbc   = apply_pbc;
+__device__ PositionFunction p_apply_pbc_x = apply_pbc_x;
+__device__ PositionFunction p_apply_pbc_y = apply_pbc_y;
+__device__ PositionFunction p_apply_pbc_z = apply_pbc_z;
+
+__device__ DistanceFunction p_displacement_pbc   = displacement_pbc;
+__device__ DistanceFunction p_displacement_pbc_x = displacement_pbc_x;
+__device__ DistanceFunction p_displacement_pbc_y = displacement_pbc_y;
+__device__ DistanceFunction p_displacement_pbc_z = displacement_pbc_z;
+
+PositionFunction h_apply_pbc;
+PositionFunction h_apply_pbc_x;
+PositionFunction h_apply_pbc_y;
+PositionFunction h_apply_pbc_z;
+
+#include <iostream>
+
+__host__ void copy_device_function_symbols()
+{
+    std::cout << "Size of PositionFunction: " << sizeof(PositionFunction) << std::endl;
+    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc, p_apply_pbc, sizeof(PositionFunction)));
+    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc_x, p_apply_pbc_x, sizeof(PositionFunction)));
+    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc_y, p_apply_pbc_y, sizeof(PositionFunction)));
+    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc_z, p_apply_pbc_z, sizeof(PositionFunction)));
 }
