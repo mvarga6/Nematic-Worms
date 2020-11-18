@@ -28,19 +28,11 @@ __host__ __device__ void apply_pbc_y(float3 box, float3* p);
 __host__ __device__ void apply_pbc_z(float3 box, float3* p);
 
 
-// __device__ PositionFunction p_apply_pbc;
-// __device__ PositionFunction p_apply_pbc_x;
-// __device__ PositionFunction p_apply_pbc_y;
-// __device__ PositionFunction p_apply_pbc_z;
+extern PositionFunction h_position_function_table[];
+__constant__ extern PositionFunction d_position_function_table[4];
+extern DistanceFunction h_distance_function_table[];
+__constant__ extern DistanceFunction d_distance_function_table[4];
 
-// __device__ DistanceFunction p_displacement_pbc;
-// __device__ DistanceFunction p_displacement_pbc_x;
-// __device__ DistanceFunction p_displacement_pbc_y;
-// __device__ DistanceFunction p_displacement_pbc_z;
-
-extern PositionFunction h_apply_pbc;
-extern PositionFunction h_apply_pbc_x;
-extern PositionFunction h_apply_pbc_y;
-extern PositionFunction h_apply_pbc_z;
-
-__host__ void copy_device_function_symbols();
+__host__ void SetupDeviceFunctionTables();
+__host__ PositionFunction GetPositionFunction(int i);
+__host__ DistanceFunction GetDistanceFunction(int i);

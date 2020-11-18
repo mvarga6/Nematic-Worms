@@ -32,7 +32,7 @@ void ApplyPositionFunction(
     int num_blocks = particles->count / threads_per_block + 1;
     ApplyPositionFunctionKernel<<<num_blocks, threads_per_block>>>(
         h_func,
-        particles->r,
+        particles->dev_r,
         particles->count,
         box
     );

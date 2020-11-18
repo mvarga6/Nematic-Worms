@@ -37,6 +37,8 @@ void FilamentBackboneForceKernel(ptype *position, ptype *force, int n_filaments,
         }
     }
 }
+#include <stdlib.h>
+#include <stdio.h>
 
 __global__
 void ApplyPositionFunctionKernel(PositionFunction func, ptype *position, int n_particles, float3 box)

@@ -1,83 +1,78 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <iostream>
 
-typedef float (* fp)(float, float, float4);
+// Since C++ 11
+template<typename T>
+using func_t = T (*) (T, T);
 
-struct functor
+template <typename T>
+__device__ T add_func (T x, T y)
 {
-    float c0, c1;
-    fp f;
-
-    __device__ __host__
-    functor(float _c0, float _c1, fp _f) : c0(_c0), c1(_c1), f(_f) {};
-
-    __device__ __host__
-    float operator()(float4 x) { return f(c0, c1, x); };
-};
-
-__global__
-void kernel(float c0, float c1, fp f, const float4 * x, float * y, int N)
-{
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-    struct functor op(c0, c1, f);
-    for(int i = tid; i < N; i  = blockDim.x * gridDim.x) {
-        y[i] = op(x[i]);
-    }
+    return x + y;
 }
 
-__device__ __host__
-float f1 (float a, float b, float4 c)
+template <typename T>
+__device__ T mul_func (T x, T y)
 {
-    return a  + (b * c.x) + (b * c.y) + (b * c.z) + (b * c.w);
+    return x * y;
 }
 
-__device__ __host__
-float f2 (float a, float b, float4 c)
+// Required for functional pointer argument in kernel function
+// Static pointers to device functions
+template <typename T>
+__device__ func_t<T> p_add_func = add_func<T>;
+template <typename T>
+__device__ func_t<T> p_mul_func = mul_func<T>;
+
+
+template <typename T>
+__global__ void kernel(func_t<T> op, T * d_x, T * d_y, T * result)
 {
-    return a + b + c.x + c.y + c.z + c.w;
+    *result = (*op)(*d_x, *d_y);
 }
 
-__constant__ fp function_table[] = {f1, f2};
-
-int main(void)
+template <typename T>
+void test(T x, T y)
 {
-    cudaSetDevice(1);
+    func_t<T> h_add_func;
+    func_t<T> h_mul_func;
 
-    const float c1 = 1.0f, c2 = 2.0f;
-    const int n = 20;
-    float4 vin[n];
-    float vout1[n], vout2[n];
-    for(int i=0, j=0; i<n; i++ ) {
-        vin[i].x = j  ; vin[i].y = j  ;
-        vin[i].z = j  ; vin[i].w = j  ;
-    }
+    T * d_x, * d_y;
+    cudaMalloc(&d_x, sizeof(T));
+    cudaMalloc(&d_y, sizeof(T));
+    cudaMemcpy(d_x, &x, sizeof(T), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_y, &y, sizeof(T), cudaMemcpyHostToDevice);
 
-    float4 * _vin;
-    float * _vout1, * _vout2;
-    size_t sz4 = sizeof(float4) * size_t(n);
-    size_t sz1 = sizeof(float) * size_t(n);
-    cudaMalloc((void **)&_vin, sz4);
-    cudaMalloc((void **)&_vout1, sz1);
-    cudaMalloc((void **)&_vout2, sz1);
-    cudaMemcpy(_vin, &vin[0], sz4, cudaMemcpyHostToDevice);
+    T result;
+    T * d_result, * h_result;
+    cudaMalloc(&d_result, sizeof(T));
+    h_result = &result;
 
-    fp funcs[2];
-    cudaMemcpyFromSymbol(&funcs, "function_table", 2 * sizeof(fp));
+    // Copy device function pointer to host side
+    cudaMemcpyFromSymbol(&h_add_func, p_add_func<T>, sizeof(func_t<T>));
+    cudaMemcpyFromSymbol(&h_mul_func, p_mul_func<T>, sizeof(func_t<T>));
 
-    kernel<<<1,32>>>(c1, c2, funcs[0], _vin, _vout1, n);
-    cudaMemcpy(&vout1[0], _vout1, sz1, cudaMemcpyDeviceToHost);
+    kernel<T><<<1,1>>>(h_add_func, d_x, d_y, d_result);
+    cudaDeviceSynchronize();
+    cudaMemcpy(h_result, d_result, sizeof(T), cudaMemcpyDeviceToHost);
+    std::cout << "Sum: " << result << std::endl;
 
-    kernel<<<1,32>>>(c1, c2, funcs[1], _vin, _vout2, n);
-    cudaMemcpy(&vout2[0], _vout2, sz1, cudaMemcpyDeviceToHost);
+    kernel<T><<<1,1>>>(h_mul_func, d_x, d_y, d_result);
+    cudaDeviceSynchronize();
+    cudaMemcpy(h_result, d_result, sizeof(T), cudaMemcpyDeviceToHost);
+    std::cout << "Product: " << result << std::endl;
+}
 
-    struct functor func1(c1, c2, f1), func2(c1, c2, f2);
-    for(int i=0; i<n; i++) {
-        printf("- %6.f %6.f (%6.f,%6.f,%6.f,%6.f ) %6.f %6.f %6.f %6.f\n",
-                i, c1, c2, vin[i].x, vin[i].y, vin[i].z, vin[i].w,
-                vout1[i], func1(vin[i]), vout2[i], func2(vin[i]));
-    }
+int main()
+{
+    std::cout << "Test int for type int ..." << std::endl;
+    test<int>(2.05, 10.00);
 
-    return 0;
+    std::cout << "Test float for type float ..." << std::endl;
+    test<float>(2.05, 10.00);
+
+    std::cout << "Test double for type double ..." << std::endl;
+    test<double>(2.05, 10.00);
 }

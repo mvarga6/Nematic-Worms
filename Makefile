@@ -3,11 +3,11 @@ INCDIR = include
 SRCDIR = src
 
 ifeq ($(DEBUG),true)
-	FLAGS = -lcurand -ccbin=g++ -std=c++11 -G -g -lineinfo -Wno-deprecated-gpu-targets
+	FLAGS = -arch=sm_50 -lcurand -ccbin=g++ -std=c++11 -G -g -lineinfo -Wno-deprecated-gpu-targets
 	OBJDIR := obj/debug
 	BLDDIR := bin/debug
 else
-	FLAGS = -lcurand -ccbin=g++ -std=c++11 -Xptxas -O3,-v -Wno-deprecated-gpu-targets
+	FLAGS = -arch=sm_50 -lcurand -ccbin=g++ -std=c++11 -Xptxas -O3,-v -Wno-deprecated-gpu-targets
 	OBJDIR := obj/release
 	BLDDIR := bin/release
 endif

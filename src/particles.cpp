@@ -1,16 +1,16 @@
 #include "particles.h"
-
+#include "io.h"
 
 Particles::Particles(uint n)
 {
     this->count = n;
-    this->alloc_size = sizeof(ptype) * n;
+    this->alloc_size = n * sizeof(ptype);
     this->r = new ptype[n];
     this->v = new ptype[n];
     this->f = new ptype[n];
-    cudaMalloc((void**)&(this->dev_r), this->alloc_size);
-    cudaMalloc((void**)&(this->dev_v), this->alloc_size);
-    cudaMalloc((void**)&(this->dev_f), this->alloc_size);
+    ShowError(cudaMalloc((void**)&(this->dev_r), this->alloc_size));
+    ShowError(cudaMalloc((void**)&(this->dev_v), this->alloc_size));
+    ShowError(cudaMalloc((void**)&(this->dev_f), this->alloc_size));
 }
 
 
@@ -40,15 +40,15 @@ void Particles::ZeroHost()
 
 void Particles::ZeroDevice()
 {
-    cudaMemset((void**)this->dev_r, 0, this->alloc_size);
-    cudaMemset((void**)this->dev_v, 0, this->alloc_size);
-    cudaMemset((void**)this->dev_f, 0, this->alloc_size);
+    ShowError(cudaMemset((void**)this->dev_r, 0, this->alloc_size));
+    ShowError(cudaMemset((void**)this->dev_v, 0, this->alloc_size));
+    ShowError(cudaMemset((void**)this->dev_f, 0, this->alloc_size));
 }
 
 
 void Particles::ToDevice(bool onlyParticles)
 {
-	cudaMemcpy(this->dev_r, this->r, this->alloc_size, cudaMemcpyHostToDevice);
+	ShowError(cudaMemcpy(this->dev_r, this->r, this->alloc_size, cudaMemcpyHostToDevice));
     if (!onlyParticles)
     {
         cudaMemcpy(this->dev_v, this->r, this->alloc_size, cudaMemcpyHostToDevice);
@@ -59,7 +59,7 @@ void Particles::ToDevice(bool onlyParticles)
 
 void Particles::ToHost(bool onlyParticles)
 {
-	cudaMemcpy(this->r, this->dev_r, this->alloc_size, cudaMemcpyDeviceToHost);
+	ShowError(cudaMemcpy(this->r, this->dev_r, this->alloc_size, cudaMemcpyDeviceToHost));
     if (!onlyParticles)
     {
         cudaMemcpy(this->v, this->dev_v, this->alloc_size, cudaMemcpyDeviceToHost);

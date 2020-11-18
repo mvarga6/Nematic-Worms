@@ -1,7 +1,5 @@
 #pragma once
 #include "cuda_runtime.h"
-#include <stdlib.h>
-#include <stdio.h>
-
+#include <iostream>
 
 void ShowError(cudaError_t Status);

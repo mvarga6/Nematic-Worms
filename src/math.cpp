@@ -119,28 +119,35 @@ __host__ __device__ void apply_pbc_z(float3 box, float3* p)
 }
 
 
-__device__ PositionFunction p_apply_pbc   = apply_pbc;
-__device__ PositionFunction p_apply_pbc_x = apply_pbc_x;
-__device__ PositionFunction p_apply_pbc_y = apply_pbc_y;
-__device__ PositionFunction p_apply_pbc_z = apply_pbc_z;
+PositionFunction h_position_function_table[4];
+__constant__ PositionFunction d_position_function_table[] = {
+    apply_pbc,
+    apply_pbc_x,
+    apply_pbc_y,
+    apply_pbc_z
+};
 
-__device__ DistanceFunction p_displacement_pbc   = displacement_pbc;
-__device__ DistanceFunction p_displacement_pbc_x = displacement_pbc_x;
-__device__ DistanceFunction p_displacement_pbc_y = displacement_pbc_y;
-__device__ DistanceFunction p_displacement_pbc_z = displacement_pbc_z;
+DistanceFunction h_distance_function_table[4];
+__constant__ DistanceFunction d_distance_function_table[] = {
+    displacement_pbc,
+    displacement_pbc_x,
+    displacement_pbc_y,
+    displacement_pbc_z
+};
 
-PositionFunction h_apply_pbc;
-PositionFunction h_apply_pbc_x;
-PositionFunction h_apply_pbc_y;
-PositionFunction h_apply_pbc_z;
-
-#include <iostream>
-
-__host__ void copy_device_function_symbols()
+__host__ void SetupDeviceFunctionTables()
 {
-    std::cout << "Size of PositionFunction: " << sizeof(PositionFunction) << std::endl;
-    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc, p_apply_pbc, sizeof(PositionFunction)));
-    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc_x, p_apply_pbc_x, sizeof(PositionFunction)));
-    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc_y, p_apply_pbc_y, sizeof(PositionFunction)));
-    ShowError(cudaMemcpyFromSymbol(&h_apply_pbc_z, p_apply_pbc_z, sizeof(PositionFunction)));
+    ShowError(cudaMemcpyFromSymbol(&h_position_function_table, d_position_function_table, 4 * sizeof(PositionFunction)));
+    ShowError(cudaMemcpyFromSymbol(&h_distance_function_table, d_distance_function_table, 4 * sizeof(PositionFunction)));
+}
+
+
+__host__ PositionFunction GetPositionFunction(int i)
+{
+    return h_position_function_table[i];
+}
+
+__host__ DistanceFunction GetDistanceFunction(int i)
+{
+    return h_distance_function_table[i];
 }
