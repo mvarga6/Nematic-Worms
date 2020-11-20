@@ -48,7 +48,7 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize /*, bool bUseOp
     m_numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
     //    float3 worldSize = make_float3(2.0f, 2.0f, 2.0f);
 
-    m_gridSortBits = 18;    // increase this for larger grids
+    m_gridSortBits = 24;    // increase this for larger grids
 
     // set simulation parameters
     m_params.gridSize = m_gridSize;

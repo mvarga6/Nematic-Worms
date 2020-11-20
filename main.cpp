@@ -18,7 +18,7 @@
 #define THRESHOLD         0.30f
 
 #define GRID_SIZE       64
-#define NUM_PARTICLES   16384
+#define NUM_PARTICLES   16384 * 32
 
 
 extern "C" void cudaInit(int argc, char **argv);
@@ -31,10 +31,10 @@ int main(int argc, char *argv[])
 
 	// Simulation parameters
 	int numParticles = NUM_PARTICLES;
-	float timestep = 0.01f;
+	float timestep = 0.001f;
 	float damping = 1.0f;
 	float gravity = 0.0003f;
-	int iterations = 10000;
+	int iterations = 1000;
 	int ballr = 1;
 	float collideSpring = 0.5f;;
 	float collideDamping = 0.02f;;
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numParticles, gridSize);
-	psystem->reset(ParticleSystem::CONFIG_GRID);
+	psystem->reset(ParticleSystem::CONFIG_RANDOM);
 
 	// Pre time loop actions
 	StopWatchInterface *timer = NULL;
@@ -67,5 +67,6 @@ int main(int argc, char *argv[])
 	printf("particles, Throughput = %.4f KParticles/s, Time = %.5f s, Size = %u particles, NumDevsUsed = %u, Workgroup = %u\n",
            (1.0e-3 * numParticles)/fAvgSeconds, fAvgSeconds, numParticles, 1, 0);
 
+	delete psystem;
 	return 0;
 }
