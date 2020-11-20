@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <algorithm>
+#include <string>
 
 // Our application import
 #include "particleSystem.h"
@@ -18,7 +19,7 @@
 #define THRESHOLD         0.30f
 
 #define GRID_SIZE       64
-#define NUM_PARTICLES   16384 * 32
+#define NUM_PARTICLES   16384
 
 
 extern "C" void cudaInit(int argc, char **argv);
@@ -31,20 +32,22 @@ int main(int argc, char *argv[])
 
 	// Simulation parameters
 	int numParticles = NUM_PARTICLES;
-	float timestep = 0.001f;
+	float timestep = 0.01f;
+	int printRate = 100;
+	int iterations = 20000;
 	float damping = 1.0f;
-	float gravity = 0.0003f;
-	int iterations = 1000;
 	int ballr = 1;
-	float collideSpring = 0.5f;;
-	float collideDamping = 0.02f;;
+	float collideSpring = 0.5f;
+	float collideDamping = 0.02f;
 	float collideShear = 0.1f;
 	float collideAttraction = 0.0f;
+	const std::string particlesFile = "nw.xyz";
 	uint3 gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numParticles, gridSize);
 	psystem->reset(ParticleSystem::CONFIG_RANDOM);
+	psystem->setGravity(-0.001f);
 
 	// Pre time loop actions
 	StopWatchInterface *timer = NULL;
@@ -56,6 +59,11 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < iterations; ++i)
     {
         psystem->update(timestep);
+
+		if (i % printRate == 0)
+		{
+			psystem->saveToFile(particlesFile);
+		}
     }
 
 	// Post time loop actions

@@ -28,6 +28,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <algorithm>
+#include <iostream>
+#include <fstream>
 
 #ifndef CUDART_PI_F
 #define CUDART_PI_F         3.141592654f
@@ -48,7 +50,7 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize /*, bool bUseOp
     m_numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
     //    float3 worldSize = make_float3(2.0f, 2.0f, 2.0f);
 
-    m_gridSortBits = 24;    // increase this for larger grids
+    m_gridSortBits = 18;    // increase this for larger grids
 
     // set simulation parameters
     m_params.gridSize = m_gridSize;
@@ -346,6 +348,22 @@ ParticleSystem::dumpParticles(uint start, uint count)
     }
 }
 
+void
+ParticleSystem::saveToFile(const std::string& filePath)
+{
+    copyArrayFromDevice(m_hPos, m_dPos, 0, sizeof(float)*4*m_numParticles);
+
+    std::ofstream fout;
+    fout.open(filePath, std::ios::out | std::ios::app);
+    fout << m_numParticles << std::endl;
+    fout << "Test simulation" << std::endl;
+    for (int i = 0; i < m_numParticles; i++)
+    {
+        fout << "A " << m_hPos[i*4+0] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2] << std::endl;
+    }
+    fout.close();
+}
+
 float *
 ParticleSystem::getArray(ParticleArray array)
 {
@@ -431,9 +449,9 @@ ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numPartic
                     m_hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand()*2.0f-1.0f)*jitter;
                     m_hPos[i*4+3] = 1.0f;
 
-                    m_hVel[i*4] = 0.0f;
-                    m_hVel[i*4+1] = 0.0f;
-                    m_hVel[i*4+2] = 0.0f;
+                    m_hVel[i*4]   = 0.1f * (frand()*2.0f-1.0f);
+                    m_hVel[i*4+1] = 0.1f * (frand()*2.0f-1.0f);
+                    m_hVel[i*4+2] = 0.1f * (frand()*2.0f-1.0f);
                     m_hVel[i*4+3] = 0.0f;
                 }
             }
@@ -461,9 +479,9 @@ ParticleSystem::reset(ParticleConfig config)
                     m_hPos[p++] = 2 * (point[1] - 0.5f);
                     m_hPos[p++] = 2 * (point[2] - 0.5f);
                     m_hPos[p++] = 1.0f; // radius
-                    m_hVel[v++] = 0.0f;
-                    m_hVel[v++] = 0.0f;
-                    m_hVel[v++] = 0.0f;
+                    m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
                     m_hVel[v++] = 0.0f;
                 }
             }
@@ -471,7 +489,7 @@ ParticleSystem::reset(ParticleConfig config)
 
         case CONFIG_GRID:
             {
-                float jitter = m_params.particleRadius*0.01f;
+                float jitter = m_params.particleRadius * 0.05f;
                 uint s = (int) ceilf(powf((float) m_numParticles, 1.0f / 3.0f));
                 uint gridSize[3];
                 gridSize[0] = gridSize[1] = gridSize[2] = s;

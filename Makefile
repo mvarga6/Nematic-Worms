@@ -378,6 +378,6 @@ run: build
 	$(EXEC) ./nw
 
 clean:
-	rm -f nw particleSystem.o particleSystem_cuda.o main.o
+	rm -f nw particleSystem.o particleSystem_cuda.o main.o nw.xyz
 
 clobber: clean
