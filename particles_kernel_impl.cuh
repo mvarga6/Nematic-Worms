@@ -354,7 +354,7 @@ float3 collideCell(int3    gridPos,
 
 
 __global__
-void collideD(float4 *forces,                // update: unsorted forces array
+void collideKernel(float4 *forces,          // update: unsorted forces array
               float4 *sortedPos,            // input: sorted positions
               float4 *sortedVel,            // input: sorted velocities
               uint   *gridParticleIndex,    // input: sorted particle indices
@@ -391,6 +391,71 @@ void collideD(float4 *forces,                // update: unsorted forces array
     // write new velocity back to original unsorted location
     uint originalIndex = gridParticleIndex[index];
     forces[originalIndex] += make_float4(force, 0.0f);
+}
+
+
+//
+// Implementation of the GROMACS harmonic angle potential
+// http://manual.gromacs.org/current/reference-manual/functions/bonded-interactions.html#harmonic-angle-potential
+//
+__global__
+void filamentKernel(float4 *forces,     // update: particle forces
+                    float4 *tangent,    // output: filament tangent at particle
+                    float4 *pos,        // input:  particle positions
+                    uint numFilaments)
+{
+    uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+
+    if (index >= numFilaments) return;
+
+    const uint size = params.filamentSize;
+    const float k = params.bondBendingK;
+
+    uint i = 0;
+
+    float3 r_i  = make_float3(0.0f), r_j  = make_float3(0.0f), r_k  = make_float3(0.0f);
+    float3 f_i  = make_float3(0.0f), f_j  = make_float3(0.0f), f_k  = make_float3(0.0f);
+    float3 r_ij = make_float3(0.0f), r_jk = make_float3(0.0f), r_ik = make_float3(0.0f);
+    float A = 0.0f, d_ij = 0.0f, d_jk = 0.0f, d_ik = 0.0f, d_ij_jk = 0.0f;
+    float3 B = make_float3(0.0f), C = make_float3(0.0f);
+
+    for (int p = 0; p < size; p++)
+    {
+        i    = index * size + p;
+        r_i  = make_float3(pos[i]);
+
+        // Bond bending forces
+        if (p < size - 2)
+        {
+            r_j  = make_float3(pos[i + 1]);
+            r_k  = make_float3(pos[i + 2]);
+
+            r_ij = r_j - r_i;
+            r_jk = r_k - r_j;
+            d_ij = lengthPeriodic(r_ij);
+            d_jk = lengthPeriodic(r_jk);
+            printf("[%i][%i] [%.4f %.4f %.4f] [%.4f %.4f %.4f]\n", index, i, r_ij.x, r_ij.y, r_ij.z, r_jk.x, r_jk.y, r_jk.z);
+            d_ij_jk = dot(r_ij, r_jk);
+
+            A = k / (d_ij * d_jk);
+            B = r_ij * d_ij_jk / dot(r_ij, r_ij);
+            C = r_jk * d_ij_jk / dot(r_jk, r_jk);
+
+            f_i = -A * (r_jk - B);
+            f_k = -A * (C - r_ij);
+            f_j = -f_i - f_k;
+
+            forces[i]     += make_float4(f_i, 0.0f);
+            forces[i + 1] += make_float4(f_j, 0.0f);
+            forces[i + 2] += make_float4(f_k, 0.0f);
+
+            // compute tangent at j at same time
+            r_ik = r_k - r_i;
+            d_ik = lengthPeriodic(r_ik);
+            tangent[i + 1] = make_float4(r_ik / d_ik, 0.0f);
+        }
+
+    }
 }
 
 #endif

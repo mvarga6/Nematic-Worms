@@ -24,7 +24,7 @@
 class ParticleSystem
 {
     public:
-        ParticleSystem(uint numParticles, uint3 gridSize /*, bool bUseOpenGL*/);
+        ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridSize);
         ~ParticleSystem();
 
         enum ParticleConfig
@@ -38,6 +38,7 @@ class ParticleSystem
         {
             POSITION,
             VELOCITY,
+            TANGENT,
         };
 
         void update(float deltaTime);
@@ -87,7 +88,27 @@ class ParticleSystem
         }
         void setFilamentSize(uint n)
         {
+            m_filamentSize = n;
             m_params.filamentSize = n;
+            updateNumParticles();
+        }
+        void setNumFilaments(uint n)
+        {
+            m_numFilaments = n;
+            m_params.numFilaments = n;
+            updateNumParticles();
+        }
+        void setBondSpringConstant(float x)
+        {
+            m_params.bondSpringK = x;
+        }
+        void setBondSpringLength(float x)
+        {
+            m_params.bondSpringL = x;
+        }
+        void setBondBendingConstant(float x)
+        {
+            m_params.bondBendingK = x;
         }
 
         float getParticleRadius()
@@ -117,9 +138,17 @@ class ParticleSystem
 
         void initGrid(uint *size, float spacing, float jitter, uint numParticles);
 
+        void updateNumParticles()
+        {
+            m_numParticles = m_numFilaments * m_filamentSize;
+            m_params.numParticles = m_numParticles;
+        }
+
     protected: // data
         bool m_bInitialized;
         uint m_numParticles;
+        uint m_numFilaments;
+        uint m_filamentSize;
 
         // CPU data
         float *m_hPos;              // particle positions
@@ -132,6 +161,7 @@ class ParticleSystem
         // GPU data
         float *m_dPos;
         float *m_dVel;
+        float *m_dTangent;
         float *m_dForce;
         float *m_dForceOld;
 

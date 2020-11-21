@@ -41,22 +41,23 @@ int main(int argc, char *argv[])
 
 	// Simulation parameters
 	const std::string outFile = "nw.xyz";
-	int numParticles 		  = NUM_PARTICLES;
+	uint numFilaments		  = 256;
 	uint filamentSize 		  = 32;
+	int numParticles 		  = numFilaments * filamentSize;
 	float timestep 			  = 0.001f;
-	int printRate 			  = 1000;
-	int iterations 			  = 500000;
+	int printRate 			  = 100;
+	int iterations 			  = 10000;
 	float damping 			  = 0.0f;
 	float gravity 			  = -0.001f;
 
 	uint3 gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
 
 	// Instantiate the system of particles
-	auto psystem = new ParticleSystem(numParticles, gridSize);
+	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);
 	psystem->setGravity(gravity);
 	psystem->setDamping(damping);
-	psystem->setFilamentSize(filamentSize);
 	psystem->reset(ParticleSystem::CONFIG_GRID);
+	psystem->saveToFile(outFile);
 
 	// Pre time loop actions
 	StopWatchInterface *timer = NULL;

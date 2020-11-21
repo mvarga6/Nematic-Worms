@@ -55,6 +55,11 @@ extern "C"
                  uint   numParticles,
                  uint   numCells);
 
+    void filamentForces(float *force,
+                        float *tangent,
+                        float *pos,
+                        float numFilaments);
+
     void sortParticles(uint *dGridParticleHash, uint *dGridParticleIndex, uint numParticles);
 
 }

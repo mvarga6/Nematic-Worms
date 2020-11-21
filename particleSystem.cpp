@@ -35,9 +35,11 @@
 #define CUDART_PI_F         3.141592654f
 #endif
 
-ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize) :
+ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridSize) :
     m_bInitialized(false),
-    m_numParticles(numParticles),
+    m_numFilaments(numFilaments),
+    m_filamentSize(filamentSize),
+    m_numParticles(numFilaments * filamentSize),
     m_hPos(0),
     m_hVel(0),
     m_dPos(0),
@@ -48,10 +50,11 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize) :
     m_timer(NULL),
     m_solverIterations(1)
 {
-        // set simulation parameters
-    m_params.numBodies = m_numParticles;
+    // Filament parameters
+    m_params.numFilaments = m_numFilaments;
+    m_params.filamentSize = m_filamentSize;
+    m_params.numParticles = m_numParticles;
     m_params.particleRadius = 1.0f / 64.0f;
-    m_params.filamentSize = 8;
 
     // System size/boundaries
     m_gridSortBits = 18;    // increase this for larger grids
@@ -68,6 +71,7 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize) :
     // Particle-Particle bonding
     m_params.bondSpringK = 57.f;
     m_params.bondSpringL = m_params.particleRadius * 0.8f;
+    m_params.bondBendingK = 0.1f;
 
     // Particle-Particle forces
     m_params.spring = 0.5f;
@@ -80,13 +84,13 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize) :
     m_params.gravity = make_float3(0.0f, -0.0003f, 0.0f);
     m_params.globalDamping = 1.0f;
 
-    _initialize(numParticles);
+    _initialize(m_numParticles);
 }
 
 ParticleSystem::~ParticleSystem()
 {
     _finalize();
-    m_numParticles = 0;
+    m_numParticles = m_numFilaments = m_filamentSize = 0;
 }
 
 inline float lerp(float a, float b, float t)
@@ -139,6 +143,7 @@ ParticleSystem::_initialize(int numParticles)
     unsigned int memSize = sizeof(float) * 4 * m_numParticles;
     allocateArray((void **)&m_dPos, memSize);
     allocateArray((void **)&m_dVel, memSize);
+    allocateArray((void **)&m_dTangent, memSize);
     allocateArray((void **)&m_dForce, memSize);
     allocateArray((void **)&m_dForceOld, memSize);
     allocateArray((void **)&m_dSortedPos, memSize);
@@ -166,6 +171,7 @@ ParticleSystem::_finalize()
 
     freeArray(m_dPos);
     freeArray(m_dVel);
+    freeArray(m_dTangent);
     freeArray(m_dSortedPos);
     freeArray(m_dSortedVel);
 
@@ -192,6 +198,13 @@ ParticleSystem::update(float deltaTime)
         m_dForceOld,
         deltaTime,
         m_numParticles);
+
+    // forces of filament bonds
+    filamentForces(
+        m_dForce,
+        m_dTangent,
+        m_dPos,
+        m_numFilaments);
 
     // calculate grid hash
     calcHash(
@@ -323,6 +336,10 @@ ParticleSystem::setArray(ParticleArray array, const float *data, int start, int 
         case VELOCITY:
             copyArrayToDevice(m_dVel, data, start*4*sizeof(float), count*4*sizeof(float));
             break;
+
+        case TANGENT:
+            copyArrayToDevice(m_dTangent, data, start*4*sizeof(float), count*4*sizeof(float));
+            break;
     }
 }
 
@@ -364,6 +381,7 @@ ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numPartic
 void
 ParticleSystem::reset(ParticleConfig config)
 {
+    auto tang = new float[4 * m_numParticles];
     switch (config)
     {
         default:
@@ -396,7 +414,7 @@ ParticleSystem::reset(ParticleConfig config)
                 int ydim_max = int(floor(m_params.boxSize.y / (2 * m_params.particleRadius)));
                 int xyplane_max = xdim_max * ydim_max;
                 float x,y,z,x_head;
-                uint w, p = 0, v = 0;
+                uint w, p = 0, v = 0, t = 0;
 
                 printf("CONFIG_GRID:\n");
                 printf("filamentLength: %.4f\n", filamentLength);
@@ -414,7 +432,12 @@ ParticleSystem::reset(ParticleConfig config)
                     m_hPos[p++] = y + m_params.origin.y;
                     m_hPos[p++] = z + m_params.origin.z;
                     m_hPos[p++] = 1.0f; // radius
-                    m_hVel[v++] = m_hVel[v++] = m_hVel[v++] = m_hVel[v++] = 0.0f;
+                    m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.0f;
+                    tang[t++] = 1.0f;
+                    tang[t++] = tang[t++] = tang[t++] = 0.0f;
                 }
 
                 // float jitter = m_params.particleRadius * 0.05f;
@@ -428,6 +451,7 @@ ParticleSystem::reset(ParticleConfig config)
 
     setArray(POSITION, m_hPos, 0, m_numParticles);
     setArray(VELOCITY, m_hVel, 0, m_numParticles);
+    setArray(TANGENT, tang, 0, m_numParticles);
 }
 
 void

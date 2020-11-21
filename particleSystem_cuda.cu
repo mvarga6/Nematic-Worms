@@ -177,7 +177,7 @@ extern "C"
         computeGridSize(numParticles, 64, numBlocks, numThreads);
 
         // execute the kernel
-        collideD<<< numBlocks, numThreads >>>((float4 *)force,
+        collideKernel<<< numBlocks, numThreads >>>((float4 *)force,
                                               (float4 *)sortedPos,
                                               (float4 *)sortedVel,
                                               gridParticleIndex,
@@ -188,6 +188,24 @@ extern "C"
         // check if kernel invocation generated an error
         getLastCudaError("Kernel execution failed");
 
+    }
+
+    void filamentForces(float *force,
+                        float *tangent,
+                        float *pos,
+                        float numFilaments)
+    {
+        // thread per filament
+        uint numThreads, numBlocks;
+        computeGridSize(numFilaments, 64, numBlocks, numThreads);
+
+        filamentKernel<<< numBlocks, numThreads >>>((float4 *)force,
+                                                    (float4 *)tangent,
+                                                    (float4 *)pos,
+                                                    numFilaments);
+
+        // check if kernel invocation generated an error
+        getLastCudaError("Kernel execution failed");
     }
 
 

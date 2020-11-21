@@ -258,6 +258,8 @@ else
       BUILD_TYPE := release
 endif
 
+NVCCFLAGS += -Wno-deprecated-gpu-targets
+
 ALL_CCFLAGS :=
 ALL_CCFLAGS += $(NVCCFLAGS)
 ALL_CCFLAGS += $(EXTRA_NVCCFLAGS)

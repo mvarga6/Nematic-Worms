@@ -32,12 +32,13 @@ struct SimParams
     float3 boxSize;
     float3 cellSize;
 
-    uint numBodies;
-    uint maxParticlesPerCell;
+    uint numParticles;
+    uint numFilaments;
     uint filamentSize;
 
     float bondSpringK;
     float bondSpringL;
+    float bondBendingK;
 
     float spring;
     float damping;
