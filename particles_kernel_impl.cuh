@@ -56,9 +56,6 @@ struct integrate_functor
         pos += vel * dt + 0.5f * f_old * dt * dt;
         vel += 0.5f * (f + f_old) * dt;
 
-        // new position = old position + velocity * deltaTime
-        // pos += vel * deltaTime;
-
         // set this to zero to disable collisions with cube sides
 #if 0
 
@@ -254,7 +251,7 @@ void reorderDataAndFindCellStartD(uint   *cellStart,        // output: cell star
 
 // collide two spheres using DEM method
 __device__
-float3 collideSpheres(float3 posA, float3 posB,
+float3 collideParticles(float3 posA, float3 posB,
                       float3 velA, float3 velB,
                       float radiusA, float radiusB,
                       float attraction)
@@ -291,22 +288,37 @@ float3 collideSpheres(float3 posA, float3 posB,
 }
 
 
+// collide two spheres using DEM method
+__device__
+float3 bondHookean(float3 posA, float3 posB, float k, float L)
+{
+    float3 relPos = posB - posA;
+    float dist = lengthPeriodic(relPos);
+    float3 norm = relPos / dist;
+    return -k * (L - dist) * norm;
+}
+
+
 
 // collide a particle against all other particles in a given cell
 __device__
 float3 collideCell(int3    gridPos,
                    uint    index,
-                   float3  pos,
-                   float3  vel,
-                   float4 *oldPos,
-                   float4 *oldVel,
+                   float3  r,
+                   float3  v,
+                   float4 *pos,
+                   float4 *vel,
                    uint   *cellStart,
-                   uint   *cellEnd)
+                   uint   *cellEnd,
+                   uint   *gridParticleIndex)
 {
     uint gridHash = calcGridHash(gridPos);
 
     // get start of bucket for this cell
-    uint startIndex = cellStart[gridHash];
+    uint startIndex    = cellStart[gridHash];
+    uint filamentIndex = gridParticleIndex[index] / params.filamentSize;
+    uint chainIndex    = gridParticleIndex[index] % params.filamentSize;
+    uint filamentIndex2, chainIndex2;
 
     float3 force = make_float3(0.0f);
 
@@ -319,11 +331,20 @@ float3 collideCell(int3    gridPos,
         {
             if (j != index)                // check not colliding with self
             {
-                float3 pos2 = make_float3(oldPos[j]);
-                float3 vel2 = make_float3(oldVel[j]);
+                float3 r2      = make_float3(pos[j]);
+                float3 v2      = make_float3(vel[j]);
+                filamentIndex2 = gridParticleIndex[j] / params.filamentSize;
+                chainIndex2    = gridParticleIndex[j] % params.filamentSize;
 
-                // collide two spheres
-                force += collideSpheres(pos, pos2, vel, vel2, params.particleRadius, params.particleRadius, params.attraction);
+                // filament bonding
+                if (filamentIndex == filamentIndex2 && ((chainIndex + 1 == chainIndex2) || (chainIndex - 1 == chainIndex2)))
+                {
+                    force += bondHookean(r, r2, params.bondSpringK, params.bondSpringL);
+                }
+                else // collide particles
+                {
+                    force += collideParticles(r, r2, v, v2, params.particleRadius, params.particleRadius, params.attraction);
+                }
             }
         }
     }
@@ -334,7 +355,6 @@ float3 collideCell(int3    gridPos,
 
 __global__
 void collideD(float4 *forces,                // update: unsorted forces array
-            //   float4 *newVel,               // output: new velocity
               float4 *sortedPos,            // input: sorted positions
               float4 *sortedVel,            // input: sorted velocities
               uint   *gridParticleIndex,    // input: sorted particle indices
@@ -363,17 +383,13 @@ void collideD(float4 *forces,                // update: unsorted forces array
             for (int x=-1; x<=1; x++)
             {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                force += collideCell(neighbourPos, index, pos, vel, sortedPos, sortedVel, cellStart, cellEnd);
+                force += collideCell(neighbourPos, index, pos, vel, sortedPos, sortedVel, cellStart, cellEnd, gridParticleIndex);
             }
         }
     }
 
-    // collide with cursor sphere
-    // force += collideSpheres(pos, params.colliderPos, vel, make_float3(0.0f, 0.0f, 0.0f), params.particleRadius, params.colliderRadius, 0.0f);
-
     // write new velocity back to original unsorted location
     uint originalIndex = gridParticleIndex[index];
-    // newVel[originalIndex] = make_float4(vel + force, 0.0f);
     forces[originalIndex] += make_float4(force, 0.0f);
 }
 

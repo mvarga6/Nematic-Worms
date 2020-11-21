@@ -377,6 +377,8 @@ nw: particleSystem.o particleSystem_cuda.o main.o
 run: build
 	$(EXEC) ./nw
 
+clean-run: clean build run
+
 clean:
 	rm -f nw particleSystem.o particleSystem_cuda.o main.o nw.xyz
 

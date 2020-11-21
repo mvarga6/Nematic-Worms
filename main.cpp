@@ -19,10 +19,19 @@
 #define THRESHOLD         0.30f
 
 #define GRID_SIZE       64
-#define NUM_PARTICLES   16384
+#define NUM_PARTICLES   16384 * 4
 
 
 extern "C" void cudaInit(int argc, char **argv);
+
+
+void printInfo(StopWatchInterface *timer, int numParticles, int iterations, int iter)
+{
+	// Print some speed metrics
+	float fAvgSeconds = ((float)1.0e-3 * (float)sdkGetTimerValue(&timer)/(float)iterations);
+	printf("[%i / %i] particles, Throughput = %.4f KParticles/s, Time = %.5f s, Size = %u particles, NumDevsUsed = %u, Workgroup = %u\n",
+           iter, iterations, (1.0e-3 * numParticles)/fAvgSeconds, fAvgSeconds, numParticles, 1, 0);
+}
 
 
 int main(int argc, char *argv[])
@@ -31,24 +40,23 @@ int main(int argc, char *argv[])
 	cudaInit(argc, argv);
 
 	// Simulation parameters
-	int numParticles = NUM_PARTICLES;
-	float timestep = 0.01f;
-	int printRate = 100;
-	int iterations = 20000;
-	float damping = 0.0f;
-	float gravity = -0.001f;
-	float collideSpring = 0.5f;
-	float collideDamping = 0.02f;
-	float collideShear = 0.1f;
-	float collideAttraction = 0.0f;
-	const std::string particlesFile = "nw.xyz";
+	const std::string outFile = "nw.xyz";
+	int numParticles 		  = NUM_PARTICLES;
+	uint filamentSize 		  = 32;
+	float timestep 			  = 0.001f;
+	int printRate 			  = 1000;
+	int iterations 			  = 500000;
+	float damping 			  = 0.0f;
+	float gravity 			  = -0.001f;
+
 	uint3 gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numParticles, gridSize);
-	psystem->reset(ParticleSystem::CONFIG_RANDOM);
 	psystem->setGravity(gravity);
 	psystem->setDamping(damping);
+	psystem->setFilamentSize(filamentSize);
+	psystem->reset(ParticleSystem::CONFIG_GRID);
 
 	// Pre time loop actions
 	StopWatchInterface *timer = NULL;
@@ -63,18 +71,14 @@ int main(int argc, char *argv[])
 
 		if (i % printRate == 0)
 		{
-			psystem->saveToFile(particlesFile);
+			psystem->saveToFile(outFile);
+			printInfo(timer, numParticles, iterations, i);
 		}
     }
 
 	// Post time loop actions
 	cudaDeviceSynchronize();
     sdkStopTimer(&timer);
-
-	// Print some speed metrics
-	float fAvgSeconds = ((float)1.0e-3 * (float)sdkGetTimerValue(&timer)/(float)iterations);
-	printf("particles, Throughput = %.4f KParticles/s, Time = %.5f s, Size = %u particles, NumDevsUsed = %u, Workgroup = %u\n",
-           (1.0e-3 * numParticles)/fAvgSeconds, fAvgSeconds, numParticles, 1, 0);
 
 	delete psystem;
 	return 0;

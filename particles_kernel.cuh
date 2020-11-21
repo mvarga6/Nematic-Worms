@@ -22,9 +22,6 @@ typedef unsigned int uint;
 // simulation parameters
 struct SimParams
 {
-    float3 colliderPos;
-    float  colliderRadius;
-
     float3 gravity;
     float globalDamping;
     float particleRadius;
@@ -37,6 +34,10 @@ struct SimParams
 
     uint numBodies;
     uint maxParticlesPerCell;
+    uint filamentSize;
+
+    float bondSpringK;
+    float bondSpringL;
 
     float spring;
     float damping;

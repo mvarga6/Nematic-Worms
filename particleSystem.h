@@ -85,23 +85,14 @@ class ParticleSystem
         {
             m_params.attraction = x;
         }
-
-        void setColliderPos(float3 x)
+        void setFilamentSize(uint n)
         {
-            m_params.colliderPos = x;
+            m_params.filamentSize = n;
         }
 
         float getParticleRadius()
         {
             return m_params.particleRadius;
-        }
-        float3 getColliderPos()
-        {
-            return m_params.colliderPos;
-        }
-        float getColliderRadius()
-        {
-            return m_params.colliderRadius;
         }
         uint3 getGridSize()
         {
@@ -146,7 +137,6 @@ class ParticleSystem
 
         float *m_dSortedPos;
         float *m_dSortedVel;
-        float *m_dSortedForce;
 
         // grid data for sorting method
         uint  *m_dGridParticleHash; // grid hash value for each particle
