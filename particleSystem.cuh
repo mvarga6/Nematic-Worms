@@ -30,6 +30,8 @@ extern "C"
 
     void integrateSystem(float *pos,
                          float *vel,
+                         float *f,
+                         float *f_old,
                          float deltaTime,
                          uint numParticles);
 
@@ -44,12 +46,13 @@ extern "C"
                                      float *sortedVel,
                                      uint  *gridParticleHash,
                                      uint  *gridParticleIndex,
-                                     float *oldPos,
-                                     float *oldVel,
+                                     float *pos,
+                                     float *vel,
                                      uint   numParticles,
                                      uint   numCells);
 
-    void collide(float *newVel,
+    void collide(float *force,
+                //  float *newVel,
                  float *sortedPos,
                  float *sortedVel,
                  uint  *gridParticleIndex,

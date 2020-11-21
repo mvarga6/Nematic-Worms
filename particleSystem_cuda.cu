@@ -136,16 +136,20 @@ extern "C"
 
     void integrateSystem(float *pos,
                          float *vel,
+                         float *f,
+                         float *f_old,
                          float deltaTime,
                          uint numParticles)
     {
         thrust::device_ptr<float4> d_pos4((float4 *)pos);
         thrust::device_ptr<float4> d_vel4((float4 *)vel);
+        thrust::device_ptr<float4> d_f4((float4 *)f);
+        thrust::device_ptr<float4> d_f_old4((float4 *)f_old);
 
-        thrust::for_each(
-            thrust::make_zip_iterator(thrust::make_tuple(d_pos4, d_vel4)),
-            thrust::make_zip_iterator(thrust::make_tuple(d_pos4+numParticles, d_vel4+numParticles)),
-            integrate_functor(deltaTime));
+        auto start = thrust::make_tuple(d_pos4, d_vel4, d_f4, d_f_old4);
+        auto end = thrust::make_tuple(d_pos4+numParticles, d_vel4+numParticles, d_f4+numParticles, d_f_old4+numParticles);
+
+        thrust::for_each(thrust::make_zip_iterator(start),thrust::make_zip_iterator(end), integrate_functor(deltaTime));
     }
 
     void calcHash(uint  *gridParticleHash,
@@ -172,8 +176,8 @@ extern "C"
                                      float *sortedVel,
                                      uint  *gridParticleHash,
                                      uint  *gridParticleIndex,
-                                     float *oldPos,
-                                     float *oldVel,
+                                     float *pos,
+                                     float *vel,
                                      uint   numParticles,
                                      uint   numCells)
     {
@@ -191,14 +195,15 @@ extern "C"
             (float4 *) sortedVel,
             gridParticleHash,
             gridParticleIndex,
-            (float4 *) oldPos,
-            (float4 *) oldVel,
+            (float4 *) pos,
+            (float4 *) vel,
             numParticles);
         getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
 
     }
 
-    void collide(float *newVel,
+    void collide(float *force,
+                //  float *newVel,
                  float *sortedPos,
                  float *sortedVel,
                  uint  *gridParticleIndex,
@@ -213,7 +218,8 @@ extern "C"
         computeGridSize(numParticles, 64, numBlocks, numThreads);
 
         // execute the kernel
-        collideD<<< numBlocks, numThreads >>>((float4 *)newVel,
+        collideD<<< numBlocks, numThreads >>>((float4 *)force,
+                                            //   (float4 *)newVel,
                                               (float4 *)sortedPos,
                                               (float4 *)sortedVel,
                                               gridParticleIndex,

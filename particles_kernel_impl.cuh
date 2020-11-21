@@ -31,10 +31,10 @@ __constant__ SimParams params;
 
 struct integrate_functor
 {
-    float deltaTime;
+    float dt;
 
     __host__ __device__
-    integrate_functor(float delta_time) : deltaTime(delta_time) {}
+    integrate_functor(float delta_time) : dt(delta_time) {}
 
     template <typename Tuple>
     __device__
@@ -42,14 +42,22 @@ struct integrate_functor
     {
         volatile float4 posData = thrust::get<0>(t);
         volatile float4 velData = thrust::get<1>(t);
-        float3 pos = make_float3(posData.x, posData.y, posData.z);
-        float3 vel = make_float3(velData.x, velData.y, velData.z);
+        volatile float4 forceData = thrust::get<2>(t);
+        volatile float4 forceOldData = thrust::get<3>(t);
+        float3 pos   = make_float3(posData.x, posData.y, posData.z);
+        float3 vel   = make_float3(velData.x, velData.y, velData.z);
+        float3 f     = make_float3(forceData.x, forceData.y, forceData.z);
+        float3 f_old = make_float3(forceOldData.x, forceOldData.y, forceOldData.z);
 
-        vel += params.gravity * deltaTime;
+        f += params.gravity;
         vel *= params.globalDamping;
 
+        // Velocity Verlet update
+        pos += vel * dt + 0.5f * f_old * dt * dt;
+        vel += 0.5f * (f + f_old) * dt;
+
         // new position = old position + velocity * deltaTime
-        pos += vel * deltaTime;
+        // pos += vel * deltaTime;
 
         // set this to zero to disable collisions with cube sides
 #if 1
@@ -86,15 +94,18 @@ struct integrate_functor
 
 #endif
 
+        // Ground
         if (pos.y < -1.0f + params.particleRadius)
         {
             pos.y = -1.0f + params.particleRadius;
             vel.y *= params.boundaryDamping;
         }
 
-        // store new position and velocity
+        // store new position, velocity, and forces
         thrust::get<0>(t) = make_float4(pos, posData.w);
         thrust::get<1>(t) = make_float4(vel, velData.w);
+        thrust::get<2>(t) = make_float4(0.f);
+        thrust::get<3>(t) = make_float4(f, forceOldData.w);
     }
 };
 
@@ -148,8 +159,8 @@ void reorderDataAndFindCellStartD(uint   *cellStart,        // output: cell star
                                   float4 *sortedVel,        // output: sorted velocities
                                   uint   *gridParticleHash, // input: sorted grid hashes
                                   uint   *gridParticleIndex,// input: sorted particle indices
-                                  float4 *oldPos,           // input: sorted position array
-                                  float4 *oldVel,           // input: sorted velocity array
+                                  float4 *pos,              // input: sorted position array
+                                  float4 *vel,              // input: sorted velocity array
                                   uint    numParticles)
 {
     // Handle to thread block group
@@ -199,13 +210,10 @@ void reorderDataAndFindCellStartD(uint   *cellStart,        // output: cell star
             cellEnd[hash] = index + 1;
         }
 
-        // Now use the sorted index to reorder the pos and vel data
+        // Now use the sorted index to reorder data array
         uint sortedIndex = gridParticleIndex[index];
-        float4 pos = oldPos[sortedIndex];
-        float4 vel = oldVel[sortedIndex];
-
-        sortedPos[index] = pos;
-        sortedVel[index] = vel;
+        sortedPos[index] = pos[sortedIndex];
+        sortedVel[index] = vel[sortedIndex];
     }
 
 
@@ -292,9 +300,10 @@ float3 collideCell(int3    gridPos,
 
 
 __global__
-void collideD(float4 *newVel,               // output: new velocity
-              float4 *oldPos,               // input: sorted positions
-              float4 *oldVel,               // input: sorted velocities
+void collideD(float4 *forces,                // update: unsorted forces array
+            //   float4 *newVel,               // output: new velocity
+              float4 *sortedPos,            // input: sorted positions
+              float4 *sortedVel,            // input: sorted velocities
               uint   *gridParticleIndex,    // input: sorted particle indices
               uint   *cellStart,
               uint   *cellEnd,
@@ -305,8 +314,8 @@ void collideD(float4 *newVel,               // output: new velocity
     if (index >= numParticles) return;
 
     // read particle data from sorted arrays
-    float3 pos = make_float3(oldPos[index]);
-    float3 vel = make_float3(oldVel[index]);
+    float3 pos = make_float3(sortedPos[index]);
+    float3 vel = make_float3(sortedVel[index]);
 
     // get address in grid
     int3 gridPos = calcGridPos(pos);
@@ -321,17 +330,18 @@ void collideD(float4 *newVel,               // output: new velocity
             for (int x=-1; x<=1; x++)
             {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                force += collideCell(neighbourPos, index, pos, vel, oldPos, oldVel, cellStart, cellEnd);
+                force += collideCell(neighbourPos, index, pos, vel, sortedPos, sortedVel, cellStart, cellEnd);
             }
         }
     }
 
     // collide with cursor sphere
-    force += collideSpheres(pos, params.colliderPos, vel, make_float3(0.0f, 0.0f, 0.0f), params.particleRadius, params.colliderRadius, 0.0f);
+    // force += collideSpheres(pos, params.colliderPos, vel, make_float3(0.0f, 0.0f, 0.0f), params.particleRadius, params.colliderRadius, 0.0f);
 
     // write new velocity back to original unsorted location
     uint originalIndex = gridParticleIndex[index];
-    newVel[originalIndex] = make_float4(vel + force, 0.0f);
+    // newVel[originalIndex] = make_float4(vel + force, 0.0f);
+    forces[originalIndex] += make_float4(force, 0.0f);
 }
 
 #endif

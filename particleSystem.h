@@ -160,9 +160,12 @@ class ParticleSystem
         // GPU data
         float *m_dPos;
         float *m_dVel;
+        float *m_dForce;
+        float *m_dForceOld;
 
         float *m_dSortedPos;
         float *m_dSortedVel;
+        float *m_dSortedForce;
 
         // grid data for sorting method
         uint  *m_dGridParticleHash; // grid hash value for each particle

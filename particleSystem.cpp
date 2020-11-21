@@ -156,6 +156,8 @@ ParticleSystem::_initialize(int numParticles)
 
     allocateArray((void **)&m_dPos, memSize);
     allocateArray((void **)&m_dVel, memSize);
+    allocateArray((void **)&m_dForce, memSize);
+    allocateArray((void **)&m_dForceOld, memSize);
 
     allocateArray((void **)&m_dSortedPos, memSize);
     allocateArray((void **)&m_dSortedVel, memSize);
@@ -262,6 +264,8 @@ ParticleSystem::update(float deltaTime)
     integrateSystem(
         m_dPos,
         m_dVel,
+        m_dForce,
+        m_dForceOld,
         deltaTime,
         m_numParticles);
 
@@ -291,7 +295,8 @@ ParticleSystem::update(float deltaTime)
 
     // process collisions
     collide(
-        m_dVel,
+        m_dForce,
+        // m_dVel,
         m_dSortedPos,
         m_dSortedVel,
         m_dGridParticleIndex,
