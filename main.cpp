@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
 	float timestep = 0.01f;
 	int printRate = 100;
 	int iterations = 20000;
-	float damping = 1.0f;
-	int ballr = 1;
+	float damping = 0.0f;
+	float gravity = -0.001f;
 	float collideSpring = 0.5f;
 	float collideDamping = 0.02f;
 	float collideShear = 0.1f;
@@ -47,7 +47,8 @@ int main(int argc, char *argv[])
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numParticles, gridSize);
 	psystem->reset(ParticleSystem::CONFIG_RANDOM);
-	psystem->setGravity(-0.001f);
+	psystem->setGravity(gravity);
+	psystem->setDamping(damping);
 
 	// Pre time loop actions
 	StopWatchInterface *timer = NULL;

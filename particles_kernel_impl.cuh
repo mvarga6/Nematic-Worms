@@ -50,7 +50,7 @@ struct integrate_functor
         float3 f_old = make_float3(forceOldData.x, forceOldData.y, forceOldData.z);
 
         f += params.gravity;
-        vel *= params.globalDamping;
+        // vel *= params.globalDamping;
 
         // Velocity Verlet update
         pos += vel * dt + 0.5f * f_old * dt * dt;
@@ -60,7 +60,7 @@ struct integrate_functor
         // pos += vel * deltaTime;
 
         // set this to zero to disable collisions with cube sides
-#if 1
+#if 0
 
         if (pos.x > 1.0f - params.particleRadius)
         {
@@ -101,6 +101,19 @@ struct integrate_functor
             vel.y *= params.boundaryDamping;
         }
 
+#if PBC_X
+        if (pos.x < params.origin.x) pos.x += params.boxLength.x;
+        else if (pos.x > params.boxLength.x + params.origin.x) pos.x -= params.boxLength.x;
+#endif
+#if PBC_Y
+        if (pos.y < params.origin.y) pos.y += params.boxLength.y;
+        else if (pos.y > params.boxLength.y + params.origin.y) pos.y -= params.boxLength.y;
+#endif
+#if PBC_Z
+        if (pos.z < params.origin.z) pos.z += params.boxLength.z;
+        else if (pos.z > params.boxLength.z + params.origin.z) pos.z -= params.boxLength.z;
+#endif
+
         // store new position, velocity, and forces
         thrust::get<0>(t) = make_float4(pos, posData.w);
         thrust::get<1>(t) = make_float4(vel, velData.w);
@@ -113,9 +126,9 @@ struct integrate_functor
 __device__ int3 calcGridPos(float3 p)
 {
     int3 gridPos;
-    gridPos.x = floor((p.x - params.worldOrigin.x) / params.cellSize.x);
-    gridPos.y = floor((p.y - params.worldOrigin.y) / params.cellSize.y);
-    gridPos.z = floor((p.z - params.worldOrigin.z) / params.cellSize.z);
+    gridPos.x = floor((p.x - params.origin.x) / params.cellSize.x);
+    gridPos.y = floor((p.y - params.origin.y) / params.cellSize.y);
+    gridPos.z = floor((p.z - params.origin.z) / params.cellSize.z);
     return gridPos;
 }
 
@@ -126,6 +139,26 @@ __device__ uint calcGridHash(int3 gridPos)
     gridPos.y = gridPos.y & (params.gridSize.y-1);
     gridPos.z = gridPos.z & (params.gridSize.z-1);
     return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
+}
+
+// calculate address in grid from position (clamping to edges)
+__device__ float lengthPeriodic(float3& dr)
+{
+    float3 L = params.boxLength;
+    float3 Lo2 = L / 2.0f;
+#if PBC_X
+    if (dr.x > Lo2.x) dr.x -= L.x;
+    else if (dr.x < -Lo2.x) dr.x += L.x;
+#endif
+#if PBX_Y
+    if (dr.y > Lo2.y) dr.y -= L.y;
+    else if (dr.y < -Lo2.y) dr.y += L.y;
+#endif
+#if PBC_Z
+    if (dr.z > Lo2.z) dr.z -= L.z;
+    else if (dr.z < -Lo2.z) dr.z += L.z;
+#endif
+    return length(dr);
 }
 
 // calculate grid hash value for each particle
@@ -229,7 +262,7 @@ float3 collideSpheres(float3 posA, float3 posB,
     // calculate relative position
     float3 relPos = posB - posA;
 
-    float dist = length(relPos);
+    float dist = lengthPeriodic(relPos);
     float collideDist = radiusA + radiusB;
 
     float3 force = make_float3(0.0f);

@@ -43,6 +43,8 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize /*, bool bUseOp
     m_hVel(0),
     m_dPos(0),
     m_dVel(0),
+    m_dForce(0),
+    m_dForceOld(0),
     m_gridSize(gridSize),
     m_timer(NULL),
     m_solverIterations(1)
@@ -61,10 +63,11 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize /*, bool bUseOp
     m_params.colliderPos = make_float3(-1.2f, -0.8f, 0.8f);
     m_params.colliderRadius = 0.2f;
 
-    m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
+    m_params.origin = make_float3(-1.0f, -1.0f, -1.0f);
     //    m_params.cellSize = make_float3(worldSize.x / m_gridSize.x, worldSize.y / m_gridSize.y, worldSize.z / m_gridSize.z);
     float cellSize = m_params.particleRadius * 2.0f;  // cell size equal to particle diameter
     m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
+    m_params.boxLength = make_float3(2.0f, 2.0f, 2.0f);
 
     m_params.spring = 0.5f;
     m_params.damping = 0.02f;

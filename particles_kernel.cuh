@@ -15,6 +15,10 @@
 #include "vector_types.h"
 typedef unsigned int uint;
 
+#define PBC_X 1
+#define PBC_Y 0
+#define PBC_Z 1
+
 // simulation parameters
 struct SimParams
 {
@@ -27,7 +31,8 @@ struct SimParams
 
     uint3 gridSize;
     uint numCells;
-    float3 worldOrigin;
+    float3 origin;
+    float3 boxLength;
     float3 cellSize;
 
     uint numBodies;

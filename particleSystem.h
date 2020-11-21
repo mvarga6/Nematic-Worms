@@ -125,9 +125,9 @@ class ParticleSystem
         {
             return m_params.gridSize;
         }
-        float3 getWorldOrigin()
+        float3 getOrigin()
         {
-            return m_params.worldOrigin;
+            return m_params.origin;
         }
         float3 getCellSize()
         {
