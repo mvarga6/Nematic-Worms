@@ -32,7 +32,7 @@ struct SimParams
     uint3 gridSize;
     uint numCells;
     float3 origin;
-    float3 boxLength;
+    float3 boxSize;
     float3 cellSize;
 
     uint numBodies;

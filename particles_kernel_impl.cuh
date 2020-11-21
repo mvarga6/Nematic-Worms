@@ -102,16 +102,16 @@ struct integrate_functor
         }
 
 #if PBC_X
-        if (pos.x < params.origin.x) pos.x += params.boxLength.x;
-        else if (pos.x > params.boxLength.x + params.origin.x) pos.x -= params.boxLength.x;
+        if (pos.x < params.origin.x) pos.x += params.boxSize.x;
+        else if (pos.x > params.boxSize.x + params.origin.x) pos.x -= params.boxSize.x;
 #endif
 #if PBC_Y
-        if (pos.y < params.origin.y) pos.y += params.boxLength.y;
-        else if (pos.y > params.boxLength.y + params.origin.y) pos.y -= params.boxLength.y;
+        if (pos.y < params.origin.y) pos.y += params.boxSize.y;
+        else if (pos.y > params.boxSize.y + params.origin.y) pos.y -= params.boxSize.y;
 #endif
 #if PBC_Z
-        if (pos.z < params.origin.z) pos.z += params.boxLength.z;
-        else if (pos.z > params.boxLength.z + params.origin.z) pos.z -= params.boxLength.z;
+        if (pos.z < params.origin.z) pos.z += params.boxSize.z;
+        else if (pos.z > params.boxSize.z + params.origin.z) pos.z -= params.boxSize.z;
 #endif
 
         // store new position, velocity, and forces
@@ -144,7 +144,7 @@ __device__ uint calcGridHash(int3 gridPos)
 // calculate address in grid from position (clamping to edges)
 __device__ float lengthPeriodic(float3& dr)
 {
-    float3 L = params.boxLength;
+    float3 L = params.boxSize;
     float3 Lo2 = L / 2.0f;
 #if PBC_X
     if (dr.x > Lo2.x) dr.x -= L.x;
