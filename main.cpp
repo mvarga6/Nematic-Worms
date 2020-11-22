@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	int iterations 			  = 1000000;
 	float damping 			  = 0.999f;
 	float gravity 			  = 0.0f; // -10.0f;
-	float kBend				  = 150.f;
+	float kBend				  = 100.f;
 	float hardness			  = 57.f;
 
 	uint3 gridSize = make_uint3(256, 64, 1);
