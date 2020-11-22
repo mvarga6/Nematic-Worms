@@ -57,39 +57,39 @@ struct integrate_functor
         vel *= params.globalDamping;
 
         // set this to zero to disable collisions with cube sides
-#if 0
+// #if 0
 
-        if (pos.x > 1.0f - params.particleRadius)
-        {
-            pos.x = 1.0f - params.particleRadius;
-            vel.x *= params.boundaryDamping;
-        }
+//         if (pos.x > 1.0f - params.particleRadius)
+//         {
+//             pos.x = 1.0f - params.particleRadius;
+//             vel.x *= params.boundaryDamping;
+//         }
 
-        if (pos.x < -1.0f + params.particleRadius)
-        {
-            pos.x = -1.0f + params.particleRadius;
-            vel.x *= params.boundaryDamping;
-        }
+//         if (pos.x < -1.0f + params.particleRadius)
+//         {
+//             pos.x = -1.0f + params.particleRadius;
+//             vel.x *= params.boundaryDamping;
+//         }
 
-        if (pos.y > 1.0f - params.particleRadius)
-        {
-            pos.y = 1.0f - params.particleRadius;
-            vel.y *= params.boundaryDamping;
-        }
+//         if (pos.y > 1.0f - params.particleRadius)
+//         {
+//             pos.y = 1.0f - params.particleRadius;
+//             vel.y *= params.boundaryDamping;
+//         }
 
-        if (pos.z > 1.0f - params.particleRadius)
-        {
-            pos.z = 1.0f - params.particleRadius;
-            vel.z *= params.boundaryDamping;
-        }
+//         if (pos.z > 1.0f - params.particleRadius)
+//         {
+//             pos.z = 1.0f - params.particleRadius;
+//             vel.z *= params.boundaryDamping;
+//         }
 
-        if (pos.z < -1.0f + params.particleRadius)
-        {
-            pos.z = -1.0f + params.particleRadius;
-            vel.z *= params.boundaryDamping;
-        }
+//         if (pos.z < -1.0f + params.particleRadius)
+//         {
+//             pos.z = -1.0f + params.particleRadius;
+//             vel.z *= params.boundaryDamping;
+//         }
 
-#endif
+// #endif
 
         // Ground
         // if (pos.y < -1.0f + params.particleRadius)
@@ -98,23 +98,56 @@ struct integrate_functor
         //     vel.y *= params.boundaryDamping;
         // }
 
+        // if (pos.y < params.origin.y + params.particleRadius)
+        // {
+        //     pos.y = params.origin.y + params.particleRadius;
+        //     vel.y *= params.boundaryDamping;
+        // }
+
+#if PBC_X
+        if (pos.x < params.origin.x) pos.x += params.boxSize.x;
+        else if (pos.x > params.boxSize.x + params.origin.x) pos.x -= params.boxSize.x;
+#else
+        if (pos.x < params.origin.x + params.particleRadius)
+        {
+            pos.x = params.origin.x + params.particleRadius;
+            vel.x *= params.boundaryDamping;
+        }
+        else if (pos.x > (params.boxSize.x + params.origin.x) - params.particleRadius)
+        {
+            pos.x = (params.boxSize.x + params.origin.x) - params.particleRadius;
+            vel.x *= params.boundaryDamping;
+        }
+#endif
+#if PBC_Y
+        if (pos.y < params.origin.y) pos.y += params.boxSize.y;
+        else if (pos.y > params.boxSize.y + params.origin.y) pos.y -= params.boxSize.y;
+#else
         if (pos.y < params.origin.y + params.particleRadius)
         {
             pos.y = params.origin.y + params.particleRadius;
             vel.y *= params.boundaryDamping;
         }
-
-#if PBC_X
-        if (pos.x < params.origin.x) pos.x += params.boxSize.x;
-        else if (pos.x > params.boxSize.x + params.origin.x) pos.x -= params.boxSize.x;
-#endif
-#if PBC_Y
-        if (pos.y < params.origin.y) pos.y += params.boxSize.y;
-        else if (pos.y > params.boxSize.y + params.origin.y) pos.y -= params.boxSize.y;
+        else if (pos.y > (params.boxSize.y + params.origin.y) - params.particleRadius)
+        {
+            pos.y = (params.boxSize.y + params.origin.y) - params.particleRadius;
+            vel.y *= params.boundaryDamping;
+        }
 #endif
 #if PBC_Z
         if (pos.z < params.origin.z) pos.z += params.boxSize.z;
         else if (pos.z > params.boxSize.z + params.origin.z) pos.z -= params.boxSize.z;
+#else
+        if (pos.z < params.origin.z + params.particleRadius)
+        {
+            pos.z = params.origin.z + params.particleRadius;
+            vel.z *= params.boundaryDamping;
+        }
+        else if (pos.z > (params.boxSize.z + params.origin.z) - params.particleRadius)
+        {
+            pos.z = (params.boxSize.z + params.origin.z) - params.particleRadius;
+            vel.z *= params.boundaryDamping;
+        }
 #endif
 
         // store new position, velocity, and forces
@@ -201,10 +234,12 @@ void reorderDataAndFindCellStartD(uint   *cellStart,        // output: cell star
                                   uint   *cellEnd,          // output: cell end index
                                   float4 *sortedPos,        // output: sorted positions
                                   float4 *sortedVel,        // output: sorted velocities
+                                  float4 *sortedTangent,    // output: sorted tangents
                                   uint   *gridParticleHash, // input: sorted grid hashes
                                   uint   *gridParticleIndex,// input: sorted particle indices
-                                  float4 *pos,              // input: sorted position array
-                                  float4 *vel,              // input: sorted velocity array
+                                  float4 *pos,              // input: position array
+                                  float4 *vel,              // input: velocity array
+                                  float4 *tangent,          // input: tangents array
                                   uint    numParticles)
 {
     // Handle to thread block group
@@ -255,9 +290,10 @@ void reorderDataAndFindCellStartD(uint   *cellStart,        // output: cell star
         }
 
         // Now use the sorted index to reorder data array
-        uint sortedIndex = gridParticleIndex[index];
-        sortedPos[index] = pos[sortedIndex];
-        sortedVel[index] = vel[sortedIndex];
+        uint sortedIndex     = gridParticleIndex[index];
+        sortedPos[index]     = pos[sortedIndex];
+        sortedVel[index]     = vel[sortedIndex];
+        sortedTangent[index] = tangent[sortedIndex];
     }
 
 
@@ -313,15 +349,14 @@ float3 bondHookean(float3 posA, float3 posB, float k, float L)
 }
 
 
-// // compute extensile drive forces
-// __device__
-// float3 extensileForce(float3 posA, float3 posB, float k, float L)
-// {
-//     float3 relPos = posB - posA;
-//     float dist = lengthPeriodic(relPos);
-//     float3 norm = relPos / dist;
-//     return -k * (L - dist) * norm;
-// }
+// compute extensile drive forces
+__device__
+float3 extensileForce(float3 posA, float3 posB, float3 tangA, float3 tangB, float A)
+{
+    float3 relPos = posB - posA;
+    float dist = lengthPeriodic(relPos);
+    return -A * (tangA - tangB) / (2.0f * dist);
+}
 
 
 
@@ -331,8 +366,10 @@ float3 collideCell(int3    gridPos,
                    uint    index,
                    float3  r,
                    float3  v,
+                   float3  t,
                    float4 *pos,
                    float4 *vel,
+                   float4 *tangent,
                    uint   *cellStart,
                    uint   *cellEnd,
                    uint   *gridParticleIndex)
@@ -358,6 +395,7 @@ float3 collideCell(int3    gridPos,
             {
                 float3 r2      = make_float3(pos[j]);
                 float3 v2      = make_float3(vel[j]);
+                float3 t2      = make_float3(tangent[j]);
                 filamentIndex2 = gridParticleIndex[j] / params.filamentSize;
                 chainIndex2    = gridParticleIndex[j] % params.filamentSize;
 
@@ -369,6 +407,11 @@ float3 collideCell(int3    gridPos,
                 else // collide particles
                 {
                     force += collideParticles(r, r2, v, v2, params.particleRadius, params.particleRadius, params.attraction);
+                }
+
+                if (filamentIndex != filamentIndex2)
+                {
+                    force += extensileForce(r, r2, t, t2, params.activity);
                 }
             }
         }
@@ -382,6 +425,7 @@ __global__
 void collideKernel(float4 *forces,          // update: unsorted forces array
               float4 *sortedPos,            // input: sorted positions
               float4 *sortedVel,            // input: sorted velocities
+              float4 *sortedTangent,        // input: sorted tangents
               uint   *gridParticleIndex,    // input: sorted particle indices
               uint   *cellStart,
               uint   *cellEnd,
@@ -392,8 +436,9 @@ void collideKernel(float4 *forces,          // update: unsorted forces array
     if (index >= numParticles) return;
 
     // read particle data from sorted arrays
-    float3 pos = make_float3(sortedPos[index]);
-    float3 vel = make_float3(sortedVel[index]);
+    float3 pos     = make_float3(sortedPos[index]);
+    float3 vel     = make_float3(sortedVel[index]);
+    float3 tangent = make_float3(sortedTangent[index]);
 
     // get address in grid
     int3 gridPos = calcGridPos(pos);
@@ -408,7 +453,17 @@ void collideKernel(float4 *forces,          // update: unsorted forces array
             for (int x=-1; x<=1; x++)
             {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                force += collideCell(neighbourPos, index, pos, vel, sortedPos, sortedVel, cellStart, cellEnd, gridParticleIndex);
+                force += collideCell(neighbourPos,
+                                     index,
+                                     pos,
+                                     vel,
+                                     tangent,
+                                     sortedPos,
+                                     sortedVel,
+                                     sortedTangent,
+                                     cellStart,
+                                     cellEnd,
+                                     gridParticleIndex);
             }
         }
     }

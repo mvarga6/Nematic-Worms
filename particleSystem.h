@@ -70,6 +70,11 @@ class ParticleSystem
             m_params.gravity = make_float3(0.0f, x, 0.0f);
         }
 
+        void setActivity(float x)
+        {
+            m_params.activity = x;
+        }
+
         void setCollideSpring(float x)
         {
             m_params.spring = x;
@@ -168,6 +173,7 @@ class ParticleSystem
 
         float *m_dSortedPos;
         float *m_dSortedVel;
+        float *m_dSortedTangent;
 
         // grid data for sorting method
         uint  *m_dGridParticleHash; // grid hash value for each particle

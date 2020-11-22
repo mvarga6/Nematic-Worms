@@ -17,7 +17,7 @@ typedef unsigned int uint;
 
 #define PBC_X 1
 #define PBC_Y 0
-#define PBC_Z 1
+#define PBC_Z 0
 
 // simulation parameters
 struct SimParams
@@ -39,6 +39,8 @@ struct SimParams
     float bondSpringK;
     float bondSpringL;
     float bondBendingK;
+
+    float activity;
 
     float spring;
     float damping;

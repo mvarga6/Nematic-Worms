@@ -41,18 +41,18 @@ int main(int argc, char *argv[])
 
 	// Simulation parameters
 	const std::string outFile = "nw.xyzv";
-	uint numFilaments		  = 128;
-	uint filamentSize 		  = 32;
+	uint numFilaments		  = 153 * 4;
+	uint filamentSize 		  = 60;
 	int numParticles 		  = numFilaments * filamentSize;
 	float timestep 			  = 0.001f;
-	int printRate 			  = 2000;
-	int iterations 			  = 200000;
-	float damping 			  = 0.9995f;
-	float gravity 			  = -1.0f;
-	float kBend				  = 10.f;
+	int printRate 			  = 1000;
+	int iterations 			  = 1000000;
+	float damping 			  = 0.999f;
+	float gravity 			  = 0.0f; // -10.0f;
+	float kBend				  = 150.f;
 	float hardness			  = 57.f;
 
-	uint3 gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
+	uint3 gridSize = make_uint3(256, 64, 1);
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);

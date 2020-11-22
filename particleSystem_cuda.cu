@@ -117,7 +117,7 @@ extern "C"
                   int    numParticles)
     {
         uint numThreads, numBlocks;
-        computeGridSize(numParticles, 256, numBlocks, numThreads);
+        computeGridSize(numParticles, 128, numBlocks, numThreads);
 
         // execute the kernel
         calcHashD<<< numBlocks, numThreads >>>(gridParticleHash,
@@ -133,15 +133,17 @@ extern "C"
                                      uint  *cellEnd,
                                      float *sortedPos,
                                      float *sortedVel,
+                                     float *sortedTangent,
                                      uint  *gridParticleHash,
                                      uint  *gridParticleIndex,
                                      float *pos,
                                      float *vel,
+                                     float *tangent,
                                      uint   numParticles,
                                      uint   numCells)
     {
         uint numThreads, numBlocks;
-        computeGridSize(numParticles, 256, numBlocks, numThreads);
+        computeGridSize(numParticles, 128, numBlocks, numThreads);
 
         // set all cells to empty
         checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));
@@ -152,10 +154,12 @@ extern "C"
             cellEnd,
             (float4 *) sortedPos,
             (float4 *) sortedVel,
+            (float4 *) sortedTangent,
             gridParticleHash,
             gridParticleIndex,
             (float4 *) pos,
             (float4 *) vel,
+            (float4 *) tangent,
             numParticles);
         getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
 
@@ -164,6 +168,7 @@ extern "C"
     void collide(float *force,
                  float *sortedPos,
                  float *sortedVel,
+                 float *sortedTangent,
                  uint  *gridParticleIndex,
                  uint  *cellStart,
                  uint  *cellEnd,
@@ -173,12 +178,13 @@ extern "C"
 
         // thread per particle
         uint numThreads, numBlocks;
-        computeGridSize(numParticles, 256, numBlocks, numThreads);
+        computeGridSize(numParticles, 128, numBlocks, numThreads);
 
         // execute the kernel
         collideKernel<<< numBlocks, numThreads >>>((float4 *)force,
                                               (float4 *)sortedPos,
                                               (float4 *)sortedVel,
+                                              (float4 *)sortedTangent,
                                               gridParticleIndex,
                                               cellStart,
                                               cellEnd,
@@ -196,7 +202,7 @@ extern "C"
     {
         // thread per filament
         uint numThreads, numBlocks;
-        computeGridSize(numFilaments, 256, numBlocks, numThreads);
+        computeGridSize(numFilaments, 128, numBlocks, numThreads);
 
         filamentKernel<<< numBlocks, numThreads >>>((float4 *)force,
                                                     (float4 *)tangent,

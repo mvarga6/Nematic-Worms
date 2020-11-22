@@ -69,8 +69,8 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     float cellSize = m_params.particleRadius * 2.0f;  // cell size equal to particle diameter
     m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
     // m_params.boxSize = make_float3(2.0f, 2.0f, 2.0f);
-    m_params.boxSize = make_float3(gridSize.x*cellSize, gridSize.y*cellSize, gridSize.z * cellSize);
-    m_params.origin = m_params.boxSize / 2.0f;
+    m_params.boxSize = make_float3(gridSize.x*cellSize, gridSize.y*cellSize, gridSize.z*cellSize);
+    m_params.origin = -m_params.boxSize / 2.0f;
     //    float3 worldSize = make_float3(2.0f, 2.0f, 2.0f);
     //    m_params.cellSize = make_float3(worldSize.x / m_gridSize.x, worldSize.y / m_gridSize.y, worldSize.z / m_gridSize.z);
 
@@ -85,6 +85,9 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_params.shear = 0.1f;
     m_params.attraction = 0.0f;
     m_params.boundaryDamping = -0.5f;
+
+    // Active forces
+    m_params.activity = 1.0f;
 
     // Global interations
     m_params.gravity = make_float3(0.0f, -0.0003f, 0.0f);
@@ -156,6 +159,7 @@ ParticleSystem::_initialize(int numParticles)
     allocateArray((void **)&m_dForceOld, memSize);
     allocateArray((void **)&m_dSortedPos, memSize);
     allocateArray((void **)&m_dSortedVel, memSize);
+    allocateArray((void **)&m_dSortedTangent, memSize);
     allocateArray((void **)&m_dGridParticleHash, m_numParticles*sizeof(uint));
     allocateArray((void **)&m_dGridParticleIndex, m_numParticles*sizeof(uint));
     allocateArray((void **)&m_dCellStart, m_numGridCells*sizeof(uint));
@@ -225,21 +229,12 @@ ParticleSystem::update(float deltaTime)
         m_dCellEnd,
         m_dSortedPos,
         m_dSortedVel,
+        m_dSortedTangent,
         m_dGridParticleHash,
         m_dGridParticleIndex,
         m_dPos,
         m_dVel,
-        m_numParticles,
-        m_numGridCells);
-
-    // process collisions
-    collide(
-        m_dForce,
-        m_dSortedPos,
-        m_dSortedVel,
-        m_dGridParticleIndex,
-        m_dCellStart,
-        m_dCellEnd,
+        m_dTangent,
         m_numParticles,
         m_numGridCells);
 
@@ -249,6 +244,18 @@ ParticleSystem::update(float deltaTime)
         m_dTangent,
         m_dPos,
         m_numFilaments);
+
+    // process collisions
+    collide(
+        m_dForce,
+        m_dSortedPos,
+        m_dSortedVel,
+        m_dSortedTangent,
+        m_dGridParticleIndex,
+        m_dCellStart,
+        m_dCellEnd,
+        m_numParticles,
+        m_numGridCells);
 }
 
 void
@@ -299,8 +306,8 @@ ParticleSystem::saveToFile(const std::string& filePath)
     fout << "Test simulation" << std::endl;
     for (int i = 0; i < m_numParticles; i++)
     {
-        fout << "A " << m_hPos[i*4]     << " " << m_hPos[i*4+1]     << " " << m_hPos[i*4+2] << " "
-                     << m_hTangent[i*4] << " " << m_hTangent[i*4+1] << " " << m_hTangent[i*4+2]
+        fout << "A " << m_hPos[i*4]     << " " << m_hPos[i*4+1]     << " " << m_hPos[i*4+2]
+             << " "  << m_hTangent[i*4] << " " << m_hTangent[i*4+1] << " " << m_hTangent[i*4+2]
                      << std::endl;
     }
     fout.close();
@@ -421,7 +428,7 @@ ParticleSystem::reset(ParticleConfig config)
 
         case CONFIG_GRID:
             {
-                float filamentLength = m_params.filamentSize * m_params.bondSpringL + m_params.particleRadius;
+                float filamentLength = m_params.filamentSize * m_params.bondSpringL + 2.0f * m_params.particleRadius;
                 int xdim_max = int(floor(m_params.boxSize.x / filamentLength));
                 int ydim_max = int(floor(m_params.boxSize.y / (2 * m_params.particleRadius)));
                 int xyplane_max = xdim_max * ydim_max;
@@ -436,7 +443,7 @@ ParticleSystem::reset(ParticleConfig config)
                 for (uint i = 0; i < m_numParticles; i++)
                 {
                     w = (i / m_params.filamentSize);
-                    x_head = (w % xdim_max) * filamentLength;
+                    x_head = (w % xdim_max) * filamentLength + m_params.particleRadius;
                     x = x_head + (i % m_params.filamentSize) * m_params.bondSpringL;
                     y = 2.f * m_params.particleRadius * ((w / xdim_max) % ydim_max + 1);
                     z = 2.f * m_params.particleRadius * (w / xyplane_max + 1);
@@ -452,11 +459,39 @@ ParticleSystem::reset(ParticleConfig config)
                     m_hTangent[t++] = m_hTangent[t++] = m_hTangent[t++] = 0.0f;
                 }
 
-                // float jitter = m_params.particleRadius * 0.05f;
-                // uint s = (int) ceilf(powf((float) m_numParticles, 1.0f / 3.0f));
-                // uint gridSize[3];
-                // gridSize[0] = gridSize[1] = gridSize[2] = s;
-                // initGrid(gridSize, m_params.particleRadius*2.0f, jitter, m_numParticles);
+                // Flip half the filaments
+                for (w = 0; w < m_params.numFilaments; w++)
+                {
+                    if (frand() < 0.5f) continue;
+
+                    uint i,j;
+                    float m;
+                    for (p = 0; p < m_params.filamentSize / 2; p++)
+                    {
+                        i = w      * m_params.filamentSize      + p; // starts at head
+                        j = ((w+1) * m_params.filamentSize) - 1 - p; // starts at tail
+                        x = m_hPos[i*4 + 0]; // tmp save head pos
+                        y = m_hPos[i*4 + 1];
+                        z = m_hPos[i*4 + 2];
+                        m = m_hPos[i*4 + 3];
+                        m_hPos[i*4 + 0] = m_hPos[j*4 + 0]; // Assign j pos to i
+                        m_hPos[i*4 + 1] = m_hPos[j*4 + 1];
+                        m_hPos[i*4 + 2] = m_hPos[j*4 + 2];
+                        m_hPos[i*4 + 3] = m_hPos[j*4 + 3];
+                        m_hPos[j*4 + 0] = x; // Assign i pos to j
+                        m_hPos[j*4 + 1] = y;
+                        m_hPos[j*4 + 2] = z;
+                        m_hPos[j*4 + 3] = m;
+                        m_hTangent[i*4 + 0] = -m_hTangent[i*4 + 0]; // Invert tangent i
+                        m_hTangent[i*4 + 1] = -m_hTangent[i*4 + 1];
+                        m_hTangent[i*4 + 2] = -m_hTangent[i*4 + 2];
+                        m_hTangent[i*4 + 3] = -m_hTangent[i*4 + 3];
+                        m_hTangent[j*4 + 0] = -m_hTangent[j*4 + 0]; // Invert tangent j
+                        m_hTangent[j*4 + 1] = -m_hTangent[j*4 + 1];
+                        m_hTangent[j*4 + 2] = -m_hTangent[j*4 + 2];
+                        m_hTangent[j*4 + 3] = -m_hTangent[j*4 + 3];
+                    }
+                }
             }
             break;
     }
