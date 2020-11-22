@@ -434,8 +434,12 @@ void filamentKernel(float4 *forces,     // update: particle forces
             r_jk = r_k - r_j;
             d_ij = lengthPeriodic(r_ij);
             d_jk = lengthPeriodic(r_jk);
-            printf("[%i][%i] [%.4f %.4f %.4f] [%.4f %.4f %.4f]\n", index, i, r_ij.x, r_ij.y, r_ij.z, r_jk.x, r_jk.y, r_jk.z);
             d_ij_jk = dot(r_ij, r_jk);
+
+            // A = (k / (d_ij*d_ij*d_jk*d_jk));
+            // f_i = -A * ( (d_ij_jk * d_ij_jk / (d_ij*d_ij)) * r_ij - r_jk );
+            // f_k = -A * ( (d_ij_jk * d_ij_jk / (d_jk*d_jk)) * r_jk - r_ij );
+            // f_j = -f_i - f_k;
 
             A = k / (d_ij * d_jk);
             B = r_ij * d_ij_jk / dot(r_ij, r_ij);
@@ -452,6 +456,10 @@ void filamentKernel(float4 *forces,     // update: particle forces
             // compute tangent at j at same time
             r_ik = r_k - r_i;
             d_ik = lengthPeriodic(r_ik);
+            // f_i = bondHookean(r_i, r_j, k, 2.0f * params.bondSpringL);
+            // forces[i]     += make_float4(f_i, 0.0f);
+            // forces[i + 2] -= make_float4(f_i, 0.0f);
+
             tangent[i + 1] = make_float4(r_ik / d_ik, 0.0f);
         }
 

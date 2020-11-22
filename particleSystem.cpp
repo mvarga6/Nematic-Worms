@@ -71,7 +71,7 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     // Particle-Particle bonding
     m_params.bondSpringK = 57.f;
     m_params.bondSpringL = m_params.particleRadius * 0.8f;
-    m_params.bondBendingK = 0.1f;
+    m_params.bondBendingK = 10.f;
 
     // Particle-Particle forces
     m_params.spring = 0.5f;
@@ -199,13 +199,6 @@ ParticleSystem::update(float deltaTime)
         deltaTime,
         m_numParticles);
 
-    // forces of filament bonds
-    filamentForces(
-        m_dForce,
-        m_dTangent,
-        m_dPos,
-        m_numFilaments);
-
     // calculate grid hash
     calcHash(
         m_dGridParticleHash,
@@ -240,6 +233,13 @@ ParticleSystem::update(float deltaTime)
         m_dCellEnd,
         m_numParticles,
         m_numGridCells);
+
+    // forces of filament bonds
+    filamentForces(
+        m_dForce,
+        m_dTangent,
+        m_dPos,
+        m_numFilaments);
 }
 
 void

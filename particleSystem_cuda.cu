@@ -162,7 +162,6 @@ extern "C"
     }
 
     void collide(float *force,
-                //  float *newVel,
                  float *sortedPos,
                  float *sortedVel,
                  uint  *gridParticleIndex,
