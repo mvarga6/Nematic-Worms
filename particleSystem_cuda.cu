@@ -173,7 +173,7 @@ extern "C"
 
         // thread per particle
         uint numThreads, numBlocks;
-        computeGridSize(numParticles, 64, numBlocks, numThreads);
+        computeGridSize(numParticles, 256, numBlocks, numThreads);
 
         // execute the kernel
         collideKernel<<< numBlocks, numThreads >>>((float4 *)force,
@@ -196,7 +196,7 @@ extern "C"
     {
         // thread per filament
         uint numThreads, numBlocks;
-        computeGridSize(numFilaments, 64, numBlocks, numThreads);
+        computeGridSize(numFilaments, 256, numBlocks, numThreads);
 
         filamentKernel<<< numBlocks, numThreads >>>((float4 *)force,
                                                     (float4 *)tangent,
