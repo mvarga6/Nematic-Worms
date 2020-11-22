@@ -42,8 +42,10 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_numParticles(numFilaments * filamentSize),
     m_hPos(0),
     m_hVel(0),
+    m_hTangent(0),
     m_dPos(0),
     m_dVel(0),
+    m_dTangent(0),
     m_dForce(0),
     m_dForceOld(0),
     m_gridSize(gridSize),
@@ -130,8 +132,10 @@ ParticleSystem::_initialize(int numParticles)
     // allocate host storage
     m_hPos = new float[m_numParticles*4];
     m_hVel = new float[m_numParticles*4];
+    m_hTangent = new float[m_numParticles*4];
     memset(m_hPos, 0, m_numParticles*4*sizeof(float));
     memset(m_hVel, 0, m_numParticles*4*sizeof(float));
+    memset(m_hTangent, 0, m_numParticles*4*sizeof(float));
 
     m_hCellStart = new uint[m_numGridCells];
     memset(m_hCellStart, 0, m_numGridCells*sizeof(uint));
@@ -166,6 +170,7 @@ ParticleSystem::_finalize()
 
     delete [] m_hPos;
     delete [] m_hVel;
+    delete [] m_hTangent;
     delete [] m_hCellStart;
     delete [] m_hCellEnd;
 
@@ -282,6 +287,7 @@ void
 ParticleSystem::saveToFile(const std::string& filePath)
 {
     copyArrayFromDevice(m_hPos, m_dPos, 0, sizeof(float)*4*m_numParticles);
+    copyArrayFromDevice(m_hTangent, m_dTangent, 0, sizeof(float)*4*m_numParticles);
 
     std::ofstream fout;
     fout.open(filePath, std::ios::out | std::ios::app);
@@ -289,7 +295,9 @@ ParticleSystem::saveToFile(const std::string& filePath)
     fout << "Test simulation" << std::endl;
     for (int i = 0; i < m_numParticles; i++)
     {
-        fout << "A " << m_hPos[i*4+0] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2] << std::endl;
+        fout << "A " << m_hPos[i*4]     << " " << m_hPos[i*4+1]     << " " << m_hPos[i*4+2] << " "
+                     << m_hTangent[i*4] << " " << m_hTangent[i*4+1] << " " << m_hTangent[i*4+2]
+                     << std::endl;
     }
     fout.close();
 }
@@ -381,7 +389,7 @@ ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numPartic
 void
 ParticleSystem::reset(ParticleConfig config)
 {
-    auto tang = new float[4 * m_numParticles];
+    // auto tang = new float[4 * m_numParticles];
     switch (config)
     {
         default:
@@ -436,8 +444,8 @@ ParticleSystem::reset(ParticleConfig config)
                     m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
                     m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
                     m_hVel[v++] = 0.0f;
-                    tang[t++] = 1.0f;
-                    tang[t++] = tang[t++] = tang[t++] = 0.0f;
+                    m_hTangent[t++] = 1.0f;
+                    m_hTangent[t++] = m_hTangent[t++] = m_hTangent[t++] = 0.0f;
                 }
 
                 // float jitter = m_params.particleRadius * 0.05f;
@@ -451,7 +459,7 @@ ParticleSystem::reset(ParticleConfig config)
 
     setArray(POSITION, m_hPos, 0, m_numParticles);
     setArray(VELOCITY, m_hVel, 0, m_numParticles);
-    setArray(TANGENT, tang, 0, m_numParticles);
+    setArray(TANGENT, m_hTangent, 0, m_numParticles);
 }
 
 void

@@ -40,8 +40,8 @@ int main(int argc, char *argv[])
 	cudaInit(argc, argv);
 
 	// Simulation parameters
-	const std::string outFile = "nw.xyz";
-	uint numFilaments		  = 2048;
+	const std::string outFile = "nw.xyzv";
+	uint numFilaments		  = 256;
 	uint filamentSize 		  = 32;
 	int numParticles 		  = numFilaments * filamentSize;
 	float timestep 			  = 0.001f;

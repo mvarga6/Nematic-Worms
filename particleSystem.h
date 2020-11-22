@@ -153,6 +153,7 @@ class ParticleSystem
         // CPU data
         float *m_hPos;              // particle positions
         float *m_hVel;              // particle velocities
+        float *m_hTangent;          // tangent of filament at particle position
 
         uint  *m_hParticleHash;
         uint  *m_hCellStart;

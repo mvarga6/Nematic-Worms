@@ -158,6 +158,14 @@ __device__ float lengthPeriodic(float3& dr)
     return length(dr);
 }
 
+__device__
+float3 getTangent(float3 posA, float3 posB)
+{
+    float3 relPos = posB - posA;
+    float dist = lengthPeriodic(relPos);
+    return relPos / dist;
+}
+
 // calculate grid hash value for each particle
 __global__
 void calcHashD(uint   *gridParticleHash,  // output
@@ -288,7 +296,7 @@ float3 collideParticles(float3 posA, float3 posB,
 }
 
 
-// collide two spheres using DEM method
+// bond to particles with Hookean spring
 __device__
 float3 bondHookean(float3 posA, float3 posB, float k, float L)
 {
@@ -297,6 +305,17 @@ float3 bondHookean(float3 posA, float3 posB, float k, float L)
     float3 norm = relPos / dist;
     return -k * (L - dist) * norm;
 }
+
+
+// // compute extensile drive forces
+// __device__
+// float3 extensileForce(float3 posA, float3 posB, float k, float L)
+// {
+//     float3 relPos = posB - posA;
+//     float dist = lengthPeriodic(relPos);
+//     float3 norm = relPos / dist;
+//     return -k * (L - dist) * norm;
+// }
 
 
 
@@ -412,57 +431,60 @@ void filamentKernel(float4 *forces,     // update: particle forces
     const float k = params.bondBendingK;
 
     uint i = 0;
+    uint head_i = index * size;
 
     float3 r_i  = make_float3(0.0f), r_j  = make_float3(0.0f), r_k  = make_float3(0.0f);
     float3 f_i  = make_float3(0.0f), f_j  = make_float3(0.0f), f_k  = make_float3(0.0f);
     float3 r_ij = make_float3(0.0f), r_jk = make_float3(0.0f), r_ik = make_float3(0.0f);
-    float A = 0.0f, d_ij = 0.0f, d_jk = 0.0f, d_ik = 0.0f, d_ij_jk = 0.0f;
+    float A = 0.0f, d_ij = 0.0f, d_jk = 0.0f, d_ij_jk = 0.0f;
     float3 B = make_float3(0.0f), C = make_float3(0.0f);
 
-    for (int p = 0; p < size; p++)
+
+
+    // Bond bending forces
+    for (int p = 0; p < size - 2; p++)
     {
-        i    = index * size + p;
+        i    = head_i + p;
         r_i  = make_float3(pos[i]);
+        r_j  = make_float3(pos[i + 1]);
+        r_k  = make_float3(pos[i + 2]);
 
-        // Bond bending forces
-        if (p < size - 2)
+        r_ij = r_j - r_i;
+        r_jk = r_k - r_j;
+        d_ij = lengthPeriodic(r_ij);
+        d_jk = lengthPeriodic(r_jk);
+        d_ij_jk = dot(r_ij, r_jk);
+
+        // Derivation 1
+        // A = (k / (d_ij*d_ij*d_jk*d_jk));
+        // f_i = -A * ( (d_ij_jk * d_ij_jk / (d_ij*d_ij)) * r_ij - r_jk );
+        // f_k = -A * ( (d_ij_jk * d_ij_jk / (d_jk*d_jk)) * r_jk - r_ij );
+        // f_j = -f_i - f_k;
+
+        // Derivation 2
+        A = k / (d_ij * d_jk);
+        B = r_ij * d_ij_jk / dot(r_ij, r_ij);
+        C = r_jk * d_ij_jk / dot(r_jk, r_jk);
+
+        f_i = -A * (r_jk - B);
+        f_k = -A * (C - r_ij);
+        f_j = -f_i - f_k;
+
+        forces[i]     += make_float4(f_i, 0.0f);
+        forces[i + 1] += make_float4(f_j, 0.0f);
+        forces[i + 2] += make_float4(f_k, 0.0f);
+
+        // Compute tangent at j
+        tangent[i + 1] = make_float4(getTangent(r_i, r_k), 0.0f);
+
+        if (p == 0) // Head tangent
         {
-            r_j  = make_float3(pos[i + 1]);
-            r_k  = make_float3(pos[i + 2]);
-
-            r_ij = r_j - r_i;
-            r_jk = r_k - r_j;
-            d_ij = lengthPeriodic(r_ij);
-            d_jk = lengthPeriodic(r_jk);
-            d_ij_jk = dot(r_ij, r_jk);
-
-            // A = (k / (d_ij*d_ij*d_jk*d_jk));
-            // f_i = -A * ( (d_ij_jk * d_ij_jk / (d_ij*d_ij)) * r_ij - r_jk );
-            // f_k = -A * ( (d_ij_jk * d_ij_jk / (d_jk*d_jk)) * r_jk - r_ij );
-            // f_j = -f_i - f_k;
-
-            A = k / (d_ij * d_jk);
-            B = r_ij * d_ij_jk / dot(r_ij, r_ij);
-            C = r_jk * d_ij_jk / dot(r_jk, r_jk);
-
-            f_i = -A * (r_jk - B);
-            f_k = -A * (C - r_ij);
-            f_j = -f_i - f_k;
-
-            forces[i]     += make_float4(f_i, 0.0f);
-            forces[i + 1] += make_float4(f_j, 0.0f);
-            forces[i + 2] += make_float4(f_k, 0.0f);
-
-            // compute tangent at j at same time
-            r_ik = r_k - r_i;
-            d_ik = lengthPeriodic(r_ik);
-            // f_i = bondHookean(r_i, r_j, k, 2.0f * params.bondSpringL);
-            // forces[i]     += make_float4(f_i, 0.0f);
-            // forces[i + 2] -= make_float4(f_i, 0.0f);
-
-            tangent[i + 1] = make_float4(r_ik / d_ik, 0.0f);
+            tangent[i] = make_float4(getTangent(r_i, r_j), 0.0f);
         }
-
+        else if (p == size - 2) // last iteration do tail as well
+        {
+            tangent[i + 2] = make_float4(getTangent(r_j, r_k), 0.0f);
+        }
     }
 }
 
