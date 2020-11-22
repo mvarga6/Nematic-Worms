@@ -71,7 +71,7 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     // Particle-Particle bonding
     m_params.bondSpringK = 57.f;
     m_params.bondSpringL = m_params.particleRadius * 0.8f;
-    m_params.bondBendingK = 10.f;
+    m_params.bondBendingK = 0.001f;
 
     // Particle-Particle forces
     m_params.spring = 0.5f;

@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 	int numParticles 		  = numFilaments * filamentSize;
 	float timestep 			  = 0.001f;
 	int printRate 			  = 100;
-	int iterations 			  = 20000;
+	int iterations 			  = 50000;
 	float damping 			  = 0.0f;
 	float gravity 			  = -0.001f;
 
