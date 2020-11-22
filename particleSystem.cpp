@@ -20,6 +20,7 @@
 #include <cuda_runtime.h>
 
 #include <helper_functions.h>
+#include <helper_math.h>
 #include <helper_cuda.h>
 
 #include <assert.h>
@@ -56,17 +57,20 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_params.numFilaments = m_numFilaments;
     m_params.filamentSize = m_filamentSize;
     m_params.numParticles = m_numParticles;
-    m_params.particleRadius = 1.0f / 64.0f;
+    // m_params.particleRadius = 1.0f / 64.0f;
+    m_params.particleRadius = 1.0f;
 
     // System size/boundaries
     m_gridSortBits = 18;    // increase this for larger grids
     m_numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
     m_params.gridSize = m_gridSize;
     m_params.numCells = m_numGridCells;
-    m_params.origin = make_float3(-1.0f, -1.0f, -1.0f);
+    // m_params.origin = make_float3(-1.0f, -1.0f, -1.0f);
     float cellSize = m_params.particleRadius * 2.0f;  // cell size equal to particle diameter
     m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
-    m_params.boxSize = make_float3(2.0f, 2.0f, 2.0f);
+    // m_params.boxSize = make_float3(2.0f, 2.0f, 2.0f);
+    m_params.boxSize = make_float3(gridSize.x*cellSize, gridSize.y*cellSize, gridSize.z * cellSize);
+    m_params.origin = m_params.boxSize / 2.0f;
     //    float3 worldSize = make_float3(2.0f, 2.0f, 2.0f);
     //    m_params.cellSize = make_float3(worldSize.x / m_gridSize.x, worldSize.y / m_gridSize.y, worldSize.z / m_gridSize.z);
 
@@ -95,10 +99,10 @@ ParticleSystem::~ParticleSystem()
     m_numParticles = m_numFilaments = m_filamentSize = 0;
 }
 
-inline float lerp(float a, float b, float t)
-{
-    return a + t*(b-a);
-}
+// inline float lerp(float a, float b, float t)
+// {
+//     return a + t*(b-a);
+// }
 
 // create a color ramp
 void colorRamp(float t, float *r)
@@ -434,15 +438,15 @@ ParticleSystem::reset(ParticleConfig config)
                     w = (i / m_params.filamentSize);
                     x_head = (w % xdim_max) * filamentLength;
                     x = x_head + (i % m_params.filamentSize) * m_params.bondSpringL;
-                    y = m_params.particleRadius * ((w / xdim_max) % ydim_max + 1);
-                    z = m_params.particleRadius * (w / xyplane_max + 1);
+                    y = 2.f * m_params.particleRadius * ((w / xdim_max) % ydim_max + 1);
+                    z = 2.f * m_params.particleRadius * (w / xyplane_max + 1);
                     m_hPos[p++] = x + m_params.origin.x;
                     m_hPos[p++] = y + m_params.origin.y;
                     m_hPos[p++] = z + m_params.origin.z;
-                    m_hPos[p++] = 1.0f; // radius
-                    m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
-                    m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
-                    m_hVel[v++] = 0.001f * (frand()*2.0f-1.0f);
+                    m_hPos[p++] = m_params.particleRadius; // radius
+                    m_hVel[v++] = 0.005f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.005f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.005f * (frand()*2.0f-1.0f);
                     m_hVel[v++] = 0.0f;
                     m_hTangent[t++] = 1.0f;
                     m_hTangent[t++] = m_hTangent[t++] = m_hTangent[t++] = 0.0f;

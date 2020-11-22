@@ -50,11 +50,11 @@ struct integrate_functor
         float3 f_old = make_float3(forceOldData.x, forceOldData.y, forceOldData.z);
 
         f += params.gravity;
-        // vel *= params.globalDamping;
 
         // Velocity Verlet update
         pos += vel * dt + 0.5f * f_old * dt * dt;
         vel += 0.5f * (f + f_old) * dt;
+        vel *= params.globalDamping;
 
         // set this to zero to disable collisions with cube sides
 #if 0
@@ -92,9 +92,15 @@ struct integrate_functor
 #endif
 
         // Ground
-        if (pos.y < -1.0f + params.particleRadius)
+        // if (pos.y < -1.0f + params.particleRadius)
+        // {
+        //     pos.y = -1.0f + params.particleRadius;
+        //     vel.y *= params.boundaryDamping;
+        // }
+
+        if (pos.y < params.origin.y + params.particleRadius)
         {
-            pos.y = -1.0f + params.particleRadius;
+            pos.y = params.origin.y + params.particleRadius;
             vel.y *= params.boundaryDamping;
         }
 
