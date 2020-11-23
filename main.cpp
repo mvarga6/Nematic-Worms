@@ -44,13 +44,14 @@ int main(int argc, char *argv[])
 	uint numFilaments		  = 153 * 4;
 	uint filamentSize 		  = 60;
 	int numParticles 		  = numFilaments * filamentSize;
-	float timestep 			  = 0.001f;
-	int printRate 			  = 1000;
-	int iterations 			  = 1000000;
-	float damping 			  = 0.999f;
+	float timestep 			  = 0.0005f;
+	int printRate 			  = 10000;
+	int iterations 			  = 10000000;
+	float damping 			  = 0.997f;
 	float gravity 			  = 0.0f; // -10.0f;
-	float kBend				  = 100.f;
-	float hardness			  = 57.f;
+	float kBend				  = 200.f;
+	float kBond				  = 200.f;
+	float hardness			  = 100.f;
 
 	uint3 gridSize = make_uint3(256, 64, 1);
 
@@ -58,7 +59,9 @@ int main(int argc, char *argv[])
 	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);
 	psystem->setGravity(gravity);
 	psystem->setDamping(damping);
+	psystem->setActivity(2.0f);
 	psystem->setCollideSpring(hardness);
+	psystem->setBondSpringConstant(kBond);
 	psystem->setBondBendingConstant(kBend);
 	psystem->reset(ParticleSystem::CONFIG_GRID);
 	psystem->saveToFile(outFile);
