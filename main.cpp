@@ -18,14 +18,25 @@
 #define MAX_EPSILON_ERROR 5.00f
 #define THRESHOLD         0.30f
 
-#define GRID_SIZE       64
-#define NUM_PARTICLES   16384
-
+// Simulation parameters
+std::string outFile = "nw.xyzv";
+uint numFilaments	= 135 * 8;
+uint filamentSize 	= 60;
+float timestep 		= 0.005f;
+int printRate 		= 500;
+int iterations 		= 1000000;
+float damping 		= 0.9999f;
+float gravity 		= 0.0f;
+float kBend			= 100.f;
+float kBond			= 57.146436f;
+float activity		= 0.15f;
+float hardness		= kBond;
+uint3 gridSize 		= make_uint3(512, 64, 1);
 
 extern "C" void cudaInit(int argc, char **argv);
 
 
-void printInfo(StopWatchInterface *timer, int numParticles, int iterations, int iter)
+void printInfo(StopWatchInterface *timer, int numParticles, int iter)
 {
 	// Print some speed metrics
 	float fAvgSeconds = ((float)1.0e-3 * (float)sdkGetTimerValue(&timer)/(float)iterations);
@@ -34,36 +45,71 @@ void printInfo(StopWatchInterface *timer, int numParticles, int iterations, int 
 }
 
 
+void readParameters(int argc, char *argv[])
+{
+	if (checkCmdLineFlag(argc, (const char **) argv, "iterations"))
+        iterations = getCmdLineArgumentInt(argc, (const char **) argv, "iterations");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "numFilaments"))
+        numFilaments = (uint)getCmdLineArgumentInt(argc, (const char **) argv, "numFilaments");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "filamentSize"))
+        filamentSize = (uint)getCmdLineArgumentInt(argc, (const char **) argv, "filamentSize");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "dt"))
+        timestep = getCmdLineArgumentFloat(argc, (const char **) argv, "dt");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "printRate"))
+        printRate = getCmdLineArgumentFloat(argc, (const char **) argv, "printRate");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "damping"))
+        damping = getCmdLineArgumentFloat(argc, (const char **) argv, "damping");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "kBend"))
+        kBend = getCmdLineArgumentFloat(argc, (const char **) argv, "kBend");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "kBond"))
+        kBond = getCmdLineArgumentFloat(argc, (const char **) argv, "kBond");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "activity"))
+        activity = getCmdLineArgumentFloat(argc, (const char **) argv, "activity");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "hardness"))
+        hardness = getCmdLineArgumentFloat(argc, (const char **) argv, "hardness");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "gridX"))
+        gridSize.x = getCmdLineArgumentInt(argc, (const char **) argv, "gridX");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "gridY"))
+        gridSize.y = getCmdLineArgumentInt(argc, (const char **) argv, "gridY");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "gridZ"))
+        gridSize.z = getCmdLineArgumentInt(argc, (const char **) argv, "gridZ");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "o"))
+	{
+		char* c = &*outFile.begin();
+        getCmdLineArgumentString(argc, (const char **) argv, "o", &c);
+		outFile = std::string(c);
+	}
+}
+
+
 int main(int argc, char *argv[])
 {
 	// Initialize CUDA
 	cudaInit(argc, argv);
 
-	// Simulation parameters
-	const std::string outFile = "nw.xyzv";
-	uint numFilaments		  = 135 * 8;
-	uint filamentSize 		  = 60;
-	int numParticles 		  = numFilaments * filamentSize;
-	float timestep 			  = 0.005f;
-	int printRate 			  = 500;
-	int iterations 			  = 1000000;
-	float damping 			  = 0.9999f;
-	float gravity 			  = 0.0f;
-	float kBend				  = 100.f;
-	float kBond				  = 57.146436f;
-	float activity			  = 0.15f;
-	float hardness			  = kBond;
-
-	uint3 gridSize = make_uint3(512, 64, 1);
+	// Read cmdline args
+	readParameters(argc, argv);
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);
-	psystem->setGravity(gravity);
 	psystem->setDamping(damping);
+	psystem->setBondBendingConstant(kBend);
+	psystem->setBondSpringConstant(kBond);
 	psystem->setActivity(activity);
 	psystem->setCollideSpring(hardness);
-	psystem->setBondSpringConstant(kBond);
-	psystem->setBondBendingConstant(kBend);
 	psystem->reset(ParticleSystem::CONFIG_GRID);
 	psystem->writeOutputs(outFile);
 
@@ -81,7 +127,7 @@ int main(int argc, char *argv[])
 		if (i % printRate == 0)
 		{
 			psystem->writeOutputs(outFile);
-			printInfo(timer, numParticles, iterations, i);
+			printInfo(timer, psystem->getNumParticles(), i);
 		}
     }
 
