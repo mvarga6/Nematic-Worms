@@ -87,10 +87,10 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_params.boundaryDamping = -0.5f;
 
     // Active forces
-    m_params.activity = 1.0f;
+    m_params.activity = 0.1f;
 
     // Global interations
-    m_params.gravity = make_float3(0.0f, -0.0003f, 0.0f);
+    m_params.gravity = make_float3(0.0f);
     m_params.globalDamping = 1.0f;
 
     _initialize(m_numParticles);
