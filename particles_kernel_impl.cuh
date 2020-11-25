@@ -44,65 +44,17 @@ struct integrate_functor
         volatile float4 velData = thrust::get<1>(t);
         volatile float4 forceData = thrust::get<2>(t);
         volatile float4 forceOldData = thrust::get<3>(t);
-        float3 pos   = make_float3(posData.x, posData.y, posData.z);
-        float3 vel   = make_float3(velData.x, velData.y, velData.z);
-        float3 f     = make_float3(forceData.x, forceData.y, forceData.z);
-        float3 f_old = make_float3(forceOldData.x, forceOldData.y, forceOldData.z);
+        float3 pos   = make_float3(posData);
+        float3 vel   = make_float3(velData);
+        float3 f     = make_float3(forceData);
+        float3 f_old = make_float3(forceOldData);
 
-        f += params.gravity;
+        // f += params.gravity;
 
         // Velocity Verlet update
-        pos += vel * dt + 0.5f * f_old * dt * dt;
         vel += 0.5f * (f + f_old) * dt;
+        pos += vel * dt + 0.5f * f * dt * dt;
         vel *= params.globalDamping;
-
-        // set this to zero to disable collisions with cube sides
-// #if 0
-
-//         if (pos.x > 1.0f - params.particleRadius)
-//         {
-//             pos.x = 1.0f - params.particleRadius;
-//             vel.x *= params.boundaryDamping;
-//         }
-
-//         if (pos.x < -1.0f + params.particleRadius)
-//         {
-//             pos.x = -1.0f + params.particleRadius;
-//             vel.x *= params.boundaryDamping;
-//         }
-
-//         if (pos.y > 1.0f - params.particleRadius)
-//         {
-//             pos.y = 1.0f - params.particleRadius;
-//             vel.y *= params.boundaryDamping;
-//         }
-
-//         if (pos.z > 1.0f - params.particleRadius)
-//         {
-//             pos.z = 1.0f - params.particleRadius;
-//             vel.z *= params.boundaryDamping;
-//         }
-
-//         if (pos.z < -1.0f + params.particleRadius)
-//         {
-//             pos.z = -1.0f + params.particleRadius;
-//             vel.z *= params.boundaryDamping;
-//         }
-
-// #endif
-
-        // Ground
-        // if (pos.y < -1.0f + params.particleRadius)
-        // {
-        //     pos.y = -1.0f + params.particleRadius;
-        //     vel.y *= params.boundaryDamping;
-        // }
-
-        // if (pos.y < params.origin.y + params.particleRadius)
-        // {
-        //     pos.y = params.origin.y + params.particleRadius;
-        //     vel.y *= params.boundaryDamping;
-        // }
 
 #if PBC_X
         if (pos.x < params.origin.x) pos.x += params.boxSize.x;
@@ -355,7 +307,11 @@ float3 extensileForce(float3 posA, float3 posB, float3 tangA, float3 tangB, floa
 {
     float3 relPos = posB - posA;
     float dist = lengthPeriodic(relPos);
-    return -A * (tangA - tangB) / (2.0f * dist);
+    if (dot(tangA, tangB) < -0.5f)
+    {
+        return -A * (tangA - tangB) / (2.0f * dist);
+    }
+    return make_float3(0.0f);
 }
 
 
@@ -500,8 +456,6 @@ void filamentKernel(float4 *forces,     // update: particle forces
     float A = 0.0f, d_ij = 0.0f, d_jk = 0.0f, d_ij_jk = 0.0f;
     float3 B = make_float3(0.0f), C = make_float3(0.0f);
 
-
-
     // Bond bending forces
     for (int p = 0; p < size - 2; p++)
     {
@@ -542,7 +496,7 @@ void filamentKernel(float4 *forces,     // update: particle forces
         {
             tangent[i] = make_float4(getTangent(r_i, r_j), 0.0f);
         }
-        else if (p == size - 2) // last iteration do tail as well
+        else if (p == size - 3) // last iteration do tail as well
         {
             tangent[i + 2] = make_float4(getTangent(r_j, r_k), 0.0f);
         }

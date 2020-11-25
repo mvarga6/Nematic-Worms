@@ -54,7 +54,7 @@ class ParticleSystem
 
         void dumpGrid();
         void dumpParticles(uint start, uint count);
-        void saveToFile(const std::string& filePath);
+        void writeOutputs(const std::string& fileName);
 
         void setIterations(int i)
         {
@@ -158,6 +158,7 @@ class ParticleSystem
         // CPU data
         float *m_hPos;              // particle positions
         float *m_hVel;              // particle velocities
+        float *m_hForce;            // particle forces
         float *m_hTangent;          // tangent of filament at particle position
 
         uint  *m_hParticleHash;

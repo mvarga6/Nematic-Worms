@@ -29,7 +29,7 @@ void printInfo(StopWatchInterface *timer, int numParticles, int iterations, int 
 {
 	// Print some speed metrics
 	float fAvgSeconds = ((float)1.0e-3 * (float)sdkGetTimerValue(&timer)/(float)iterations);
-	printf("[%i / %i] particles, Throughput = %.4f KParticles/s, Time = %.5f s, Size = %u particles, NumDevsUsed = %u, Workgroup = %u\n",
+	printf("[%i / %i] Throughput = %.4f KParticles/s, Time = %.5f s, Size = %u particles, NumDevsUsed = %u, Workgroup = %u\n",
            iter, iterations, (1.0e-3 * numParticles)/fAvgSeconds, fAvgSeconds, numParticles, 1, 0);
 }
 
@@ -41,30 +41,31 @@ int main(int argc, char *argv[])
 
 	// Simulation parameters
 	const std::string outFile = "nw.xyzv";
-	uint numFilaments		  = 153 * 4;
+	uint numFilaments		  = 135 * 8;
 	uint filamentSize 		  = 60;
 	int numParticles 		  = numFilaments * filamentSize;
-	float timestep 			  = 0.0005f;
-	int printRate 			  = 10000;
-	int iterations 			  = 10000000;
-	float damping 			  = 0.997f;
-	float gravity 			  = 0.0f; // -10.0f;
-	float kBend				  = 200.f;
-	float kBond				  = 200.f;
-	float hardness			  = 100.f;
+	float timestep 			  = 0.005f;
+	int printRate 			  = 500;
+	int iterations 			  = 1000000;
+	float damping 			  = 0.9999f;
+	float gravity 			  = 0.0f;
+	float kBend				  = 100.f;
+	float kBond				  = 57.146436f;
+	float activity			  = 0.15f;
+	float hardness			  = kBond;
 
-	uint3 gridSize = make_uint3(256, 64, 1);
+	uint3 gridSize = make_uint3(512, 64, 1);
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);
 	psystem->setGravity(gravity);
 	psystem->setDamping(damping);
-	psystem->setActivity(2.0f);
+	psystem->setActivity(activity);
 	psystem->setCollideSpring(hardness);
 	psystem->setBondSpringConstant(kBond);
 	psystem->setBondBendingConstant(kBend);
 	psystem->reset(ParticleSystem::CONFIG_GRID);
-	psystem->saveToFile(outFile);
+	psystem->writeOutputs(outFile);
 
 	// Pre time loop actions
 	StopWatchInterface *timer = NULL;
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
 
 		if (i % printRate == 0)
 		{
-			psystem->saveToFile(outFile);
+			psystem->writeOutputs(outFile);
 			printInfo(timer, numParticles, iterations, i);
 		}
     }

@@ -43,6 +43,7 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_numParticles(numFilaments * filamentSize),
     m_hPos(0),
     m_hVel(0),
+    m_hForce(0),
     m_hTangent(0),
     m_dPos(0),
     m_dVel(0),
@@ -57,8 +58,7 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_params.numFilaments = m_numFilaments;
     m_params.filamentSize = m_filamentSize;
     m_params.numParticles = m_numParticles;
-    // m_params.particleRadius = 1.0f / 64.0f;
-    m_params.particleRadius = 1.0f;
+    m_params.particleRadius = 0.5f;
 
     // System size/boundaries
     m_gridSortBits = 18;    // increase this for larger grids
@@ -137,11 +137,13 @@ ParticleSystem::_initialize(int numParticles)
     m_numParticles = numParticles;
 
     // allocate host storage
-    m_hPos = new float[m_numParticles*4];
-    m_hVel = new float[m_numParticles*4];
+    m_hPos     = new float[m_numParticles*4];
+    m_hVel     = new float[m_numParticles*4];
+    m_hForce   = new float[m_numParticles*4];
     m_hTangent = new float[m_numParticles*4];
     memset(m_hPos, 0, m_numParticles*4*sizeof(float));
     memset(m_hVel, 0, m_numParticles*4*sizeof(float));
+    memset(m_hForce, 0, m_numParticles*4*sizeof(float));
     memset(m_hTangent, 0, m_numParticles*4*sizeof(float));
 
     m_hCellStart = new uint[m_numGridCells];
@@ -212,6 +214,13 @@ ParticleSystem::update(float deltaTime)
         deltaTime,
         m_numParticles);
 
+    // forces of filament bonds
+    filamentForces(
+        m_dForce,
+        m_dTangent,
+        m_dPos,
+        m_numFilaments);
+
     // calculate grid hash
     calcHash(
         m_dGridParticleHash,
@@ -237,13 +246,6 @@ ParticleSystem::update(float deltaTime)
         m_dTangent,
         m_numParticles,
         m_numGridCells);
-
-    // forces of filament bonds
-    filamentForces(
-        m_dForce,
-        m_dTangent,
-        m_dPos,
-        m_numFilaments);
 
     // process collisions
     collide(
@@ -295,20 +297,24 @@ ParticleSystem::dumpParticles(uint start, uint count)
 }
 
 void
-ParticleSystem::saveToFile(const std::string& filePath)
+ParticleSystem::writeOutputs(const std::string& fileName)
 {
     copyArrayFromDevice(m_hPos, m_dPos, 0, sizeof(float)*4*m_numParticles);
+    // copyArrayFromDevice(m_hVel, m_dVel, 0, sizeof(float)*4*m_numParticles);
+    // copyArrayFromDevice(m_hForce, m_dForce, 0, sizeof(float)*4*m_numParticles);
     copyArrayFromDevice(m_hTangent, m_dTangent, 0, sizeof(float)*4*m_numParticles);
 
     std::ofstream fout;
-    fout.open(filePath, std::ios::out | std::ios::app);
+    fout.open(fileName, std::ios::out | std::ios::app);
     fout << m_numParticles << std::endl;
-    fout << "Test simulation" << std::endl;
+    fout << "Active Filaments Simulation" << std::endl;
     for (int i = 0; i < m_numParticles; i++)
     {
-        fout << "A " << m_hPos[i*4]     << " " << m_hPos[i*4+1]     << " " << m_hPos[i*4+2]
+        fout << "A " << m_hPos[i*4] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2]
+            //  << " "  << m_hVel[i*4] << " " << m_hVel[i*4+1] << " " << m_hVel[i*4+2]
+            //  << " "  << m_hForce[i*4] << " " << m_hForce[i*4+1] << " " << m_hForce[i*4+2]
              << " "  << m_hTangent[i*4] << " " << m_hTangent[i*4+1] << " " << m_hTangent[i*4+2]
-                     << std::endl;
+             << std::endl;
     }
     fout.close();
 }
@@ -451,9 +457,9 @@ ParticleSystem::reset(ParticleConfig config)
                     m_hPos[p++] = y + m_params.origin.y;
                     m_hPos[p++] = z + m_params.origin.z;
                     m_hPos[p++] = m_params.particleRadius; // radius
-                    m_hVel[v++] = 0.005f * (frand()*2.0f-1.0f);
-                    m_hVel[v++] = 0.005f * (frand()*2.0f-1.0f);
-                    m_hVel[v++] = 0.005f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
+                    m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
                     m_hVel[v++] = 0.0f;
                     m_hTangent[t++] = 1.0f;
                     m_hTangent[t++] = m_hTangent[t++] = m_hTangent[t++] = 0.0f;
