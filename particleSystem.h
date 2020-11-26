@@ -74,6 +74,10 @@ class ParticleSystem
         {
             m_params.activity = x;
         }
+        void setReverseProbability(float x)
+        {
+            m_params.reverseProbability = x;
+        }
 
         void setCollideSpring(float x)
         {
@@ -171,6 +175,7 @@ class ParticleSystem
         float *m_dTangent;
         float *m_dForce;
         float *m_dForceOld;
+        float *m_dRandom;
 
         float *m_dSortedPos;
         float *m_dSortedVel;

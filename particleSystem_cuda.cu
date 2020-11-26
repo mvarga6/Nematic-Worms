@@ -20,7 +20,9 @@
 #include <cstdio>
 #include <string.h>
 
+#include <cuda.h>
 #include <cuda_runtime.h>
+#include <curand.h>
 
 #include <helper_cuda.h>
 #include <helper_functions.h>
@@ -33,6 +35,7 @@
 
 extern "C"
 {
+    curandGenerator_t rng;
 
     void cudaInit(int argc, char **argv)
     {
@@ -46,6 +49,13 @@ extern "C"
             printf("No CUDA Capable devices found, exiting...\n");
             exit(EXIT_SUCCESS);
         }
+
+        curandCreateGenerator(&rng, CURAND_RNG_PSEUDO_DEFAULT);
+    }
+
+    void randomizeUniform(float *device, uint n)
+    {
+        curandGenerateUniform(rng, device, n);
     }
 
     void allocateArray(void **devPtr, size_t size)
@@ -219,6 +229,28 @@ extern "C"
         thrust::sort_by_key(thrust::device_ptr<uint>(dGridParticleHash),
                             thrust::device_ptr<uint>(dGridParticleHash + numParticles),
                             thrust::device_ptr<uint>(dGridParticleIndex));
+    }
+
+    void reverseFilaments(float *force,
+        float *forceOld,
+        float *vel,
+        float *pos,
+        float *uniform,
+        uint numFilaments)
+    {
+        // thread per filament
+        uint numThreads, numBlocks;
+        computeGridSize(numFilaments, 256, numBlocks, numThreads);
+
+        reverseFilamentsKernel<<< numBlocks, numThreads >>>((float4 *)force,
+                                                            (float4 *)forceOld,
+                                                            (float4 *)vel,
+                                                            (float4 *)pos,
+                                                            uniform,
+                                                            numFilaments);
+
+        // check if kernel invocation generated an error
+        getLastCudaError("Kernel execution failed");
     }
 
 }   // extern "C"

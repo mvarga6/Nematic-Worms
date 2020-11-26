@@ -50,6 +50,7 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_dTangent(0),
     m_dForce(0),
     m_dForceOld(0),
+    m_dRandom(0),
     m_gridSize(gridSize),
     m_timer(NULL),
     m_solverIterations(1)
@@ -88,6 +89,7 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
 
     // Active forces
     m_params.activity = 0.1f;
+    m_params.reverseProbability = 0.0f;
 
     // Global interations
     m_params.gravity = make_float3(0.0f);
@@ -159,6 +161,7 @@ ParticleSystem::_initialize(int numParticles)
     allocateArray((void **)&m_dTangent, memSize);
     allocateArray((void **)&m_dForce, memSize);
     allocateArray((void **)&m_dForceOld, memSize);
+    allocateArray((void **)&m_dRandom, memSize);
     allocateArray((void **)&m_dSortedPos, memSize);
     allocateArray((void **)&m_dSortedVel, memSize);
     allocateArray((void **)&m_dSortedTangent, memSize);
@@ -213,6 +216,19 @@ ParticleSystem::update(float deltaTime)
         m_dForceOld,
         deltaTime,
         m_numParticles);
+
+    if (m_params.reverseProbability > 0.0f)
+    {
+        randomizeUniform(m_dRandom, m_numFilaments);
+
+        reverseFilaments(
+            m_dForce,
+            m_dForceOld,
+            m_dVel,
+            m_dPos,
+            m_dRandom,
+            m_numFilaments);
+    }
 
     // forces of filament bonds
     filamentForces(

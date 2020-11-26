@@ -12,6 +12,7 @@
 extern "C"
 {
     void cudaInit(int argc, char **argv);
+    void randomizeUniform(float *device, uint n);
 
     void allocateArray(void **devPtr, int size);
     void freeArray(void *devPtr);
@@ -65,4 +66,10 @@ extern "C"
 
     void sortParticles(uint *dGridParticleHash, uint *dGridParticleIndex, uint numParticles);
 
+    void reverseFilaments(float *force,
+                          float *forceOld,
+                          float *vel,
+                          float *pos,
+                          float *uniform,
+                          uint numFilaments);
 }

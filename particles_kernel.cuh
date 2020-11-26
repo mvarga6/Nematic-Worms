@@ -41,6 +41,7 @@ struct SimParams
     float bondBendingK;
 
     float activity;
+    float reverseProbability;
 
     float spring;
     float damping;

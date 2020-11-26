@@ -22,15 +22,16 @@
 std::string outFile = "nw.xyzv";
 uint numFilaments	= 135 * 8;
 uint filamentSize 	= 60;
-float timestep 		= 0.005f;
-int printRate 		= 500;
+float timestep 		= 0.0025f;
+int printRate 		= 1000;
 int iterations 		= 1000000;
 float damping 		= 0.9999f;
 float gravity 		= 0.0f;
 float kBend			= 100.f;
 float kBond			= 57.146436f;
-float activity		= 0.15f;
 float hardness		= kBond;
+float activity		= 0.25f;
+float reverse   	= 0.0f;
 uint3 gridSize 		= make_uint3(512, 64, 1);
 
 extern "C" void cudaInit(int argc, char **argv);
@@ -74,6 +75,9 @@ void readParameters(int argc, char *argv[])
 	if (checkCmdLineFlag(argc, (const char **) argv, "activity"))
         activity = getCmdLineArgumentFloat(argc, (const char **) argv, "activity");
 
+	if (checkCmdLineFlag(argc, (const char **) argv, "reverse"))
+        reverse = getCmdLineArgumentFloat(argc, (const char **) argv, "reverse");
+
 	if (checkCmdLineFlag(argc, (const char **) argv, "hardness"))
         hardness = getCmdLineArgumentFloat(argc, (const char **) argv, "hardness");
 
@@ -109,6 +113,7 @@ int main(int argc, char *argv[])
 	psystem->setBondBendingConstant(kBend);
 	psystem->setBondSpringConstant(kBond);
 	psystem->setActivity(activity);
+	psystem->setReverseProbability(reverse);
 	psystem->setCollideSpring(hardness);
 	psystem->reset(ParticleSystem::CONFIG_GRID);
 	psystem->writeOutputs(outFile);

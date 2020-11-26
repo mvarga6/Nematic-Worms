@@ -283,7 +283,7 @@ float3 collideParticles(float3 posA, float3 posB,
         // tangential shear force
         force += params.shear*tanVel;
         // attraction
-        force += attraction*relPos;
+        // force += attraction*relPos;
     }
 
     return force;
@@ -333,10 +333,13 @@ float3 collideCell(int3    gridPos,
     uint gridHash = calcGridHash(gridPos);
 
     // get start of bucket for this cell
-    uint startIndex    = cellStart[gridHash];
-    uint filamentIndex = gridParticleIndex[index] / params.filamentSize;
-    uint chainIndex    = gridParticleIndex[index] % params.filamentSize;
-    uint filamentIndex2, chainIndex2;
+    uint  startIndex     = cellStart[gridHash];
+    uint  filamentSize   = params.filamentSize;
+    float particleRadius = params.particleRadius;
+    uint  filamentIndex  = gridParticleIndex[index] / filamentSize;
+    uint  chainIndex     = gridParticleIndex[index] % filamentSize;
+    uint  filamentIndex2, chainIndex2;
+    bool  sameFilament;
 
     float3 force = make_float3(0.0f);
 
@@ -352,8 +355,9 @@ float3 collideCell(int3    gridPos,
                 float3 r2      = make_float3(pos[j]);
                 float3 v2      = make_float3(vel[j]);
                 float3 t2      = make_float3(tangent[j]);
-                filamentIndex2 = gridParticleIndex[j] / params.filamentSize;
-                chainIndex2    = gridParticleIndex[j] % params.filamentSize;
+                filamentIndex2 = gridParticleIndex[j] / filamentSize;
+                chainIndex2    = gridParticleIndex[j] % filamentSize;
+                sameFilament   = filamentIndex == filamentIndex2;
 
                 // filament bonding
                 if (filamentIndex == filamentIndex2 && ((chainIndex + 1 == chainIndex2) || (chainIndex - 1 == chainIndex2)))
@@ -364,8 +368,12 @@ float3 collideCell(int3    gridPos,
                 {
                     force += collideParticles(r, r2, v, v2, params.particleRadius, params.particleRadius, params.attraction);
                 }
+                // if (!sameFilament || (chainIndex > chainIndex2 + 1) || (chainIndex < chainIndex2 - 1))
+                // {
+                //     force += collideParticles(r, r2, v, v2, particleRadius, particleRadius, 0.0f);
+                // }
 
-                if (filamentIndex != filamentIndex2)
+                if (!sameFilament)
                 {
                     force += extensileForce(r, r2, t, t2, params.activity);
                 }
@@ -444,8 +452,10 @@ void filamentKernel(float4 *forces,     // update: particle forces
 
     if (index >= numFilaments) return;
 
-    const uint size = params.filamentSize;
-    const float k = params.bondBendingK;
+    const uint size    = params.filamentSize;
+    const float k_bend = params.bondBendingK;
+    const float k_bond = params.bondSpringK;
+    const float l_bond = params.bondSpringL;
 
     uint i = 0;
     uint head_i = index * size;
@@ -456,6 +466,8 @@ void filamentKernel(float4 *forces,     // update: particle forces
     float A = 0.0f, d_ij = 0.0f, d_jk = 0.0f, d_ij_jk = 0.0f;
     float3 B = make_float3(0.0f), C = make_float3(0.0f);
 
+    // float3 f_bond;
+
     // Bond bending forces
     for (int p = 0; p < size - 2; p++)
     {
@@ -463,6 +475,9 @@ void filamentKernel(float4 *forces,     // update: particle forces
         r_i  = make_float3(pos[i]);
         r_j  = make_float3(pos[i + 1]);
         r_k  = make_float3(pos[i + 2]);
+
+        // Bonding force
+        // f_bond = bondHookean(r_i, r_j, k_bond, l_bond);
 
         r_ij = r_j - r_i;
         r_jk = r_k - r_j;
@@ -477,7 +492,7 @@ void filamentKernel(float4 *forces,     // update: particle forces
         // f_j = -f_i - f_k;
 
         // Derivation 2
-        A = k / (d_ij * d_jk);
+        A = k_bend / (d_ij * d_jk);
         B = r_ij * d_ij_jk / dot(r_ij, r_ij);
         C = r_jk * d_ij_jk / dot(r_jk, r_jk);
 
@@ -499,7 +514,50 @@ void filamentKernel(float4 *forces,     // update: particle forces
         else if (p == size - 3) // last iteration do tail as well
         {
             tangent[i + 2] = make_float4(getTangent(r_j, r_k), 0.0f);
+
+            // f_bond = bondHookean(r_j, r_k, k_bond, l_bond);
+            // forces[i + 1] += make_float4(f_bond, 0.0f);
+            // forces[i + 2] -= make_float4(f_bond, 0.0f);
         }
+    }
+}
+
+__global__
+void reverseFilamentsKernel(float4 *force,     // update: particle forces
+                            float4 *forceOld,        // update: particle old forces
+                            float4 *vel,        // update: particle velocities
+                            float4 *pos,        // update: particle positions
+                            float *uniform,     // input: random numbers drawn from uniform dist
+                            uint numFilaments   // input: number of filaments
+                            )
+{
+    uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+
+    if (index >= numFilaments) return;
+    if (uniform[index] > params.reverseProbability) return;
+
+    const uint size = params.filamentSize;
+    uint head = index * size;
+    uint i,j;
+
+    float4 tmp_r, tmp_v, tmp_f, tmp_fOld;
+
+    for (uint p = 0; p < size / 2; p++)
+    {
+        i = head            + p;
+        j = head + size - 1 - p;
+        tmp_r       = pos[i];
+        tmp_v       = vel[i];
+        tmp_f       = force[i];
+        tmp_fOld    = forceOld[i];
+        pos[i]      = pos[j];
+        vel[i]      = vel[j];
+        force[i]    = force[j];
+        forceOld[i] = forceOld[j];
+        pos[j]      = tmp_r;
+        vel[j]      = tmp_v;
+        force[j]    = tmp_f;
+        forceOld[j] = tmp_fOld;
     }
 }
 

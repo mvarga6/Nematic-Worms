@@ -281,7 +281,7 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for CUDA
 INCLUDES  := -Invidia_common
-LIBRARIES :=
+LIBRARIES := -lcurand
 
 ################################################################################
 
