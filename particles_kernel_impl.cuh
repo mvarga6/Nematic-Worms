@@ -54,7 +54,6 @@ struct integrate_functor
         // Velocity Verlet update
         vel += 0.5f * (f + f_old) * dt;
         pos += vel * dt + 0.5f * f * dt * dt;
-        vel *= params.globalDamping;
 
 #if PBC_X
         if (pos.x < params.origin.x) pos.x += params.boxSize.x;
@@ -335,7 +334,6 @@ float3 collideCell(int3    gridPos,
     // get start of bucket for this cell
     uint  startIndex     = cellStart[gridHash];
     uint  filamentSize   = params.filamentSize;
-    float particleRadius = params.particleRadius;
     uint  filamentIndex  = gridParticleIndex[index] / filamentSize;
     uint  chainIndex     = gridParticleIndex[index] % filamentSize;
     uint  filamentIndex2, chainIndex2;
@@ -454,8 +452,6 @@ void filamentKernel(float4 *forces,     // update: particle forces
 
     const uint size    = params.filamentSize;
     const float k_bend = params.bondBendingK;
-    const float k_bond = params.bondSpringK;
-    const float l_bond = params.bondSpringL;
 
     uint i = 0;
     uint head_i = index * size;
@@ -466,8 +462,6 @@ void filamentKernel(float4 *forces,     // update: particle forces
     float A = 0.0f, d_ij = 0.0f, d_jk = 0.0f, d_ij_jk = 0.0f;
     float3 B = make_float3(0.0f), C = make_float3(0.0f);
 
-    // float3 f_bond;
-
     // Bond bending forces
     for (int p = 0; p < size - 2; p++)
     {
@@ -475,9 +469,6 @@ void filamentKernel(float4 *forces,     // update: particle forces
         r_i  = make_float3(pos[i]);
         r_j  = make_float3(pos[i + 1]);
         r_k  = make_float3(pos[i + 2]);
-
-        // Bonding force
-        // f_bond = bondHookean(r_i, r_j, k_bond, l_bond);
 
         r_ij = r_j - r_i;
         r_jk = r_k - r_j;
@@ -514,17 +505,13 @@ void filamentKernel(float4 *forces,     // update: particle forces
         else if (p == size - 3) // last iteration do tail as well
         {
             tangent[i + 2] = make_float4(getTangent(r_j, r_k), 0.0f);
-
-            // f_bond = bondHookean(r_j, r_k, k_bond, l_bond);
-            // forces[i + 1] += make_float4(f_bond, 0.0f);
-            // forces[i + 2] -= make_float4(f_bond, 0.0f);
         }
     }
 }
 
 __global__
-void reverseFilamentsKernel(float4 *force,     // update: particle forces
-                            float4 *forceOld,        // update: particle old forces
+void reverseFilamentsKernel(float4 *force,      // update: particle forces
+                            float4 *forceOld,   // update: particle old forces
                             float4 *vel,        // update: particle velocities
                             float4 *pos,        // update: particle positions
                             float *uniform,     // input: random numbers drawn from uniform dist
@@ -559,6 +546,23 @@ void reverseFilamentsKernel(float4 *force,     // update: particle forces
         force[j]    = tmp_f;
         forceOld[j] = tmp_fOld;
     }
+}
+
+__global__
+void langevinKernel(float4 *force,     // update: particle forces
+                    float4 *vel,       // input: particle velocities
+                    float4 *gaussian,  // input: random numbers drawn from normal dist
+                    uint numParticles  // input: number of particles
+                 )
+{
+    uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+
+    if (index >= numParticles) return;
+
+    float3 f = make_float3(0.0f);
+    f -= params.gamma * make_float3(vel[index]);
+    f += make_float3(gaussian[index]);
+    force[index] += make_float4(f, 0.0f);
 }
 
 #endif

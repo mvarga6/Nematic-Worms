@@ -91,9 +91,12 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_params.activity = 0.1f;
     m_params.reverseProbability = 0.0f;
 
+    // Langevin thermostat
+    m_params.kbT = 1.0f;
+    m_params.gamma = 0.01;
+
     // Global interations
     m_params.gravity = make_float3(0.0f);
-    m_params.globalDamping = 1.0f;
 
     _initialize(m_numParticles);
 }
@@ -219,8 +222,6 @@ ParticleSystem::update(float deltaTime)
 
     if (m_params.reverseProbability > 0.0f)
     {
-        randomizeUniform(m_dRandom, m_numFilaments);
-
         reverseFilaments(
             m_dForce,
             m_dForceOld,
@@ -228,6 +229,17 @@ ParticleSystem::update(float deltaTime)
             m_dPos,
             m_dRandom,
             m_numFilaments);
+    }
+
+    if (m_params.kbT > 0.0f || m_params.gamma > 0.0f)
+    {
+        langevinThermostat(
+            m_dForce,
+            m_dVel,
+            m_dRandom,
+            m_params.gamma,
+            m_params.kbT,
+            m_numParticles);
     }
 
     // forces of filament bonds

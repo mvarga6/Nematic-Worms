@@ -58,6 +58,11 @@ extern "C"
         curandGenerateUniform(rng, device, n);
     }
 
+    void randomizeGaussian(float *device, uint n, float mean, float stddev)
+    {
+        curandGenerateNormal(rng, device, n, mean, stddev);
+    }
+
     void allocateArray(void **devPtr, size_t size)
     {
         checkCudaErrors(cudaMalloc(devPtr, size));
@@ -171,8 +176,8 @@ extern "C"
             (float4 *) vel,
             (float4 *) tangent,
             numParticles);
-        getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
 
+        getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
     }
 
     void collide(float *force,
@@ -201,7 +206,7 @@ extern "C"
                                               numParticles);
 
         // check if kernel invocation generated an error
-        getLastCudaError("Kernel execution failed");
+        getLastCudaError("Kernel execution failed: collide");
 
     }
 
@@ -220,7 +225,7 @@ extern "C"
                                                     numFilaments);
 
         // check if kernel invocation generated an error
-        getLastCudaError("Kernel execution failed");
+        getLastCudaError("Kernel execution failed: filamentForces");
     }
 
 
@@ -232,12 +237,14 @@ extern "C"
     }
 
     void reverseFilaments(float *force,
-        float *forceOld,
-        float *vel,
-        float *pos,
-        float *uniform,
-        uint numFilaments)
+                          float *forceOld,
+                          float *vel,
+                          float *pos,
+                          float *random,
+                          uint numFilaments)
     {
+        randomizeUniform(random, numFilaments);
+
         // thread per filament
         uint numThreads, numBlocks;
         computeGridSize(numFilaments, 256, numBlocks, numThreads);
@@ -246,11 +253,33 @@ extern "C"
                                                             (float4 *)forceOld,
                                                             (float4 *)vel,
                                                             (float4 *)pos,
-                                                            uniform,
+                                                            random,
                                                             numFilaments);
 
         // check if kernel invocation generated an error
-        getLastCudaError("Kernel execution failed");
+        getLastCudaError("Kernel execution failed: reverseFilaments");
+    }
+
+    void langevinThermostat(float *force,
+                            float *vel,
+                            float *random,
+                            float gamma,
+                            float kbT,
+                            uint numParticles)
+    {
+        const float stddev = sqrtf(2.0f * gamma * kbT);
+        randomizeGaussian(random, 4 * numParticles, 0.0f, stddev);
+
+        // thread per particle
+        uint numThreads, numBlocks;
+        computeGridSize(numParticles, 256, numBlocks, numThreads);
+
+        langevinKernel<<< numBlocks, numThreads >>>((float4 *)force,
+                                                    (float4 *)vel,
+                                                    (float4 *)random,
+                                                    numParticles);
+
+        getLastCudaError("Lernel execution failed: langevinThermostat");
     }
 
 }   // extern "C"

@@ -13,6 +13,7 @@ extern "C"
 {
     void cudaInit(int argc, char **argv);
     void randomizeUniform(float *device, uint n);
+    void randomizeGaussian(float *device, uint n, float mean, float stddev);
 
     void allocateArray(void **devPtr, int size);
     void freeArray(void *devPtr);
@@ -72,4 +73,11 @@ extern "C"
                           float *pos,
                           float *uniform,
                           uint numFilaments);
+
+    void langevinThermostat(float *force,
+                            float *vel,
+                            float *random,
+                            float gamma,
+                            float kbT,
+                            uint numParticles);
 }

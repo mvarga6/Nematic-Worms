@@ -25,13 +25,14 @@ uint filamentSize 	= 60;
 float timestep 		= 0.0025f;
 int printRate 		= 1000;
 int iterations 		= 1000000;
-float damping 		= 0.9999f;
 float gravity 		= 0.0f;
 float kBend			= 100.f;
 float kBond			= 57.146436f;
 float hardness		= kBond;
 float activity		= 0.25f;
 float reverse   	= 0.0f;
+float kbT			= 1.0f;
+float drag			= 0.01f;
 uint3 gridSize 		= make_uint3(512, 64, 1);
 
 extern "C" void cudaInit(int argc, char **argv);
@@ -63,8 +64,11 @@ void readParameters(int argc, char *argv[])
 	if (checkCmdLineFlag(argc, (const char **) argv, "printRate"))
         printRate = getCmdLineArgumentFloat(argc, (const char **) argv, "printRate");
 
-	if (checkCmdLineFlag(argc, (const char **) argv, "damping"))
-        damping = getCmdLineArgumentFloat(argc, (const char **) argv, "damping");
+	if (checkCmdLineFlag(argc, (const char **) argv, "gamma"))
+        drag = getCmdLineArgumentFloat(argc, (const char **) argv, "gamma");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "kbT"))
+        kbT = getCmdLineArgumentFloat(argc, (const char **) argv, "kbT");
 
 	if (checkCmdLineFlag(argc, (const char **) argv, "kBend"))
         kBend = getCmdLineArgumentFloat(argc, (const char **) argv, "kBend");
@@ -109,7 +113,8 @@ int main(int argc, char *argv[])
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);
-	psystem->setDamping(damping);
+	psystem->setDamping(drag);
+	psystem->setTemperature(kbT);
 	psystem->setBondBendingConstant(kBend);
 	psystem->setBondSpringConstant(kBond);
 	psystem->setActivity(activity);

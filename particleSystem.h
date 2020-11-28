@@ -63,7 +63,11 @@ class ParticleSystem
 
         void setDamping(float x)
         {
-            m_params.globalDamping = x;
+            m_params.gamma = x;
+        }
+        void setTemperature(float x)
+        {
+            m_params.kbT = x;
         }
         void setGravity(float x)
         {

@@ -23,7 +23,6 @@ typedef unsigned int uint;
 struct SimParams
 {
     float3 gravity;
-    float globalDamping;
     float particleRadius;
 
     uint3 gridSize;
@@ -42,6 +41,8 @@ struct SimParams
 
     float activity;
     float reverseProbability;
+    float kbT;
+    float gamma;
 
     float spring;
     float damping;
