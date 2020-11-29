@@ -16,5 +16,6 @@ def _read_frame_body(fp, pcount):
     positions = np.empty((pcount, 3))
     labels = np.empty((pcount,), dtype=str)
     for i in range(pcount):
-        labels[i], *positions[i] = fp.readline().split()
+        labels[i], *data = fp.readline().split()
+        positions[i] = data[:3]
     return positions, labels
