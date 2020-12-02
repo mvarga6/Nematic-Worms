@@ -120,7 +120,8 @@ int main(int argc, char *argv[])
 	psystem->setActivity(activity);
 	psystem->setReverseProbability(reverse);
 	psystem->setCollideSpring(hardness);
-	psystem->reset(ParticleSystem::CONFIG_GRID);
+
+	psystem->reset();
 	psystem->writeOutputs(outFile);
 
 	// Pre time loop actions

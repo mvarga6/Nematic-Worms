@@ -241,10 +241,20 @@ void reorderDataAndFindCellStartD(uint   *cellStart,        // output: cell star
         }
 
         // Now use the sorted index to reorder data array
-        uint sortedIndex     = gridParticleIndex[index];
-        sortedPos[index]     = pos[sortedIndex];
-        sortedVel[index]     = vel[sortedIndex];
-        sortedTangent[index] = tangent[sortedIndex];
+        uint sortedIndex = gridParticleIndex[index];
+        sortedPos[index] = pos[sortedIndex];
+
+        // optionally sort velocities
+        if (vel != NULL && sortedVel != NULL)
+        {
+            sortedVel[index] = vel[sortedIndex];
+        }
+
+        // optionally sort filament tangents per particle
+        if (tangent != NULL && sortedTangent != NULL)
+        {
+            sortedTangent[index] = tangent[sortedIndex];
+        }
     }
 
 

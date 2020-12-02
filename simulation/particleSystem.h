@@ -27,13 +27,6 @@ class ParticleSystem
         ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridSize);
         ~ParticleSystem();
 
-        enum ParticleConfig
-        {
-            CONFIG_RANDOM,
-            CONFIG_GRID,
-            _NUM_CONFIGS
-        };
-
         enum ParticleArray
         {
             POSITION,
@@ -42,7 +35,7 @@ class ParticleSystem
         };
 
         void update(float deltaTime);
-        void reset(ParticleConfig config);
+        void reset();
 
         float *getArray(ParticleArray array);
         void   setArray(ParticleArray array, const float *data, int start, int count);
@@ -148,8 +141,6 @@ class ParticleSystem
 
         void _initialize(int numParticles);
         void _finalize();
-
-        void initGrid(uint *size, float spacing, float jitter, uint numParticles);
 
         void updateNumParticles()
         {
