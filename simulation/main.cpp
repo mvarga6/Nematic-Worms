@@ -20,19 +20,22 @@
 
 // Simulation parameters
 std::string outFile = "nw.xyzv";
-uint numFilaments	= 135 * 8;
-uint filamentSize 	= 60;
-float timestep 		= 0.0025f;
+uint numFilaments	= 135 * 6;
+uint filamentSize 	= 30;
+float timestep 		= 0.002f;
 int printRate 		= 1000;
 int iterations 		= 1000000;
 float gravity 		= 0.0f;
-float kBend			= 100.f;
+float kBend			= 150.f;
 float kBond			= 57.146436f;
 float hardness		= kBond;
-float activity		= 0.25f;
-float reverse   	= 0.0f;
-float kbT			= 1.0f;
+float activity		= 0.025f;
+float reverse   	= 0.0005f;
+float kbT			= 5000.0f;
 float drag			= 0.01f;
+BoundaryType boundX = BoundaryType::PERIODIC;
+BoundaryType boundY = BoundaryType::WALL;
+BoundaryType boundZ = BoundaryType::WALL;
 uint3 gridSize 		= make_uint3(512, 64, 1);
 
 extern "C" void cudaInit(int argc, char **argv);
@@ -86,13 +89,22 @@ void readParameters(int argc, char *argv[])
         hardness = getCmdLineArgumentFloat(argc, (const char **) argv, "hardness");
 
 	if (checkCmdLineFlag(argc, (const char **) argv, "gridX"))
-        gridSize.x = getCmdLineArgumentInt(argc, (const char **) argv, "gridX");
+        gridSize.x = (uint)getCmdLineArgumentInt(argc, (const char **) argv, "gridX");
 
 	if (checkCmdLineFlag(argc, (const char **) argv, "gridY"))
-        gridSize.y = getCmdLineArgumentInt(argc, (const char **) argv, "gridY");
+        gridSize.y = (uint)getCmdLineArgumentInt(argc, (const char **) argv, "gridY");
 
 	if (checkCmdLineFlag(argc, (const char **) argv, "gridZ"))
-        gridSize.z = getCmdLineArgumentInt(argc, (const char **) argv, "gridZ");
+        gridSize.z = (uint)getCmdLineArgumentInt(argc, (const char **) argv, "gridZ");
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "boundX"))
+        boundX = static_cast<BoundaryType>(getCmdLineArgumentInt(argc, (const char **) argv, "boundX"));
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "boundY"))
+        boundY = static_cast<BoundaryType>(getCmdLineArgumentInt(argc, (const char **) argv, "boundY"));
+
+	if (checkCmdLineFlag(argc, (const char **) argv, "boundZ"))
+        boundZ = static_cast<BoundaryType>(getCmdLineArgumentInt(argc, (const char **) argv, "boundZ"));
 
 	if (checkCmdLineFlag(argc, (const char **) argv, "o"))
 	{
@@ -113,6 +125,7 @@ int main(int argc, char *argv[])
 
 	// Instantiate the system of particles
 	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);
+	psystem->setBoundaries(boundX, boundY, boundZ);
 	psystem->setDamping(drag);
 	psystem->setTemperature(kbT);
 	psystem->setBondBendingConstant(kBend);

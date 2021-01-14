@@ -15,9 +15,12 @@
 #include "vector_types.h"
 typedef unsigned int uint;
 
-#define PBC_X 1
-#define PBC_Y 0
-#define PBC_Z 0
+enum BoundaryType
+{
+    PERIODIC = 0,
+    WALL = 1,
+    WALL_NO_SLIP = 2,
+};
 
 // simulation parameters
 struct SimParams
@@ -30,6 +33,10 @@ struct SimParams
     float3 origin;
     float3 boxSize;
     float3 cellSize;
+
+    BoundaryType boundaryX;
+    BoundaryType boundaryY;
+    BoundaryType boundaryZ;
 
     uint numParticles;
     uint numFilaments;

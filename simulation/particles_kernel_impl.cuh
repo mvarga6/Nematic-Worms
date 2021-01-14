@@ -52,54 +52,97 @@ struct integrate_functor
         // f += params.gravity;
 
         // Velocity Verlet update
-        vel += 0.5f * (f + f_old) * dt;
-        pos += vel * dt + 0.5f * f * dt * dt;
+        float3 dv = 0.5f * (f + f_old) * dt;
+        vel += dv;
+        float3 dr = vel * dt + 0.5f * f * dt * dt;
+        pos += dr;
 
-#if PBC_X
-        if (pos.x < params.origin.x) pos.x += params.boxSize.x;
-        else if (pos.x > params.boxSize.x + params.origin.x) pos.x -= params.boxSize.x;
-#else
-        if (pos.x < params.origin.x + params.particleRadius)
+        if (params.boundaryX == BoundaryType::PERIODIC)
         {
-            pos.x = params.origin.x + params.particleRadius;
-            vel.x *= params.boundaryDamping;
+            if (pos.x < params.origin.x) pos.x += params.boxSize.x;
+            else if (pos.x > params.boxSize.x + params.origin.x) pos.x -= params.boxSize.x;
         }
-        else if (pos.x > (params.boxSize.x + params.origin.x) - params.particleRadius)
+        else if(params.boundaryX == BoundaryType::WALL)
         {
-            pos.x = (params.boxSize.x + params.origin.x) - params.particleRadius;
-            vel.x *= params.boundaryDamping;
+            if (pos.x < params.origin.x + params.particleRadius)
+            {
+                pos.x = params.origin.x + params.particleRadius;
+                vel.x *= params.boundaryDamping;
+            }
+            else if (pos.x > (params.boxSize.x + params.origin.x) - params.particleRadius)
+            {
+                pos.x = (params.boxSize.x + params.origin.x) - params.particleRadius;
+                vel.x *= params.boundaryDamping;
+            }
         }
-#endif
-#if PBC_Y
-        if (pos.y < params.origin.y) pos.y += params.boxSize.y;
-        else if (pos.y > params.boxSize.y + params.origin.y) pos.y -= params.boxSize.y;
-#else
-        if (pos.y < params.origin.y + params.particleRadius)
+        else if(params.boundaryX == BoundaryType::WALL_NO_SLIP)
         {
-            pos.y = params.origin.y + params.particleRadius;
-            vel.y *= params.boundaryDamping;
+            if (pos.x < params.origin.x + params.particleRadius)
+            {
+                pos -= dr;
+                pos.x = params.origin.x + params.particleRadius;
+                vel = -vel;
+            }
+            else if (pos.x > (params.boxSize.x + params.origin.x) - params.particleRadius)
+            {
+                pos -= dr;
+                pos.x = (params.boxSize.x + params.origin.x) - params.particleRadius;
+                vel = -vel;
+            }
         }
-        else if (pos.y > (params.boxSize.y + params.origin.y) - params.particleRadius)
+
+        if (params.boundaryY == BoundaryType::PERIODIC)
         {
-            pos.y = (params.boxSize.y + params.origin.y) - params.particleRadius;
-            vel.y *= params.boundaryDamping;
+            if (pos.y < params.origin.y) pos.y += params.boxSize.y;
+            else if (pos.y > params.boxSize.y + params.origin.y) pos.y -= params.boxSize.y;
         }
-#endif
-#if PBC_Z
-        if (pos.z < params.origin.z) pos.z += params.boxSize.z;
-        else if (pos.z > params.boxSize.z + params.origin.z) pos.z -= params.boxSize.z;
-#else
-        if (pos.z < params.origin.z + params.particleRadius)
+        else if(params.boundaryY == BoundaryType::WALL)
         {
-            pos.z = params.origin.z + params.particleRadius;
-            vel.z *= params.boundaryDamping;
+            if (pos.y < params.origin.y + params.particleRadius)
+            {
+                pos.y = params.origin.y + params.particleRadius;
+                vel.y *= params.boundaryDamping;
+            }
+            else if (pos.y > (params.boxSize.y + params.origin.y) - params.particleRadius)
+            {
+                pos.y = (params.boxSize.y + params.origin.y) - params.particleRadius;
+                vel.y *= params.boundaryDamping;
+            }
         }
-        else if (pos.z > (params.boxSize.z + params.origin.z) - params.particleRadius)
+        else if(params.boundaryY == BoundaryType::WALL_NO_SLIP)
         {
-            pos.z = (params.boxSize.z + params.origin.z) - params.particleRadius;
-            vel.z *= params.boundaryDamping;
+            if (pos.y < params.origin.y + params.particleRadius)
+            {
+                pos -= dr;
+                pos.y = params.origin.y + params.particleRadius;
+                vel = -vel;
+            }
+            else if (pos.y > (params.boxSize.y + params.origin.y) - params.particleRadius)
+            {
+                pos -= dr;
+                pos.y = (params.boxSize.y + params.origin.y) - params.particleRadius;
+                vel = -vel;
+            }
         }
-#endif
+
+        if (params.boundaryZ == BoundaryType::PERIODIC)
+        {
+            if (pos.z < params.origin.z) pos.z += params.boxSize.z;
+            else if (pos.z > params.boxSize.z + params.origin.z) pos.z -= params.boxSize.z;
+        }
+        else if(params.boundaryZ == BoundaryType::WALL)
+        {
+            if (pos.z < params.origin.z + params.particleRadius)
+            {
+                pos.z = params.origin.z + params.particleRadius;
+                vel.z *= params.boundaryDamping;
+            }
+            else if (pos.z > (params.boxSize.z + params.origin.z) - params.particleRadius)
+            {
+                pos.z = (params.boxSize.z + params.origin.z) - params.particleRadius;
+                vel.z *= params.boundaryDamping;
+            }
+        }
 
         // store new position, velocity, and forces
         thrust::get<0>(t) = make_float4(pos, posData.w);
@@ -133,18 +176,23 @@ __device__ float lengthPeriodic(float3& dr)
 {
     float3 L = params.boxSize;
     float3 Lo2 = L / 2.0f;
-#if PBC_X
-    if (dr.x > Lo2.x) dr.x -= L.x;
-    else if (dr.x < -Lo2.x) dr.x += L.x;
-#endif
-#if PBX_Y
-    if (dr.y > Lo2.y) dr.y -= L.y;
-    else if (dr.y < -Lo2.y) dr.y += L.y;
-#endif
-#if PBC_Z
-    if (dr.z > Lo2.z) dr.z -= L.z;
-    else if (dr.z < -Lo2.z) dr.z += L.z;
-#endif
+
+    if (params.boundaryX == BoundaryType::PERIODIC)
+    {
+        if (dr.x > Lo2.x) dr.x -= L.x;
+        else if (dr.x < -Lo2.x) dr.x += L.x;
+    }
+    if (params.boundaryY == BoundaryType::PERIODIC)
+    {
+        if (dr.y > Lo2.y) dr.y -= L.y;
+        else if (dr.y < -Lo2.y) dr.y += L.y;
+    }
+    if (params.boundaryZ == BoundaryType::PERIODIC)
+    {
+        if (dr.z > Lo2.z) dr.z -= L.z;
+        else if (dr.z < -Lo2.z) dr.z += L.z;
+    }
+
     return length(dr);
 }
 

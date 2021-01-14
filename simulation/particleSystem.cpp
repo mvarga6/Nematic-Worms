@@ -70,6 +70,9 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
     m_params.boxSize = make_float3(gridSize.x*cellSize, gridSize.y*cellSize, gridSize.z*cellSize);
     m_params.origin = -m_params.boxSize / 2.0f;
+    m_params.boundaryX = BoundaryType::PERIODIC;
+    m_params.boundaryY = BoundaryType::PERIODIC;
+    m_params.boundaryZ = BoundaryType::PERIODIC;
 
     // Particle-Particle bonding
     m_params.bondSpringK = 57.f;

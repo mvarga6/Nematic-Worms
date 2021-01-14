@@ -116,6 +116,12 @@ class ParticleSystem
         {
             m_params.bondBendingK = x;
         }
+        void setBoundaries(BoundaryType x, BoundaryType y, BoundaryType z)
+        {
+            m_params.boundaryX = x;
+            m_params.boundaryY = y;
+            m_params.boundaryZ = z;
+        }
 
         float getParticleRadius()
         {
