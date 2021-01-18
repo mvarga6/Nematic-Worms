@@ -1,0 +1,68 @@
+#!/bin/bash
+#########################
+# simulation parameters #
+#########################
+
+kbt=5
+ka=10
+np=15
+xdim=15
+ydim=100
+xbox=125
+ybox=125
+
+####################
+# folder locations #
+####################
+
+srcfile="~/mvarga/worms/repo/fluid_substrate/main.cu"
+binloc="~/mvarga/worms/bin"
+dataloc="~/mvarga/worms/data"
+simid="nw3d_kbt${kbt}_ka${ka}_xdim${xdim}_ydim${ydim}_xbox${xbox}_ybox${ybox}
+
+###########################
+# portable batch scriping #
+###########################
+
+#PBS -N ${simid}
+#PBS -l walltime=96:00:00
+#PBS -l nodes=1:ppn=1:gpus=1
+#PBS -j oe
+#PBS -m ae
+#PBS -M mvarga6@kent.edu
+
+#####################
+# setup environment #
+#####################
+
+if [ ! -e ${binloc}/nw3d ]; then
+    echo "Building nw3d from source"
+    module load cuda
+    nvcc ${srcfile} -o ${binloc}/nw3d -lcurand
+fi
+
+mkdir ${dataloc}/${simid}
+
+#cd $PBS_O_WORKDIR
+#mkdir $PBS_JOBID
+#module load cuda
+#nvcc ~/mvarga/worms/repo/fluid_substrate/main.cu -o Sim -lcurand
+#cp Sim $PBS_JOBID
+#pbsdcp Sim $TMPDIR
+#rm Sim
+
+##############################
+# run simulation on the node #
+##############################
+
+pbsdcp ${binloc}/nw3d $TMPDIR
+cd $TMPDIR
+module load cuda
+./nw3d -o output.xyz -kbt ${kbt} -ka ${ka} -np ${np} -xdim ${xdim} -ydim ${ydim} -xbox ${xbox} -ybox ${ybox}
+
+#cd $PBS_O_WORKDIR
+#cp -R $TMPDIR/* $PBS_JOBID
+
+cp -R $TMPDIR/* ${dataloc}/${simid}
+
+trap "cp -R $TMPDIR/* ${dataloc}/${simid}" TERM
