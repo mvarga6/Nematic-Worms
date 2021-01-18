@@ -1,0 +1,39 @@
+#PBS -N nw3d
+#PBS -l walltime=96:00:00
+#PBS -l nodes=1:ppn=1:gpus=1
+#PBS -j oe
+
+name="kbt${kbt}_ka${ka}_np${np}_xdim${xdim}_ydim${ydim}_xbox${xbox}_ybox${ybox}"
+outdir="~/mvarga/worms/data/${name}"
+
+# PREPARE DIRECTORY ON LOCAL
+cd $PBS_O_WORKDIR
+cd ~/mvarga/worms/data
+mkdir ${name}
+
+# COPY BINARIES TO NODE
+pbsdcp ~/mvarga/worms/bin/nw3d $TMPDIR
+pbsdcp ~/mvarga/nw_analysis/bin/nw-analysis $TMPDIR
+
+# MOVE TO NODE DIRECTORY / SETUP RUNTIME ENVIRONMENT
+cd $TMPDIR
+module load cuda
+module load boost
+module load gnu
+
+# RUN SIMULATION
+time ./nw3d -o output_${PBS_JOBID}.xyz -dt 0.005 -nsteps 2000000 -framerate 10000 -kbt $kbt -ka $ka -np $np -xdim $xdim -ydim $ydim -zdim $zdim -xbox $xbox -ybox $ybox
+
+# RUN ANALYSIS
+time ./nw-analysis --thickness -i output_${PBS_JOBID} -o analysis_${PBS_JOBID} --
+
+# COPY FILES BACK TO LOCAL DIRECTORY
+cd $PBS_O_WORKDIR
+module load gnu
+pbsdcp -r $TMPDIR/* ~/mvarga/worms/data/${name}/
+cd ~/mvarga/worms/data/${name}
+
+# CHOP HUGE *.xyz FILES INTO SUB-FILES
+~/mvarga/chop/bin/chop output_${PBS_JOBID}.xyz 30
+
+trap "pbsdcp -r $TMPDIR/* ~/mvarga/worms/data/${name}/" TERM

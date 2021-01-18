@@ -1,0 +1,31 @@
+#!/bin/bash
+# References to folders and files
+########################################
+srcfile="~/mvarga/worms/repo/fluid_substrate/main.cu"
+dataloc="~/mvarga/worms/data"
+binloc="~/mvarga/worms/bin"
+
+# Submission resources requested
+########################################
+#PBS -N NWSim
+#PBS -l walltime=96:00:00
+#PBS -l nodes=1:ppn=1:gpus=1
+#PBS -j oe
+#PBS -m ae
+#PBS -M mvarga6@kent.edu
+
+# Setup folders for user
+##########################
+mkdir ${dataloc}/${PBS_JOBID}
+pbsdcp ${binloc}/nw3d $TMPDIR
+cd $TMPDIR
+
+datafile="${dataloc}/${PBS_JOBID}/${filename}"
+
+module load cuda
+${binloc}/nw3d -o ${filename} -kbt ${kbt} -ka ${ka} -np ${np} -xdim ${xdim} -ydim ${ydim} -xbox ${xbox} -ybox ${ybox}
+
+#cd $PBS_O_WORKDIR
+cp -R $TMPDIR/* ${dataloc}/${PBS_JOBID}
+
+trap "cp -R $TMPDIR/* ${dataloc}/$PBS_JOBID}" TERM

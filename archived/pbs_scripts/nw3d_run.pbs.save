@@ -1,0 +1,93 @@
+#!/bin/bash
+
+#PBS -N nw3d
+#PBS -l walltime=96:00:00
+#PBS -l nodes=1:ppn=1:gpus=1
+#PBS -j oe
+#PBS -l mem=8GB
+
+################################
+### data folder and sim name ###
+################################
+
+if [ -z ${DATADIR+x} ] 
+then
+    echo "Data folder not specified.  Use '-v DATADIR[=value]'"
+    exit 1
+fi
+
+if [ -z ${NAME+x} ]
+then
+    echo "Sim name not specified. Use '-v NAME[=value]'"
+    exit 2
+fi
+
+############################################
+### form argument list for nw3d_xlinkers ###
+############################################
+
+LIST=()
+i=0
+
+if [ ! -z ${NSTEPS+x} ]; 	then LIST[$i]="-nsteps $NSTEPS"; ((++i)); fi 
+if [ ! -z ${KA+x} ]; 		then LIST[$i]="-ka $KA"; ((++i)); fi    
+if [ ! -z ${NP+x} ]; 		then LIST[$i]="-np $NP"; ((++i)); fi    
+if [ ! -z ${FRAMERATE+x} ]; 	then LIST[$i]="-framerate $FRAMERATE"; ((++i)); fi    
+if [ ! -z ${XBOX+x} ]; 		then LIST[$i]="-xbox $XBOX"; ((++i)); fi 
+if [ ! -z ${YBOX+x} ]; 		then LIST[$i]="-ybox $YBOX"; ((++i)); fi
+if [ ! -z ${ZBOX+x} ];		then LIST[$i]="-zbox $ZBOX"; ((++i)); fi    
+if [ ! -z ${XDIM+x} ]; 		then LIST[$i]="-xdim $XDIM"; ((++i)); fi    
+if [ ! -z ${YDIM+x} ]; 		then LIST[$i]="-ydim $YDIM"; ((++i)); fi    
+if [ ! -z ${ZDIM+x} ]; 		then LIST[$i]="-zdim $ZDIM"; ((++i)); fi    
+if [ ! -z ${KBT+x} ]; 		then LIST[$i]="-kbt $KBT"; ((++i)); fi    
+if [ ! -z ${DT+x} ]; 		then LIST[$i]="-dt $DT"; ((++i)); fi    
+if [ ! -z ${K2+x} ]; 		then LIST[$i]="-k2 $K2"; ((++i)); fi    
+if [ ! -z ${DRIVE+x} ]; 	then LIST[$i]="-drive $DRIVE"; ((++i)); fi    
+if [ ! -z ${XLINK+x} ]; 	then LIST[$i]="-xlink $XLINK"; ((++i)); fi    
+if [ ! -z ${WEPS+x} ]; 		then LIST[$i]="-epsilon $WEPS"; ((++i)); fi    
+if [ ! -z ${WSIG+x} ]; 		then LIST[$i]="-sigma $WSIG"; ((++i)); fi    
+if [ ! -z ${WGAM+x} ]; 		then LIST[$i]="-gamma $WGAM"; ((++i)); fi    
+if [ ! -z ${WCA+x} ]; 		then LIST[$i]="-wca"; ((++i)); fi
+if [ ! -z ${KX+x} ]; 		then LIST[$i]="-kx $KX"; ((++i)); fi
+if [ ! -z ${LX+x} ]; 		then LIST[$i]="-lx $LX"; ((++i)); fi
+if [ ! -z ${XSTART+x} ];	then LIST[$i]="-xstart $XSTART"; ((++i)); fi
+if [ ! -z ${LMEM+x} ];		then LIST[$i]="-lmem"; ((++i)); fi
+
+echo "Command line arguments received:"
+echo "${LIST[@]}"
+
+# PREPARE DIRECTORY ON LOCAL
+cd $PBS_O_WORKDIR
+cd $DATADIR
+mkdir -p ${NAME}/${PBS_JOBID}
+cd $PBS_O_WORKDIR
+
+if [ ! -d "${DATADIR}/${NAME}/${PBS_JOBID}" ]; then echo "Data directory not created, exiting"; exit 3; fi
+
+# COPY BINARIES TO NODE
+pbsdcp ~/mvarga/worms/bin/nw3d $TMPDIR
+###pbsdcp ~/mvarga/nw_analysis/bin/nw-analysis $TMPDIR
+
+# MOVE TO NODE DIRECTORY / SETUP RUNTIME ENVIRONMENT
+cd $TMPDIR
+module load cuda
+###module load boost
+###module load gnu
+
+# RUN SIMULATION
+time ./nw3d -o nw3d_${NAME}.xyz -listsetgap 20 -wca -extensile -periodic xy -softwalls z ${LIST[@]}
+rm ./nw3d
+
+# RUN ANALYSIS
+###time ./nw-analysis --thickness -i output_${PBS_JOBID} -o thickness_${PBS_JOBID} --
+
+# COPY FILES BACK TO LOCAL DIRECTORY
+cd $PBS_O_WORKDIR
+module load gnu
+module load boost
+`pbsdcp -r $TMPDIR/* ${DATADIR}/${NAME}/${PBS_JOBID}
+
+# CHOP HUGE *.xyz FILES INTO SUB-FILES
+#~/mvarga/chop/bin/chop ${DATADIR}/${NAME}/${PBS_JOBID}/nw3d_${NAME}.xyz 40
+
+trap "pbsdcp -r $TMPDIR/* ${DATADIR}/${NAME}/${PBS_JOBID}" TERM
