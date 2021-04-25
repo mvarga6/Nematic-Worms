@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial import KDTree
 from tqdm import tqdm
+import subprocess
 
 from .io import load_next_frame
 from .utils import compute_tangents
@@ -62,6 +63,10 @@ class FilamentFrameLoader:
 
     def __next__(self) -> Frame:
         return next(self.frames)
+
+    def iter_batches(self, batch_size: int):
+        for i in range(0, len(self), batch_size):
+            yield self.frames[i:i+batch_size]
 
     def load(self, filename: str):
         with open(filename, "r") as f:

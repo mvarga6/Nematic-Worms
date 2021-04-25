@@ -3,7 +3,6 @@ import argparse
 from multiprocessing import Pool, Manager
 
 import numpy as np
-from itertools import product
 from tqdm import tqdm
 
 from afa.data import FilamentFrameLoader, DefectCollection, Frame
@@ -45,7 +44,6 @@ if __name__ == "__main__":
     parser.add_argument("-np", "--num_processes", type=int, default=4)
     args = parser.parse_args()
 
-    pool = Pool(args.num_processes)
     defect_collections = []
 
     with Manager() as manager:
