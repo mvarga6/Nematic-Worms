@@ -6,54 +6,9 @@ from numpy.core.fromnumeric import size
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from sklearn.cluster import DBSCAN, AffinityPropagation
+from sklearn.cluster import AffinityPropagation, MeanShift, OPTICS, DBSCAN
 import warnings
 from sklearn.exceptions import ConvergenceWarning
-
-from afa.io import _read_xyz_header
-
-
-DELTA = math.pi / 4
-
-
-def theta_diff(t1, t2):
-    dt = t2 - t1
-    if dt >= math.pi / 2.:
-        dt -= math.pi
-    elif dt <= -math.pi / 2.:
-        dt += math.pi
-    return dt
-
-def burgers_circuit(i, j, theta, loop):
-    circuit_angle = 0
-    di, dj = loop[0]
-    t1 = theta[i + di, j + dj]
-    for di,dj in loop[1:]:
-        t2 = theta[i + di, j + dj]
-        circuit_angle += theta_diff(t1, t2)
-        t1 = t2
-    return circuit_angle
-
-
-LOOP_A = [
-    [0, 0],
-    [1, 0],
-    [1, 1],
-    [0, 1],
-    [0, 0],
-]
-
-LOOP_B = [
-    [1, 0],
-    [1, 1],
-    [0, 1],
-    [-1, 1],
-    [-1, 0],
-    [-1, -1],
-    [0, -1],
-    [1, -1],
-    [1, 0],
-]
 
 
 def read_vector_field(filename):
@@ -104,41 +59,146 @@ def compute_theta(frame, cellsize):
     return frame
 
 
+def theta_diff(t1, t2):
+    dt = t2 - t1
+    if dt >= math.pi / 2.:
+        dt -= math.pi
+    elif dt <= -math.pi / 2.:
+        dt += math.pi
+    return dt
+
+def burgers_circuit(i, j, theta, loop):
+    circuit_angle = 0
+    di, dj = loop[0]
+    t1 = theta[i + di, j + dj]
+    for di,dj in loop[1:]:
+        t2 = theta[i + di, j + dj]
+        circuit_angle += theta_diff(t1, t2)
+        t1 = t2
+    return circuit_angle
+
+DELTA = math.pi / 16
+
+
+def contains_defect(angle):
+    return angle > math.pi - DELTA or angle < -math.pi + DELTA
+
+
+LOOP_A = [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+    [0, 0],
+]
+
+LOOP_B = [
+    [1, 0],
+    [1, 1],
+    [0, 1],
+    [-1, 1],
+    [-1, 0],
+    [-1, -1],
+    [0, -1],
+    [1, -1],
+    [1, 0],
+]
+
+LOOP_C = [
+    [2, 0],
+    [1, 1],
+    [0, 2],
+    [-1, 1],
+    [-2, 0],
+    [-1, -1],
+    [0, -2],
+    [1, -1],
+    [2, 0],
+]
+
+INTERIOR_C = [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+    [0, -1],
+]
+
+
+def _cluster(counts):
+    labels = np.zeros_like(counts)
+    N,M = counts.shape
+
+    I,J = np.where(counts > 0)
+
+    id = 1
+    for i,j in zip(I,J):
+        labels[i, j] = id
+        id += 1
+
+    def _replace_with_lowest_neighbor_id():
+        swaps = 0
+        for i,j in zip(I,J):
+            for di,dj in LOOP_B[1:]:
+                ni = i + di
+                nj = j + dj
+                if ni > 0 and ni < N and nj > 0 and nj < M and labels[ni,nj] > 0 and labels[ni,nj] < labels[i,j]:
+                    labels[i,j] = labels[ni,nj]
+                    swaps += 1
+        return swaps > 0
+
+    while _replace_with_lowest_neighbor_id():
+        pass
+
+    clusters = []
+    for cluster_id in np.unique(labels[labels > 0]):
+        x,y = np.where(labels == cluster_id)
+        clusters.append([np.mean(x), np.mean(y)])
+    return clusters
+
 
 def find_defects(frame):
     theta = frame["theta"]
     cellsize = frame["cellsize"]
     origin = frame["origin"]
-    counts = np.zeros_like(theta)
+    counts_pos = np.zeros_like(theta)
+    counts_neg = np.zeros_like(theta)
     charge = {}
 
-    for i in range(1, theta.shape[0] - 1):
-        for j in range(1, theta.shape[1] - 1):
-            angle_circuit_a = burgers_circuit(i, j, theta, LOOP_A)
+
+    for i in range(0, theta.shape[0] - 1):
+        for j in range(0, theta.shape[1] - 1):
+            # angle_circuit_a = burgers_circuit(i, j, theta, LOOP_A)
+            # if contains_defect(angle_circuit_a):
+            #     for di, dj in LOOP_A:
+            #         counts[i + di, j + dj] += 1
+            #         charge.setdefault((i + di, j + dj), []).append(angle_circuit_a / (2*math.pi))
+
             angle_circuit_b = burgers_circuit(i, j, theta, LOOP_B)
+            if contains_defect(angle_circuit_b):
+                q = angle_circuit_b / (2*math.pi)
+                charge.setdefault((i, j), []).append(q)
+                if q > 0:
+                    counts_pos[i, j] += 1
+                elif q < 0:
+                    counts_neg[i, j] += 1
 
-            if angle_circuit_a > math.pi - DELTA or angle_circuit_a < -math.pi + DELTA:
-                for di, dj in LOOP_A:
-                    counts[i + di, j + dj] += 1
-                    charge.setdefault((i + di, j + dj), []).append(angle_circuit_a / (2*math.pi))
+            # angle_circuit_c = burgers_circuit(i, j, theta, LOOP_C)
+            # if contains_defect(angle_circuit_c):
+            #     for di, dj in INTERIOR_C:
+            #         counts[i + di, j + dj] += 1
+            #         charge.setdefault((i + di, j + dj), []).append(angle_circuit_c / (2*math.pi))
 
-            if angle_circuit_b > math.pi - DELTA or angle_circuit_b < -math.pi + DELTA:
-                counts[i, j] += 1
-                charge.setdefault((i, j), []).append(angle_circuit_b / (2*math.pi))
+    charge = {k: np.mean(v) for k,v in charge.items()}
 
     defects = []
-    if counts.sum() > 0:
-        charge = {k: np.mean(v) for k,v in charge.items()}
+    if counts_pos.sum() > 0:
+        for x,y in _cluster(counts_pos):
+            defects.append(("A", x*cellsize + origin[0], y*cellsize + origin[1], 0, 0.5))
 
-        X = []
-        a,b = np.where(counts > 0)
-        for x,y in zip(a,b):
-            X.append([x,y])
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=ConvergenceWarning)
-            clustering = AffinityPropagation(random_state=None).fit(X)
-            for i,j in clustering.cluster_centers_:
-                defects.append(("A" if charge[i,j] > 0 else "B", (i*cellsize) + origin[0], (j*cellsize) + origin[1], 0, charge[i,j]))
+    if counts_neg.sum() > 0:
+        for x,y in _cluster(counts_neg):
+            defects.append(("B", x*cellsize + origin[0], y*cellsize + origin[1], 0, -0.5))
     return defects
 
 
@@ -164,5 +224,5 @@ if __name__ == "__main__":
                 origin = frame["origin"]
                 out.write(f'2\n')
                 out.write(f'No defects detected\n')
-                out.write(f'A {origin[0]} {origin[1]} 0 +0.5\n')
+                out.write(f'A {origin[0]} {origin[1]} 0 0.5\n')
                 out.write(f'B {origin[0]} {origin[1]} 0 -0.5\n')
