@@ -1,13 +1,10 @@
 import argparse
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
 import math
-from numpy.core.fromnumeric import size
 
 from tqdm import tqdm
 import numpy as np
-import pandas as pd
 from sklearn.cluster import AffinityPropagation, MeanShift, OPTICS, DBSCAN
-import warnings
 from sklearn.exceptions import ConvergenceWarning
 
 
@@ -129,27 +126,34 @@ def _cluster(counts):
     labels = np.zeros_like(counts)
     N,M = counts.shape
 
+    # i,j grid positions of where defects are.
     I,J = np.where(counts > 0)
 
+    # Initialize each defect w/ unique index.
     id = 1
     for i,j in zip(I,J):
         labels[i, j] = id
         id += 1
 
+    # Iterate over each defect and merge w/ neighbor if it has lower index.
     def _replace_with_lowest_neighbor_id():
         swaps = 0
         for i,j in zip(I,J):
             for di,dj in LOOP_B[1:]:
                 ni = i + di
                 nj = j + dj
-                if ni > 0 and ni < N and nj > 0 and nj < M and labels[ni,nj] > 0 and labels[ni,nj] < labels[i,j]:
+                # No periodic boundarys are implied here.
+                # TODO: Implement clustering over PBC
+                if ni >= 0 and ni < N and nj >= 0 and nj < M and labels[ni,nj] > 0 and labels[ni,nj] < labels[i,j]:
                     labels[i,j] = labels[ni,nj]
                     swaps += 1
         return swaps > 0
 
+    # Do this until no more defects are renumbered.
     while _replace_with_lowest_neighbor_id():
         pass
 
+    # Provide the x,y position of each cluster.
     clusters = []
     for cluster_id in np.unique(labels[labels > 0]):
         x,y = np.where(labels == cluster_id)
@@ -166,8 +170,8 @@ def find_defects(frame):
     charge = {}
 
 
-    for i in range(0, theta.shape[0] - 1):
-        for j in range(0, theta.shape[1] - 1):
+    for i in range(1, theta.shape[0] - 1):
+        for j in range(1, theta.shape[1] - 1):
             # angle_circuit_a = burgers_circuit(i, j, theta, LOOP_A)
             # if contains_defect(angle_circuit_a):
             #     for di, dj in LOOP_A:
@@ -202,9 +206,23 @@ def find_defects(frame):
     return defects
 
 
+def write_defects(defects, file_handle):
+    if len(defects) > 0:
+        file_handle.write(f'{len(defects)}\n')
+        file_handle.write(f'Defects detected\n')
+        for c,x,y,z,q in defects:
+            file_handle.write("%c %f %f %f %f\n" % (c, x, y, z, q))
+    else:
+        origin = frame["origin"]
+        file_handle.write(f'2\n')
+        file_handle.write(f'No defects detected\n')
+        file_handle.write(f'A {origin[0]} {origin[1]} 0 0.5\n')
+        file_handle.write(f'B {origin[0]} {origin[1]} 0 -0.5\n')
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze XYZ files of active filament simulation.")
-    parser.add_argument("-i", "--input", type=str, required=True, help="A directory field sequence XYZV file")
+    parser.add_argument("-i", "--input", type=str, required=True, help="A director field sequence XYZV file")
     parser.add_argument("-o", "--output", type=str, default="defects.xyz")
     parser.add_argument("-np", "--num_processes", type=int, default=cpu_count() + 1)
     parser.add_argument("-c", "--cellsize", type=float, required=True)
@@ -215,14 +233,4 @@ if __name__ == "__main__":
         for frame in tqdm(read_vector_field(args.input), desc=" Progress"):
             compute_theta(frame, args.cellsize)
             defects = find_defects(frame)
-            if len(defects) > 0:
-                out.write(f'{len(defects)}\n')
-                out.write(f'Defects detected\n')
-                for c,x,y,z,q in defects:
-                    out.write("%c %f %f %f %f\n" % (c, x, y, z, q))
-            else:
-                origin = frame["origin"]
-                out.write(f'2\n')
-                out.write(f'No defects detected\n')
-                out.write(f'A {origin[0]} {origin[1]} 0 0.5\n')
-                out.write(f'B {origin[0]} {origin[1]} 0 -0.5\n')
+            write_defects(defects, out)
