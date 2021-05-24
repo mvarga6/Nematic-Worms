@@ -2,6 +2,7 @@ import numpy as np
 from scipy.spatial import KDTree
 from tqdm import tqdm
 import subprocess
+from typing import Optional
 
 from .io import load_next_frame
 from .utils import compute_tangents
@@ -10,11 +11,18 @@ from multiprocessing.managers import BaseManager
 
 
 class Frame:
-    def __init__(self, positions: np.ndarray, labels: np.ndarray, filament_length: int, **kwargs):
+    def __init__(self,
+        positions: np.ndarray,
+        labels: np.ndarray,
+        filament_length: int,
+        displacements: Optional[np.ndarray] = None,
+        **kwargs
+    ):
         if len(positions) != len(labels):
             raise ValueError("Positions and Labels need to be same length.")
         self.r = positions
         self.t: np.ndarray = None
+        self.dr = displacements
         self.labels = labels
         self.kd_tree: KDTree = None
         self.np: int = filament_length
@@ -45,13 +53,18 @@ class Frame:
 
 class FilamentFrameLoader:
 
-    def __init__(self, filename: str, filament_length: int, max_frames: int = 1000, skip: int = 0):
+    def __init__(self,
+        filename: str,
+        filament_length: int,
+        max_frames: int = 1000,
+        skip: int = 0,
+        compute_displacements=False
+    ):
         self.frames = []
         self.max_frames = max_frames
         self.skip = skip
         self.ppf = filament_length
-        # self.manager: BaseManager = BaseManager()
-        # self.manager.start()
+        self.compute_displacements = compute_displacements
         self.load(filename)
 
 
@@ -70,14 +83,22 @@ class FilamentFrameLoader:
 
     def load(self, filename: str):
         with open(filename, "r") as f:
+            r_old = None
             for frame_count in tqdm(range(self.skip + self.max_frames), desc=f" Reading {filename}"):
                 r, t = load_next_frame(f)
+                dr = None
+
+                if self.compute_displacements:
+                    if r_old is None:
+                        r_old = r
+                    dr = r - r_old
 
                 if frame_count < self.skip:
                     continue
 
                 self.frames.append(Frame(
                     positions=r,
+                    displacements=dr,
                     labels=t,
                     filament_length=self.ppf,
                     frame_number=frame_count))

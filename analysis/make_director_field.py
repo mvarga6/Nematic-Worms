@@ -18,7 +18,7 @@ def compute_director(particle_frame: Frame, cellsize):
 
     N = np.zeros(box_shape, dtype=int)
     Q = np.zeros(box_shape + (3, 3))
-    S = np.zeros_like(N)
+    S = np.zeros_like(N, dtype=float)
     R = np.zeros(box_shape + (3,))
     director = np.zeros(box_shape + (3,))
 
@@ -44,7 +44,7 @@ def compute_director(particle_frame: Frame, cellsize):
             S[cell] = eigenvalues.max()
             director[cell] = eigenvectors[eigenvalues.argmax()]
 
-    return np.hstack((R.reshape(n_cells, 3), director.reshape(n_cells, 3)))
+    return np.hstack((R.reshape(n_cells, 3), director.reshape(n_cells, 3), S.reshape(n_cells, 1), N.reshape(n_cells, 1)))
 
 
 
@@ -52,11 +52,11 @@ def compute_director(particle_frame: Frame, cellsize):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze XYZ files of active filament simulation.")
     parser.add_argument("-i", "--input", type=str, required=True)
+    parser.add_argument("-n", "--filament_length", type=int, required=True)
     parser.add_argument("-o", "--output", type=str, default="defects.xyz")
     parser.add_argument("-s", "--skip", type=int, default=0)
     parser.add_argument("-c", "--cellsize", type=float, default=2)
     parser.add_argument("-l", "--limit", type=int, default=1000000)
-    parser.add_argument("-n", "--filament_length", type=int, required=True)
     parser.add_argument("-np", "--num_processes", type=int, default=cpu_count() + 1)
     args = parser.parse_args()
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
                 results = pool.starmap(compute_director, process_args)
                 for director_field in results:
                     out.write(f"{len(director_field)}\n")
-                    out.write("Director Field\n")
+                    out.write("type,x,y,z,nx,ny,nz,s,N\n")
                     for x in director_field:
-                        x,y,z,vx,vy,vz = tuple(x)
-                        out.write("%f %f %f %f %f %f\n" % (x,y,z,vx,-vy,vz))
+                        x,y,z,vx,vy,vz,s,n = tuple(x)
+                        out.write("A %f %f %f %f %f %f %f %f\n" % (x,y,z,vx,-vy,vz,s,n))
