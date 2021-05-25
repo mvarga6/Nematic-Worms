@@ -31,13 +31,13 @@ __constant__ SolventParams srd;
 
 
 
-__device__ void periodic_boundary(float &r, const float &L0, const float &L)
+__device__ void periodicBoundary(float &r, const float &L0, const float &L)
 {
     if (r < L0) r += L;
     else if (r > L + L0) r -= L;
 }
 
-__device__ void damped_wall_boundary(float &r, float &v, const float &coef, const float &L0, const float &L, const float &R)
+__device__ void dampedWallBoundary(float &r, float &v, const float &coef, const float &L0, const float &L, const float &R)
 {
     if (r < L0 + R)
     {
@@ -51,7 +51,7 @@ __device__ void damped_wall_boundary(float &r, float &v, const float &coef, cons
     }
 }
 
-__device__ void noslip_wall_boundary(float3 &pos, float &r, float3 &vel, const float3 &dr, const float &L0, const float &L, const float &R)
+__device__ void noslipWallBoundary(float3 &pos, float &r, float3 &vel, const float3 &dr, const float &L0, const float &L, const float &R)
 {
     if (r < L0 + R)
     {
@@ -98,37 +98,37 @@ struct filament_integrator
 
         if (params.boundaryX == BoundaryType::PERIODIC)
         {
-            periodic_boundary(pos.x, params.origin.x, params.boxSize.x);
+            periodicBoundary(pos.x, params.origin.x, params.boxSize.x);
         }
         else if(params.boundaryX == BoundaryType::WALL)
         {
-            damped_wall_boundary(pos.x, vel.x, params.boundaryDamping, params.origin.x, params.boxSize.x, params.particleRadius);
+            dampedWallBoundary(pos.x, vel.x, params.boundaryDamping, params.origin.x, params.boxSize.x, params.particleRadius);
         }
         else if(params.boundaryX == BoundaryType::WALL_NO_SLIP)
         {
-            noslip_wall_boundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, params.particleRadius);
+            noslipWallBoundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, params.particleRadius);
         }
 
         if (params.boundaryY == BoundaryType::PERIODIC)
         {
-            periodic_boundary(pos.y, params.origin.y, params.boxSize.y);
+            periodicBoundary(pos.y, params.origin.y, params.boxSize.y);
         }
         else if(params.boundaryY == BoundaryType::WALL)
         {
-            damped_wall_boundary(pos.y, vel.y, params.boundaryDamping, params.origin.y, params.boxSize.y, params.particleRadius);
+            dampedWallBoundary(pos.y, vel.y, params.boundaryDamping, params.origin.y, params.boxSize.y, params.particleRadius);
         }
         else if(params.boundaryY == BoundaryType::WALL_NO_SLIP)
         {
-            noslip_wall_boundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, params.particleRadius);
+            noslipWallBoundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, params.particleRadius);
         }
 
         if (params.boundaryZ == BoundaryType::PERIODIC)
         {
-            periodic_boundary(pos.z, params.origin.z, params.boxSize.z);
+            periodicBoundary(pos.z, params.origin.z, params.boxSize.z);
         }
         else if(params.boundaryZ == BoundaryType::WALL)
         {
-            damped_wall_boundary(pos.z, vel.z, params.boundaryDamping, params.origin.z, params.boxSize.z, params.particleRadius);
+            dampedWallBoundary(pos.z, vel.z, params.boundaryDamping, params.origin.z, params.boxSize.z, params.particleRadius);
         }
 
         // store new position, velocity, and forces
@@ -161,37 +161,37 @@ struct solvent_integrator
 
         if (params.boundaryX == BoundaryType::PERIODIC)
         {
-            periodic_boundary(pos.x, params.origin.x, params.boxSize.x);
+            periodicBoundary(pos.x, params.origin.x, params.boxSize.x);
         }
         else if(params.boundaryX == BoundaryType::WALL)
         {
-            damped_wall_boundary(pos.x, vel.x, params.boundaryDamping, params.origin.x, params.boxSize.x, 0.0f);
+            dampedWallBoundary(pos.x, vel.x, params.boundaryDamping, params.origin.x, params.boxSize.x, 0.0f);
         }
         else if(params.boundaryX == BoundaryType::WALL_NO_SLIP)
         {
-            noslip_wall_boundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, 0.0f);
+            noslipWallBoundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, 0.0f);
         }
 
         if (params.boundaryY == BoundaryType::PERIODIC)
         {
-            periodic_boundary(pos.y, params.origin.y, params.boxSize.y);
+            periodicBoundary(pos.y, params.origin.y, params.boxSize.y);
         }
         else if(params.boundaryY == BoundaryType::WALL)
         {
-            damped_wall_boundary(pos.y, vel.y, params.boundaryDamping, params.origin.y, params.boxSize.y, 0.0f);
+            dampedWallBoundary(pos.y, vel.y, params.boundaryDamping, params.origin.y, params.boxSize.y, 0.0f);
         }
         else if(params.boundaryY == BoundaryType::WALL_NO_SLIP)
         {
-            noslip_wall_boundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, 0.0f);
+            noslipWallBoundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, 0.0f);
         }
 
         if (params.boundaryZ == BoundaryType::PERIODIC)
         {
-            periodic_boundary(pos.z, params.origin.z, params.boxSize.z);
+            periodicBoundary(pos.z, params.origin.z, params.boxSize.z);
         }
         else if(params.boundaryZ == BoundaryType::WALL)
         {
-            damped_wall_boundary(pos.z, vel.z, params.boundaryDamping, params.origin.z, params.boxSize.z, 0.0f);
+            dampedWallBoundary(pos.z, vel.z, params.boundaryDamping, params.origin.z, params.boxSize.z, 0.0f);
         }
 
         // store new position, velocity, and forces
