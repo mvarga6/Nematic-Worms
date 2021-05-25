@@ -1,0 +1,12 @@
+if [[ $# -eq 0 ]] ; then
+	echo "Hours requested?"
+	read HOURS
+else
+	HOURS=$1
+fi
+
+# If using Torque
+#qsub -I -l walltime=${HOURS}:00:00 -A PGS0213 -l nodes=1:ppn=1:gpus=1 -l mem=4GB
+
+# If using Slurm
+srun --account=PGS0213 --gpus-per-node=1 --time=${HOURS}:00:00 --pty bash -i
