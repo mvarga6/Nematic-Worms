@@ -2,11 +2,11 @@ import numpy as np
 
 
 def load_next_frame(fp):
-    pcount, _ = _read_frame_header(fp)
+    pcount, _ = _read_xyz_header(fp)
     return _read_frame_body(fp, pcount)
 
 
-def _read_frame_header(fp):
+def _read_xyz_header(fp):
     particle_count = int(fp.readline())
     comment = fp.readline()
     return particle_count, comment
