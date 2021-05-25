@@ -95,6 +95,12 @@ extern "C"
         checkCudaErrors(cudaMemcpyToSymbol(params, hostParams, sizeof(SimParams)));
     }
 
+    void setSolventParameters(SolventParams *solventParams)
+    {
+        // copy parameters to constant memory
+        checkCudaErrors(cudaMemcpyToSymbol(srd, solventParams, sizeof(SolventParams)));
+    }
+
     //Round a / b to nearest higher integer value
     uint iDivUp(uint a, uint b)
     {
@@ -108,12 +114,12 @@ extern "C"
         numBlocks = iDivUp(n, numThreads);
     }
 
-    void integrateSystem(float *pos,
-                         float *vel,
-                         float *f,
-                         float *f_old,
-                         float deltaTime,
-                         uint numParticles)
+    void integrateFilaments(float *pos,
+                            float *vel,
+                            float *f,
+                            float *f_old,
+                            float deltaTime,
+                            uint numParticles)
     {
         thrust::device_ptr<float4> d_pos4((float4 *)pos);
         thrust::device_ptr<float4> d_vel4((float4 *)vel);
@@ -123,13 +129,30 @@ extern "C"
         auto start = thrust::make_tuple(d_pos4, d_vel4, d_f4, d_f_old4);
         auto end = thrust::make_tuple(d_pos4+numParticles, d_vel4+numParticles, d_f4+numParticles, d_f_old4+numParticles);
 
-        thrust::for_each(thrust::make_zip_iterator(start),thrust::make_zip_iterator(end), integrate_functor(deltaTime));
+        thrust::for_each(thrust::make_zip_iterator(start),thrust::make_zip_iterator(end), filament_integrator(deltaTime));
+    }
+
+
+    void integrateSolvent(float *pos,
+                          float *vel,
+                          float deltaTime,
+                          uint startIndex,
+                          uint numSolvent)
+    {
+        thrust::device_ptr<float4> d_pos4((float4 *)pos);
+        thrust::device_ptr<float4> d_vel4((float4 *)vel);
+
+        auto start = thrust::make_tuple(d_pos4 + startIndex, d_vel4 + startIndex);
+        auto end = thrust::make_tuple(d_pos4 + startIndex + numSolvent, d_vel4 + startIndex + numSolvent);
+
+        thrust::for_each(thrust::make_zip_iterator(start),thrust::make_zip_iterator(end), solvent_integrator(deltaTime));
     }
 
     void calcHash(uint  *gridParticleHash,
                   uint  *gridParticleIndex,
                   float *pos,
-                  int    numParticles)
+                  int    numParticles,
+                  bool   srd)
     {
         uint numThreads, numBlocks;
         computeGridSize(numParticles, 256, numBlocks, numThreads);
@@ -138,7 +161,8 @@ extern "C"
         calcHashD<<< numBlocks, numThreads >>>(gridParticleHash,
                                                gridParticleIndex,
                                                (float4 *) pos,
-                                               numParticles);
+                                               numParticles,
+                                               srd);
 
         // check if kernel invocation generated an error
         getLastCudaError("Kernel execution failed");
@@ -180,15 +204,15 @@ extern "C"
         getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
     }
 
-    void collide(float *force,
-                 float *sortedPos,
-                 float *sortedVel,
-                 float *sortedTangent,
-                 uint  *gridParticleIndex,
-                 uint  *cellStart,
-                 uint  *cellEnd,
-                 uint   numParticles,
-                 uint   numCells)
+    void collideFilaments(float *force,
+                          float *sortedPos,
+                          float *sortedVel,
+                          float *sortedTangent,
+                          uint  *gridParticleIndex,
+                          uint  *cellStart,
+                          uint  *cellEnd,
+                          uint   numParticles,
+                          uint   numCells)
     {
 
         // thread per particle
@@ -196,18 +220,39 @@ extern "C"
         computeGridSize(numParticles, 256, numBlocks, numThreads);
 
         // execute the kernel
-        collideKernel<<< numBlocks, numThreads >>>((float4 *)force,
-                                              (float4 *)sortedPos,
-                                              (float4 *)sortedVel,
-                                              (float4 *)sortedTangent,
-                                              gridParticleIndex,
-                                              cellStart,
-                                              cellEnd,
-                                              numParticles);
+        collideFilamentsKernel<<< numBlocks, numThreads >>>((float4 *)force,
+                                                            (float4 *)sortedPos,
+                                                            (float4 *)sortedVel,
+                                                            (float4 *)sortedTangent,
+                                                            gridParticleIndex,
+                                                            cellStart,
+                                                            cellEnd,
+                                                            numParticles);
 
         // check if kernel invocation generated an error
         getLastCudaError("Kernel execution failed: collide");
 
+    }
+
+    void collideSolvent(float *pos,
+                        float *vel,
+                        float *solventCellCOM,
+                        float *random,
+                        uint   numSolventCells,
+                        uint   numParticles)
+    {
+        randomizeUniform(random, numSolventCells);
+
+        // thread per particle
+        uint numThreads, numBlocks;
+        computeGridSize(numParticles, 256, numBlocks, numThreads);
+
+        // execute the kernel
+        collideSolventKernel<<< numBlocks, numThreads >>>((float4 *)pos,
+                                                          (float4 *)vel,
+                                                          (float4 *)solventCellCOM,
+                                                          random,
+                                                          numParticles);
     }
 
     void filamentForces(float *force,
@@ -279,7 +324,48 @@ extern "C"
                                                     (float4 *)random,
                                                     numParticles);
 
-        getLastCudaError("Lernel execution failed: langevinThermostat");
+        getLastCudaError("Kernel execution failed: langevinThermostat");
+    }
+
+
+    void solventCellCentorOfMomentum(float *solventCellCOM,
+                                     float *sortedVel,
+                                     uint  *cellStart,
+                                     uint  *cellEnd,
+                                     uint  *gridParticleIndex,
+                                     uint   numSolventCells)
+    {
+        uint numThreads, numBlocks;
+        computeGridSize(numSolventCells, 256, numBlocks, numThreads);
+
+        cellCenterOfMomentumSRD<<< numBlocks, numThreads >>>((float4 *)solventCellCOM,
+                                                             (float4 *)sortedVel,
+                                                             cellStart,
+                                                             cellEnd,
+                                                             gridParticleIndex,
+                                                             numSolventCells);
+
+        getLastCudaError("Kernel execution failed: solventCellCentorOfMomentum");
+    }
+
+    void solventIsokineticThermostat(float *vel,
+                                     float *sortedVel,
+                                     uint  *cellStart,
+                                     uint  *cellEnd,
+                                     uint  *gridParticleIndex,
+                                     uint   numSolventCells)
+    {
+        uint numThreads, numBlocks;
+        computeGridSize(numSolventCells, 256, numBlocks, numThreads);
+
+        isokineticThermostatSRD<<< numBlocks, numThreads >>>((float4 *)vel,
+                                                             (float4 *)sortedVel,
+                                                             cellStart,
+                                                             cellEnd,
+                                                             gridParticleIndex,
+                                                             numSolventCells);
+
+        getLastCudaError("Kernel execution failed: solventCellCentorOfMomentum");
     }
 
 }   // extern "C"

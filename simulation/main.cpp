@@ -31,12 +31,13 @@ float kBond			= 57.146436f;
 float hardness		= kBond;
 float activity		= 0.025f;
 float reverse   	= 0.0005f;
-float kbT			= 5000.0f;
+float kbT			= 2.0f;
 float drag			= 0.01f;
 BoundaryType boundX = BoundaryType::PERIODIC;
 BoundaryType boundY = BoundaryType::WALL;
 BoundaryType boundZ = BoundaryType::WALL;
 uint3 gridSize 		= make_uint3(512, 64, 1);
+bool srdSolvent		= false;
 
 extern "C" void cudaInit(int argc, char **argv);
 
@@ -106,6 +107,9 @@ void readParameters(int argc, char *argv[])
 	if (checkCmdLineFlag(argc, (const char **) argv, "boundZ"))
         boundZ = static_cast<BoundaryType>(getCmdLineArgumentInt(argc, (const char **) argv, "boundZ"));
 
+	if (checkCmdLineFlag(argc, (const char **) argv, "srd"))
+		srdSolvent = true;
+
 	if (checkCmdLineFlag(argc, (const char **) argv, "o"))
 	{
 		char* c = &*outFile.begin();
@@ -124,7 +128,7 @@ int main(int argc, char *argv[])
 	readParameters(argc, argv);
 
 	// Instantiate the system of particles
-	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize);
+	auto psystem = new ParticleSystem(numFilaments, filamentSize, gridSize, srdSolvent);
 	psystem->setBoundaries(boundX, boundY, boundZ);
 	psystem->setDamping(drag);
 	psystem->setTemperature(kbT);
@@ -151,6 +155,7 @@ int main(int argc, char *argv[])
 		if (i % printRate == 0)
 		{
 			psystem->writeOutputs(outFile);
+			// psystem->dumpSolventGrid();
 			printInfo(timer, psystem->getNumParticles(), i);
 		}
     }

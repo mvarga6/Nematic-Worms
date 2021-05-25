@@ -27,14 +27,53 @@ namespace cg = cooperative_groups;
 
 // simulation parameters in constant memory
 __constant__ SimParams params;
+__constant__ SolventParams srd;
 
 
-struct integrate_functor
+
+__device__ void periodicBoundary(float &r, const float &L0, const float &L)
+{
+    if (r < L0) r += L;
+    else if (r > L + L0) r -= L;
+}
+
+__device__ void dampedWallBoundary(float &r, float &v, const float &coef, const float &L0, const float &L, const float &R)
+{
+    if (r < L0 + R)
+    {
+        r = L0 + R;
+        v *= coef;
+    }
+    else if (r > (L + L0) - R)
+    {
+        r = (L + L0) - R;
+        v *= coef;
+    }
+}
+
+__device__ void noslipWallBoundary(float3 &pos, float &r, float3 &vel, const float3 &dr, const float &L0, const float &L, const float &R)
+{
+    if (r < L0 + R)
+    {
+        pos -= dr;
+        r = L0 + R;
+        vel = -vel;
+    }
+    else if (r > (L + L0) - R)
+    {
+        pos -= dr;
+        r = (L + L0) - R;
+        vel = -vel;
+    }
+}
+
+
+struct filament_integrator
 {
     float dt;
 
     __host__ __device__
-    integrate_functor(float delta_time) : dt(delta_time) {}
+    filament_integrator(float delta_time) : dt(delta_time) {}
 
     template <typename Tuple>
     __device__
@@ -59,89 +98,37 @@ struct integrate_functor
 
         if (params.boundaryX == BoundaryType::PERIODIC)
         {
-            if (pos.x < params.origin.x) pos.x += params.boxSize.x;
-            else if (pos.x > params.boxSize.x + params.origin.x) pos.x -= params.boxSize.x;
+            periodicBoundary(pos.x, params.origin.x, params.boxSize.x);
         }
         else if(params.boundaryX == BoundaryType::WALL)
         {
-            if (pos.x < params.origin.x + params.particleRadius)
-            {
-                pos.x = params.origin.x + params.particleRadius;
-                vel.x *= params.boundaryDamping;
-            }
-            else if (pos.x > (params.boxSize.x + params.origin.x) - params.particleRadius)
-            {
-                pos.x = (params.boxSize.x + params.origin.x) - params.particleRadius;
-                vel.x *= params.boundaryDamping;
-            }
+            dampedWallBoundary(pos.x, vel.x, params.boundaryDamping, params.origin.x, params.boxSize.x, params.particleRadius);
         }
         else if(params.boundaryX == BoundaryType::WALL_NO_SLIP)
         {
-            if (pos.x < params.origin.x + params.particleRadius)
-            {
-                pos -= dr;
-                pos.x = params.origin.x + params.particleRadius;
-                vel = -vel;
-            }
-            else if (pos.x > (params.boxSize.x + params.origin.x) - params.particleRadius)
-            {
-                pos -= dr;
-                pos.x = (params.boxSize.x + params.origin.x) - params.particleRadius;
-                vel = -vel;
-            }
+            noslipWallBoundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, params.particleRadius);
         }
 
         if (params.boundaryY == BoundaryType::PERIODIC)
         {
-            if (pos.y < params.origin.y) pos.y += params.boxSize.y;
-            else if (pos.y > params.boxSize.y + params.origin.y) pos.y -= params.boxSize.y;
+            periodicBoundary(pos.y, params.origin.y, params.boxSize.y);
         }
         else if(params.boundaryY == BoundaryType::WALL)
         {
-            if (pos.y < params.origin.y + params.particleRadius)
-            {
-                pos.y = params.origin.y + params.particleRadius;
-                vel.y *= params.boundaryDamping;
-            }
-            else if (pos.y > (params.boxSize.y + params.origin.y) - params.particleRadius)
-            {
-                pos.y = (params.boxSize.y + params.origin.y) - params.particleRadius;
-                vel.y *= params.boundaryDamping;
-            }
+            dampedWallBoundary(pos.y, vel.y, params.boundaryDamping, params.origin.y, params.boxSize.y, params.particleRadius);
         }
         else if(params.boundaryY == BoundaryType::WALL_NO_SLIP)
         {
-            if (pos.y < params.origin.y + params.particleRadius)
-            {
-                pos -= dr;
-                pos.y = params.origin.y + params.particleRadius;
-                vel = -vel;
-            }
-            else if (pos.y > (params.boxSize.y + params.origin.y) - params.particleRadius)
-            {
-                pos -= dr;
-                pos.y = (params.boxSize.y + params.origin.y) - params.particleRadius;
-                vel = -vel;
-            }
+            noslipWallBoundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, params.particleRadius);
         }
 
         if (params.boundaryZ == BoundaryType::PERIODIC)
         {
-            if (pos.z < params.origin.z) pos.z += params.boxSize.z;
-            else if (pos.z > params.boxSize.z + params.origin.z) pos.z -= params.boxSize.z;
+            periodicBoundary(pos.z, params.origin.z, params.boxSize.z);
         }
         else if(params.boundaryZ == BoundaryType::WALL)
         {
-            if (pos.z < params.origin.z + params.particleRadius)
-            {
-                pos.z = params.origin.z + params.particleRadius;
-                vel.z *= params.boundaryDamping;
-            }
-            else if (pos.z > (params.boxSize.z + params.origin.z) - params.particleRadius)
-            {
-                pos.z = (params.boxSize.z + params.origin.z) - params.particleRadius;
-                vel.z *= params.boundaryDamping;
-            }
+            dampedWallBoundary(pos.z, vel.z, params.boundaryDamping, params.origin.z, params.boxSize.z, params.particleRadius);
         }
 
         // store new position, velocity, and forces
@@ -151,6 +138,90 @@ struct integrate_functor
         thrust::get<3>(t) = make_float4(f, forceOldData.w);
     }
 };
+
+
+struct solvent_integrator
+{
+    float dt;
+
+    __host__ __device__
+    solvent_integrator(float delta_time) : dt(delta_time) {}
+
+    template <typename Tuple>
+    __device__
+    void operator()(Tuple t)
+    {
+        volatile float4 posData = thrust::get<0>(t);
+        volatile float4 velData = thrust::get<1>(t);
+        float3 pos = make_float3(posData);
+        float3 vel = make_float3(velData);
+
+        float3 dr = dt * vel;
+        pos += dr;
+
+        if (params.boundaryX == BoundaryType::PERIODIC)
+        {
+            periodicBoundary(pos.x, params.origin.x, params.boxSize.x);
+        }
+        else if(params.boundaryX == BoundaryType::WALL)
+        {
+            dampedWallBoundary(pos.x, vel.x, params.boundaryDamping, params.origin.x, params.boxSize.x, 0.0f);
+        }
+        else if(params.boundaryX == BoundaryType::WALL_NO_SLIP)
+        {
+            noslipWallBoundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, 0.0f);
+        }
+
+        if (params.boundaryY == BoundaryType::PERIODIC)
+        {
+            periodicBoundary(pos.y, params.origin.y, params.boxSize.y);
+        }
+        else if(params.boundaryY == BoundaryType::WALL)
+        {
+            dampedWallBoundary(pos.y, vel.y, params.boundaryDamping, params.origin.y, params.boxSize.y, 0.0f);
+        }
+        else if(params.boundaryY == BoundaryType::WALL_NO_SLIP)
+        {
+            noslipWallBoundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, 0.0f);
+        }
+
+        if (params.boundaryZ == BoundaryType::PERIODIC)
+        {
+            periodicBoundary(pos.z, params.origin.z, params.boxSize.z);
+        }
+        else if(params.boundaryZ == BoundaryType::WALL)
+        {
+            dampedWallBoundary(pos.z, vel.z, params.boundaryDamping, params.origin.z, params.boxSize.z, 0.0f);
+        }
+
+        // store new position, velocity, and forces
+        thrust::get<0>(t) = make_float4(pos, posData.w);
+        thrust::get<1>(t) = make_float4(vel, velData.w);
+    }
+};
+
+
+__device__ float3 positionRelativeToBox(float3 p)
+{
+    float3 pos = make_float3(p.x - params.origin.x, p.y - params.origin.y, p.z - params.origin.z);
+
+    if (params.boundaryX == BoundaryType::PERIODIC)
+    {
+        if (pos.x >= params.boxSize.x) pos.x -= params.boxSize.x;
+        else if (pos.x < 0.0f) pos.x += params.boxSize.x;
+    }
+    if (params.boundaryY == BoundaryType::PERIODIC)
+    {
+        if (pos.y >= params.boxSize.y) pos.y -= params.boxSize.y;
+        else if (pos.y < 0.0f) pos.y += params.boxSize.y;
+    }
+    if (params.boundaryZ == BoundaryType::PERIODIC)
+    {
+        if (pos.z >= params.boxSize.z) pos.z -= params.boxSize.z;
+        else if (pos.z < 0.0f) pos.z += params.boxSize.z;
+    }
+    return pos;
+}
 
 // calculate position in uniform grid
 __device__ int3 calcGridPos(float3 p)
@@ -162,6 +233,17 @@ __device__ int3 calcGridPos(float3 p)
     return gridPos;
 }
 
+// calculate position in uniform grid (SRD)
+__device__ int3 calcGridPosSRD(float3 p)
+{
+    int3 gridPos;
+    float3 pos = positionRelativeToBox(p + srd.randOffset);
+    gridPos.x = floor(pos.x / srd.cellSize.x);
+    gridPos.y = floor(pos.y / srd.cellSize.y);
+    gridPos.z = floor(pos.z / srd.cellSize.z);
+    return gridPos;
+}
+
 // calculate address in grid from position (clamping to edges)
 __device__ uint calcGridHash(int3 gridPos)
 {
@@ -169,6 +251,24 @@ __device__ uint calcGridHash(int3 gridPos)
     gridPos.y = gridPos.y & (params.gridSize.y-1);
     gridPos.z = gridPos.z & (params.gridSize.z-1);
     return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
+}
+
+// calculate address in grid from position (clamping to edges)
+__device__ uint calcGridHashSRD(int3 gridPos)
+{
+    if (params.boundaryX == BoundaryType::PERIODIC)
+    {
+        gridPos.x = gridPos.x & (srd.gridSize.x-1);  // wrap grid, assumes size is power of 2
+    }
+    if (params.boundaryY == BoundaryType::PERIODIC)
+    {
+        gridPos.y = gridPos.y & (srd.gridSize.y-1);
+    }
+    if (params.boundaryZ == BoundaryType::PERIODIC)
+    {
+        gridPos.z = gridPos.z & (srd.gridSize.z-1);
+    }
+    return __umul24(__umul24(gridPos.z, srd.gridSize.y), srd.gridSize.x) + __umul24(gridPos.y, srd.gridSize.x) + gridPos.x;
 }
 
 // calculate address in grid from position (clamping to edges)
@@ -209,17 +309,28 @@ __global__
 void calcHashD(uint   *gridParticleHash,  // output
                uint   *gridParticleIndex, // output
                float4 *pos,               // input: positions
-               uint    numParticles)
+               uint    numParticles,
+               bool    srd = false)
 {
     uint index = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
 
     if (index >= numParticles) return;
 
     volatile float4 p = pos[index];
+    int3 gridPos;
+    uint hash;
 
     // get address in grid
-    int3 gridPos = calcGridPos(make_float3(p.x, p.y, p.z));
-    uint hash = calcGridHash(gridPos);
+    if (srd)
+    {
+        gridPos = calcGridPosSRD(make_float3(p.x, p.y, p.z));
+        hash = calcGridHashSRD(gridPos);
+    }
+    else
+    {
+        gridPos = calcGridPos(make_float3(p.x, p.y, p.z));
+        hash = calcGridHash(gridPos);
+    }
 
     // store grid hash and particle index
     gridParticleHash[index] = hash;
@@ -441,15 +552,150 @@ float3 collideCell(int3    gridPos,
 }
 
 
+// Launch one per solvent cell
 __global__
-void collideKernel(float4 *forces,          // update: unsorted forces array
-              float4 *sortedPos,            // input: sorted positions
-              float4 *sortedVel,            // input: sorted velocities
-              float4 *sortedTangent,        // input: sorted tangents
-              uint   *gridParticleIndex,    // input: sorted particle indices
-              uint   *cellStart,
-              uint   *cellEnd,
-              uint    numParticles)
+void cellCenterOfMomentumSRD(float4 *cellCOM,
+                             float4 *sortedVel,
+                             uint   *cellStart,
+                             uint   *cellEnd,
+                             uint   *gridParticleIndex,
+                             uint    numCells)
+{
+    uint cellHash = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+
+    if (cellHash>= numCells) return;
+
+    uint startIndex = cellStart[cellHash]; // index in sorted arrays where cell data starts
+    float3 com      = make_float3(0.0f);
+
+    if (startIndex != 0xffffffff)
+    {
+        uint endIndex = cellEnd[cellHash]; // index in sorted arrays where cell data end
+        float M = 0;
+        for (uint i = startIndex; i < endIndex; i++) // Iterate from start to end
+        {
+            float3 v = make_float3(sortedVel[i]);
+            float m  = sortedVel[i].w; // mass is stored in w-component of float4
+            com += m * v; // aggregate momentum
+            M += m;
+        }
+
+        if (M > 0) // take mean
+        {
+            com *= (1.0f / M);
+        }
+    }
+
+    cellCOM[cellHash] = make_float4(com, 0.0f);
+}
+
+
+__device__
+float kineticEnergy(float m, float3 v)
+{
+    return 0.5f * m * dot(v, v);
+}
+
+
+// Launch one per solvent cell
+__global__
+void isokineticThermostatSRD(float4 *vel,
+                             float4 *sortedVel,
+                             uint   *cellStart,
+                             uint   *cellEnd,
+                             uint   *gridParticleIndex,
+                             uint    numCells)
+{
+    uint cellHash = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+
+    if (cellHash>= numCells) return;
+
+    uint startIndex = cellStart[cellHash]; // index in sorted arrays where cell data starts
+    if (startIndex != 0xffffffff)
+    {
+        uint endIndex = cellEnd[cellHash]; // index in sorted arrays where cell data end
+        float E_kinetic = 0;
+        for (uint i = startIndex; i < endIndex; i++)
+        {
+            E_kinetic += kineticEnergy(sortedVel[i].w, make_float3(sortedVel[i]));
+        }
+
+        const float lambda = sqrtf(srd.kbT / E_kinetic);
+
+        uint index;
+        for (uint i = startIndex; i < endIndex; i++)
+        {
+            index = gridParticleIndex[i];
+            vel[index] = make_float4(lambda * make_float3(vel[index]), sortedVel[i].w);
+            sortedVel[i] = vel[index];
+        }
+    }
+}
+
+
+__device__ float3 rotate2D(float3 v, const float alpha)
+{
+    const float sin_alpha = sin(alpha), cos_alpha = cos(alpha);
+    return make_float3(
+        v.x * cos_alpha - v.y * sin_alpha,
+        v.x * sin_alpha + v.y * cos_alpha,
+        v.z
+    );
+}
+
+
+// Launch one for ALL particles (filaments + solvent)
+// 2D-XY only!
+__global__
+void collideSolventKernel(float4 *pos,
+                          float4 *vel,
+                          float4 *cellCOM,
+                          float  *uniform,
+                          uint    numParticles)
+{
+    uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+
+    if (index >= numParticles) return;
+
+    // only update solvent particles
+    if (index < params.numParticles) return;
+
+    float3 r = make_float3(pos[index]);
+    float3 v = make_float3(vel[index]);
+
+    int3 gridPos = calcGridPosSRD(r);
+    uint cellIndex = calcGridHashSRD(gridPos);
+    float3 CoM = make_float3(cellCOM[cellIndex]);
+
+    // The SRD collision equation.
+    int sign = 2 * int(uniform[cellIndex] > 0.5f) - 1;
+    v = CoM + rotate2D(v - CoM, sign * srd.alpha);
+
+    // if (index == 0)
+    // {
+    //     int sign = 2 * int(uniform[cellIndex] > 0.5f) - 1;
+    //     printf("[%i] in cell %i\n", index, cellIndex);
+    //     printf("  v_before = {%f %f}\n", v.x, v.y);
+    //     printf("  CoM      = {%f %f}\n", CoM.x, CoM.y);
+    //     printf("  sign     = %i\n", sign);
+
+    //     v = CoM + rotate2D(v - CoM, sign * srd.alpha);
+    //     printf("  v_after  = {%f %f}\n", v.x, v.y);
+    // }
+
+    vel[index] = make_float4(v, vel[index].w);
+}
+
+
+__global__
+void collideFilamentsKernel(float4 *forces,          // update: unsorted forces array
+                            float4 *sortedPos,            // input: sorted positions
+                            float4 *sortedVel,            // input: sorted velocities
+                            float4 *sortedTangent,        // input: sorted tangents
+                            uint   *gridParticleIndex,    // input: sorted particle indices
+                            uint   *cellStart,
+                            uint   *cellEnd,
+                            uint    numParticles)
 {
     uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
 

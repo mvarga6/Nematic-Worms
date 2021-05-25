@@ -24,18 +24,26 @@ extern "C"
     void copyArrayToDevice(void *device, const void *host, int offset, int size);
 
     void setParameters(SimParams *hostParams);
+    void setSolventParameters(SolventParams *solventParams);
 
-    void integrateSystem(float *pos,
-                         float *vel,
-                         float *f,
-                         float *f_old,
-                         float deltaTime,
-                         uint numParticles);
+    void integrateFilaments(float *pos,
+                            float *vel,
+                            float *f,
+                            float *f_old,
+                            float deltaTime,
+                            uint numParticles);
+
+    void integrateSolvent(float *pos,
+                          float *vel,
+                          float deltaTime,
+                          uint startIndex,
+                          uint numSolvent);
 
     void calcHash(uint  *gridParticleHash,
                   uint  *gridParticleIndex,
                   float *pos,
-                  int    numParticles);
+                  int    numParticles,
+                  bool   srd = false);
 
     void reorderDataAndFindCellStart(uint  *cellStart,
                                      uint  *cellEnd,
@@ -50,15 +58,22 @@ extern "C"
                                      uint   numParticles,
                                      uint   numCells);
 
-    void collide(float *force,
-                 float *sortedPos,
-                 float *sortedVel,
-                 float *sortedTangent,
-                 uint  *gridParticleIndex,
-                 uint  *cellStart,
-                 uint  *cellEnd,
-                 uint   numParticles,
-                 uint   numCells);
+    void collideFilaments(float *force,
+                          float *sortedPos,
+                          float *sortedVel,
+                          float *sortedTangent,
+                          uint  *gridParticleIndex,
+                          uint  *cellStart,
+                          uint  *cellEnd,
+                          uint   numParticles,
+                          uint   numCells);
+
+    void collideSolvent(float *pos,
+                        float *vel,
+                        float *solventCellCOM,
+                        float *random,
+                        uint   numSolventCells,
+                        uint   numParticles);
 
     void filamentForces(float *force,
                         float *tangent,
@@ -80,4 +95,18 @@ extern "C"
                             float gamma,
                             float kbT,
                             uint numParticles);
+
+    void solventCellCentorOfMomentum(float *solventCellCOM,
+                                     float *sortedVel,
+                                     uint  *cellStart,
+                                     uint  *cellEnd,
+                                     uint  *gridParticleIndex,
+                                     uint   numCells);
+
+    void solventIsokineticThermostat(float *vel,
+                                     float *sortedVel,
+                                     uint  *cellStart,
+                                     uint  *cellEnd,
+                                     uint  *gridParticleIndex,
+                                     uint   numCells);
 }
