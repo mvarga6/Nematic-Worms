@@ -570,7 +570,7 @@ ParticleSystem::reset()
         w = (i / m_params.filamentSize);
         x_head = (w % xdim_max) * filamentLength + m_params.particleRadius;
         x = x_head + (i % m_params.filamentSize) * m_params.bondSpringL;
-        y = 10.f * 2.f * m_params.particleRadius * ((w / xdim_max) % ydim_max + 1);
+        y = 2.f * m_params.particleRadius * ((w / xdim_max) % ydim_max + 1);
         z = 2.f * m_params.particleRadius * (w / xyplane_max + 1);
         m_hPos[p++] = x + m_params.origin.x;
         m_hPos[p++] = y + m_params.origin.y;
