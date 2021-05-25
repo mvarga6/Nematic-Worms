@@ -483,28 +483,19 @@ ParticleSystem::writeOutputs(const std::string& fileName)
 {
     const int N = m_numParticles + m_numSolvent;
     copyArrayFromDevice(m_hPos, m_dPos, 0, sizeof(float)*4*N);
-    // copyArrayFromDevice(m_hVel, m_dVel, 0, sizeof(float)*4*m_numParticles);
-    // copyArrayFromDevice(m_hForce, m_dForce, 0, sizeof(float)*4*m_numParticles);
-    // copyArrayFromDevice(m_hTangent, m_dTangent, 0, sizeof(float)*4*m_numParticles);
+    copyArrayFromDevice(m_hVel, m_dVel, 0, sizeof(float)*4*N);
 
     std::ofstream fout;
     fout.open(fileName, std::ios::out | std::ios::app);
     fout << N << std::endl;
     fout << "Active Filaments Simulation" << std::endl;
+    const char * type = "A";
     for (int i = 0; i < N; i++)
     {
-        if (i < m_numParticles)
-        {
-            fout << "A " << m_hPos[i*4] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2]
-                //  << " "  << m_hVel[i*4] << " " << m_hVel[i*4+1] << " " << m_hVel[i*4+2]
-                //  << " "  << m_hForce[i*4] << " " << m_hForce[i*4+1] << " " << m_hForce[i*4+2]
-                // << " "  << m_hTangent[i*4] << " " << m_hTangent[i*4+1] << " " << m_hTangent[i*4+2]
-                << std::endl;
-        }
-        else
-        {
-            fout << "B " << m_hPos[i*4] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2] << std::endl;
-        }
+        type = i < m_numParticles ? "A" : "B";
+        fout << type << " " << m_hPos[i*4] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2]
+                     << " " << m_hVel[i*4] << " " << m_hVel[i*4+1] << " " << m_hVel[i*4+2]
+                     << std::endl;
     }
 
     fout.close();
