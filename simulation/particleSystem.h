@@ -24,7 +24,7 @@
 class ParticleSystem
 {
     public:
-        ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridSize);
+        ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridSize, bool srdSolvent = false);
         ~ParticleSystem();
 
         enum ParticleArray
@@ -46,13 +46,9 @@ class ParticleSystem
         }
 
         void dumpGrid();
+        void dumpSolventGrid();
         void dumpParticles(uint start, uint count);
         void writeOutputs(const std::string& fileName);
-
-        void setIterations(int i)
-        {
-            m_solverIterations = i;
-        }
 
         void setDamping(float x)
         {
@@ -61,6 +57,7 @@ class ParticleSystem
         void setTemperature(float x)
         {
             m_params.kbT = x;
+            m_solvent.kbT = x;
         }
         void setGravity(float x)
         {
@@ -145,7 +142,10 @@ class ParticleSystem
     protected: // methods
         ParticleSystem() {}
 
-        void _initialize(int numParticles);
+        void _initSolventParams();
+        void _solventUpdate(float dt);
+
+        void _initialize(int numParticles, int numSolvent);
         void _finalize();
 
         void updateNumParticles()
@@ -155,6 +155,7 @@ class ParticleSystem
         }
 
     protected: // data
+        uint m_updateCount;
         bool m_bInitialized;
         uint m_numParticles;
         uint m_numFilaments;
@@ -197,7 +198,14 @@ class ParticleSystem
 
         StopWatchInterface *m_timer;
 
-        uint m_solverIterations;
+        // solvent data
+        bool    m_solventEnabled;
+        float  *m_dSolventCellCOM;
+        uint    m_numSolvent;
+        uint    m_numSolventCells;
+        uint    m_solventUpdateCount;
+        uint    m_solventUpdateGap;
+        SolventParams m_solvent;
 };
 
 #endif // __PARTICLESYSTEM_H__

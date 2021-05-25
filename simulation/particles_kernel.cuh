@@ -27,6 +27,7 @@ struct SimParams
 {
     float3 gravity;
     float particleRadius;
+    float particleMass;
 
     uint3 gridSize;
     uint numCells;
@@ -56,6 +57,19 @@ struct SimParams
     float shear;
     float attraction;
     float boundaryDamping;
+};
+
+struct SolventParams
+{
+    bool enabled;
+    uint3 gridSize;
+    uint numCells;
+    float3 randOffset;  // random offset of boxes
+    float3 cellSize;
+    uint numParticles;  // number of solvent particles
+    float alpha;        // collsion rotation angle
+    float kbT;          // Solvent temperatur
+    float particleMass; // Mass of solvent particle
 };
 
 #endif

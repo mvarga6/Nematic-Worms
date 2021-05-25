@@ -36,8 +36,9 @@
 #define CUDART_PI_F         3.141592654f
 #endif
 
-ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridSize) :
+ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridSize, bool srdSolvent) :
     m_bInitialized(false),
+    m_updateCount(0),
     m_numFilaments(numFilaments),
     m_filamentSize(filamentSize),
     m_numParticles(numFilaments * filamentSize),
@@ -52,14 +53,20 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     m_dForceOld(0),
     m_dRandom(0),
     m_gridSize(gridSize),
-    m_timer(NULL),
-    m_solverIterations(1)
+    m_solventEnabled(srdSolvent),
+    m_dSolventCellCOM(0),
+    m_numSolvent(0),
+    m_numSolventCells(0),
+    m_solventUpdateCount(0),
+    m_solventUpdateGap(0),
+    m_timer(NULL)
 {
     // Filament parameters
     m_params.numFilaments = m_numFilaments;
     m_params.filamentSize = m_filamentSize;
     m_params.numParticles = m_numParticles;
     m_params.particleRadius = 0.5f;
+    m_params.particleMass = 1.0f;
 
     // System size/boundaries
     m_gridSortBits = 18;    // increase this for larger grids
@@ -97,13 +104,47 @@ ParticleSystem::ParticleSystem(uint numFilaments, uint filamentSize, uint3 gridS
     // Global interations
     m_params.gravity = make_float3(0.0f);
 
-    _initialize(m_numParticles);
+    // SRD Solvent particle parameters
+    _initSolventParams();
+
+    _initialize(m_numParticles, m_numSolvent);
 }
 
 ParticleSystem::~ParticleSystem()
 {
     _finalize();
     m_numParticles = m_numFilaments = m_filamentSize = 0;
+}
+
+inline float frand()
+{
+    return rand() / (float) RAND_MAX;
+}
+
+void
+ParticleSystem::_initSolventParams()
+{
+    if (m_solventEnabled)
+    {
+        m_solvent.enabled = m_solventEnabled;
+        m_solvent.alpha = 2.26893f; // 130 deg TODO: make settings
+        // m_solvent.gridSize = make_uint3(m_params.gridSize.x, m_params.gridSize.y, max(m_params.gridSize.z, 1));
+        // m_solvent.cellSize = m_params.cellSize;
+        m_solvent.gridSize = make_uint3(m_params.gridSize.x / 2, m_params.gridSize.y / 2, max(m_params.gridSize.z / 2, 1));
+        m_solvent.cellSize = m_params.cellSize * 2;
+        m_solvent.numCells = m_solvent.gridSize.x * m_solvent.gridSize.y * m_solvent.gridSize.z;
+        m_solvent.randOffset = make_float3(0.f, 0.f, 0.f);
+        m_solvent.particleMass = 1.0f;
+        m_solvent.kbT = m_params.kbT;
+
+        float density2D = 10.f; // TODO: make setting
+        m_solventUpdateGap = 5; // TODO: make settings
+        m_numSolvent =  uint(density2D * m_solvent.numCells);
+        m_numSolventCells = m_solvent.numCells;
+        m_solvent.numParticles = m_numSolvent;
+
+        printf("SRD Solvent Enabled.\n");
+    }
 }
 
 // create a color ramp
@@ -129,19 +170,20 @@ void colorRamp(float t, float *r)
 }
 
 void
-ParticleSystem::_initialize(int numParticles)
+ParticleSystem::_initialize(int numParticles, int numSolvent)
 {
     assert(!m_bInitialized);
 
     m_numParticles = numParticles;
+    int N = numParticles + numSolvent;
 
     // allocate host storage
-    m_hPos     = new float[m_numParticles*4];
-    m_hVel     = new float[m_numParticles*4];
+    m_hPos     = new float[N*4];
+    m_hVel     = new float[N*4];
     m_hForce   = new float[m_numParticles*4];
     m_hTangent = new float[m_numParticles*4];
-    memset(m_hPos, 0, m_numParticles*4*sizeof(float));
-    memset(m_hVel, 0, m_numParticles*4*sizeof(float));
+    memset(m_hPos, 0, N*4*sizeof(float));
+    memset(m_hVel, 0, N*4*sizeof(float));
     memset(m_hForce, 0, m_numParticles*4*sizeof(float));
     memset(m_hTangent, 0, m_numParticles*4*sizeof(float));
 
@@ -153,19 +195,26 @@ ParticleSystem::_initialize(int numParticles)
 
     // allocate GPU data
     unsigned int memSize = sizeof(float) * 4 * m_numParticles;
-    allocateArray((void **)&m_dPos, memSize);
-    allocateArray((void **)&m_dVel, memSize);
+    unsigned int memSizeN = sizeof(float) * 4 * N;
+    allocateArray((void **)&m_dPos, memSizeN);
+    allocateArray((void **)&m_dVel, memSizeN);
     allocateArray((void **)&m_dTangent, memSize);
     allocateArray((void **)&m_dForce, memSize);
     allocateArray((void **)&m_dForceOld, memSize);
     allocateArray((void **)&m_dRandom, memSize);
-    allocateArray((void **)&m_dSortedPos, memSize);
-    allocateArray((void **)&m_dSortedVel, memSize);
+    allocateArray((void **)&m_dSortedPos, memSizeN);
+    allocateArray((void **)&m_dSortedVel, memSizeN);
     allocateArray((void **)&m_dSortedTangent, memSize);
-    allocateArray((void **)&m_dGridParticleHash, m_numParticles*sizeof(uint));
-    allocateArray((void **)&m_dGridParticleIndex, m_numParticles*sizeof(uint));
+    allocateArray((void **)&m_dGridParticleHash, N*sizeof(uint));
+    allocateArray((void **)&m_dGridParticleIndex, N*sizeof(uint));
     allocateArray((void **)&m_dCellStart, m_numGridCells*sizeof(uint));
     allocateArray((void **)&m_dCellEnd, m_numGridCells*sizeof(uint));
+
+    if (m_solventEnabled)
+    {
+        allocateArray((void **)&m_dSolventCellCOM, m_solvent.numCells*4*sizeof(float));
+        setSolventParameters(&m_solvent);
+    }
 
     sdkCreateTimer(&m_timer);
     setParameters(&m_params);
@@ -205,8 +254,7 @@ ParticleSystem::update(float deltaTime)
     // update constants
     setParameters(&m_params);
 
-    // integrate
-    integrateSystem(
+    integrateFilaments(
         m_dPos,
         m_dVel,
         m_dForce,
@@ -225,7 +273,7 @@ ParticleSystem::update(float deltaTime)
             m_numFilaments);
     }
 
-    if (m_params.kbT > 0.0f || m_params.gamma > 0.0f)
+    if (!m_solventEnabled)
     {
         langevinThermostat(
             m_dForce,
@@ -243,17 +291,17 @@ ParticleSystem::update(float deltaTime)
         m_dPos,
         m_numFilaments);
 
-    // calculate grid hash
+    // calculate grid hash for filament particles only
     calcHash(
         m_dGridParticleHash,
         m_dGridParticleIndex,
         m_dPos,
         m_numParticles);
 
-    // sort particles based on hash
+    // sort filament particles based on hash
     sortParticles(m_dGridParticleHash, m_dGridParticleIndex, m_numParticles);
 
-    // reorder particle arrays into sorted order and
+    // reorder filament particles into sorted order and
     // find start and end of each cell
     reorderDataAndFindCellStart(
         m_dCellStart,
@@ -269,8 +317,8 @@ ParticleSystem::update(float deltaTime)
         m_numParticles,
         m_numGridCells);
 
-    // process collisions
-    collide(
+    // MD collision forces
+    collideFilaments(
         m_dForce,
         m_dSortedPos,
         m_dSortedVel,
@@ -280,6 +328,88 @@ ParticleSystem::update(float deltaTime)
         m_dCellEnd,
         m_numParticles,
         m_numGridCells);
+
+    bool doSolventUpdate = m_solventEnabled && (m_updateCount % m_solventUpdateGap) == 0;
+    if (doSolventUpdate)
+    {
+        _solventUpdate(deltaTime * m_solventUpdateGap);
+    }
+
+    m_updateCount++;
+}
+
+void
+ParticleSystem::_solventUpdate(float dt)
+{
+    // random solvent cell offsets
+    m_solvent.randOffset.x = frand() * m_solvent.cellSize.x;
+    m_solvent.randOffset.y = frand() * m_solvent.cellSize.y;
+    // m_solvent.randOffset.z = randf() * m_solvent.cellSize.z;
+
+    setSolventParameters(&m_solvent);
+
+    // calculate grid hash including solvent particles
+    calcHash(
+        m_dGridParticleHash,
+        m_dGridParticleIndex,
+        m_dPos,
+        m_numParticles + m_numSolvent,
+        true);
+
+    // sort particles based on hash including solvent particles
+    sortParticles(m_dGridParticleHash, m_dGridParticleIndex, m_numParticles + m_numSolvent);
+
+    // reorder filament and solvent particles together
+    reorderDataAndFindCellStart(
+        m_dCellStart,
+        m_dCellEnd,
+        m_dSortedPos,
+        m_dSortedVel,
+        NULL,
+        m_dGridParticleHash,
+        m_dGridParticleIndex,
+        m_dPos,
+        m_dVel,
+        NULL,
+        m_numParticles + m_numSolvent,
+        m_numGridCells);
+
+    solventIsokineticThermostat(
+        m_dVel,
+        m_dSortedVel,
+        m_dCellStart,
+        m_dCellEnd,
+        m_dGridParticleIndex,
+        m_numSolventCells
+    );
+
+    solventCellCentorOfMomentum(
+        m_dSolventCellCOM,
+        m_dSortedVel,
+        m_dCellStart,
+        m_dCellEnd,
+        m_dGridParticleIndex,
+        m_numSolventCells
+    );
+
+    collideSolvent(
+        m_dPos,
+        m_dVel,
+        m_dSolventCellCOM,
+        m_dRandom,
+        m_numSolventCells,
+        m_numParticles + m_numSolvent
+    );
+
+    integrateSolvent(
+        m_dPos,
+        m_dVel,
+        dt,
+        m_numParticles,
+        m_numSolvent
+    );
+
+    m_solventUpdateCount++;
 }
 
 void
@@ -305,6 +435,36 @@ ParticleSystem::dumpGrid()
     printf("maximum particles per cell = %d\n", maxCellSize);
 }
 
+
+void
+ParticleSystem::dumpSolventGrid()
+{
+    // dump grid information
+
+    copyArrayFromDevice(m_hCellStart, m_dCellStart, 0, sizeof(uint)*m_numSolventCells);
+    copyArrayFromDevice(m_hCellEnd, m_dCellEnd, 0, sizeof(uint)*m_numSolventCells);
+
+    float *cellCOM = new float[4*m_numSolventCells];
+    copyArrayFromDevice(cellCOM, m_dSolventCellCOM, 0, 4*sizeof(float)*m_numSolventCells);
+
+    uint maxCellSize = 0;
+
+    for (uint i = 0; i < m_numSolventCells; i++)
+    {
+        if (m_hCellStart[i] != 0xffffffff)
+        {
+            uint cellSize = m_hCellEnd[i] - m_hCellStart[i];
+            if (cellSize > maxCellSize)
+            {
+                printf("[%i] %i CoM = {%f %f} \n", i, cellSize, cellCOM[i*4], cellCOM[i*4 + 1]);
+                maxCellSize = cellSize;
+            }
+        }
+    }
+
+    printf("maximum particles per solvent cell = %d\n", maxCellSize);
+}
+
 void
 ParticleSystem::dumpParticles(uint start, uint count)
 {
@@ -321,23 +481,32 @@ ParticleSystem::dumpParticles(uint start, uint count)
 void
 ParticleSystem::writeOutputs(const std::string& fileName)
 {
-    copyArrayFromDevice(m_hPos, m_dPos, 0, sizeof(float)*4*m_numParticles);
+    const int N = m_numParticles + m_numSolvent;
+    copyArrayFromDevice(m_hPos, m_dPos, 0, sizeof(float)*4*N);
     // copyArrayFromDevice(m_hVel, m_dVel, 0, sizeof(float)*4*m_numParticles);
     // copyArrayFromDevice(m_hForce, m_dForce, 0, sizeof(float)*4*m_numParticles);
-    copyArrayFromDevice(m_hTangent, m_dTangent, 0, sizeof(float)*4*m_numParticles);
+    // copyArrayFromDevice(m_hTangent, m_dTangent, 0, sizeof(float)*4*m_numParticles);
 
     std::ofstream fout;
     fout.open(fileName, std::ios::out | std::ios::app);
-    fout << m_numParticles << std::endl;
+    fout << N << std::endl;
     fout << "Active Filaments Simulation" << std::endl;
-    for (int i = 0; i < m_numParticles; i++)
+    for (int i = 0; i < N; i++)
     {
-        fout << "A " << m_hPos[i*4] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2]
-            //  << " "  << m_hVel[i*4] << " " << m_hVel[i*4+1] << " " << m_hVel[i*4+2]
-            //  << " "  << m_hForce[i*4] << " " << m_hForce[i*4+1] << " " << m_hForce[i*4+2]
-             << " "  << m_hTangent[i*4] << " " << m_hTangent[i*4+1] << " " << m_hTangent[i*4+2]
-             << std::endl;
+        if (i < m_numParticles)
+        {
+            fout << "A " << m_hPos[i*4] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2]
+                //  << " "  << m_hVel[i*4] << " " << m_hVel[i*4+1] << " " << m_hVel[i*4+2]
+                //  << " "  << m_hForce[i*4] << " " << m_hForce[i*4+1] << " " << m_hForce[i*4+2]
+                // << " "  << m_hTangent[i*4] << " " << m_hTangent[i*4+1] << " " << m_hTangent[i*4+2]
+                << std::endl;
+        }
+        else
+        {
+            fout << "B " << m_hPos[i*4] << " " << m_hPos[i*4+1] << " " << m_hPos[i*4+2] << std::endl;
+        }
     }
+
     fout.close();
 }
 
@@ -390,12 +559,6 @@ ParticleSystem::setArray(ParticleArray array, const float *data, int start, int 
     }
 }
 
-inline float frand()
-{
-    return rand() / (float) RAND_MAX;
-}
-
-
 void
 ParticleSystem::reset()
 {
@@ -406,7 +569,7 @@ ParticleSystem::reset()
     float x,y,z,x_head;
     uint w, p = 0, v = 0, t = 0;
 
-    printf("CONFIG_GRID:\n");
+    printf("Placing filament particles.\n");
     printf("filamentLength: %.4f\n", filamentLength);
     printf("filamentsXdim:  %i\n",   xdim_max);
     printf("filamentsYdim:  %i\n",   ydim_max);
@@ -416,7 +579,7 @@ ParticleSystem::reset()
         w = (i / m_params.filamentSize);
         x_head = (w % xdim_max) * filamentLength + m_params.particleRadius;
         x = x_head + (i % m_params.filamentSize) * m_params.bondSpringL;
-        y = 2.f * m_params.particleRadius * ((w / xdim_max) % ydim_max + 1);
+        y = 10.f * 2.f * m_params.particleRadius * ((w / xdim_max) % ydim_max + 1);
         z = 2.f * m_params.particleRadius * (w / xyplane_max + 1);
         m_hPos[p++] = x + m_params.origin.x;
         m_hPos[p++] = y + m_params.origin.y;
@@ -425,7 +588,7 @@ ParticleSystem::reset()
         m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
         m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
         m_hVel[v++] = 0.1f * (frand()*2.0f-1.0f);
-        m_hVel[v++] = 0.0f;
+        m_hVel[v++] = m_params.particleMass;
         m_hTangent[t++] = 1.0f;
         m_hTangent[t++] = m_hTangent[t++] = m_hTangent[t++] = 0.0f;
     }
@@ -436,7 +599,7 @@ ParticleSystem::reset()
         if (frand() < 0.5f) continue;
 
         uint i,j;
-        float m;
+        float r;
         for (p = 0; p < m_params.filamentSize / 2; p++)
         {
             i = w      * m_params.filamentSize      + p; // starts at head
@@ -444,7 +607,7 @@ ParticleSystem::reset()
             x = m_hPos[i*4 + 0]; // tmp save head pos
             y = m_hPos[i*4 + 1];
             z = m_hPos[i*4 + 2];
-            m = m_hPos[i*4 + 3];
+            r = m_hPos[i*4 + 3];
             m_hPos[i*4 + 0] = m_hPos[j*4 + 0]; // Assign j pos to i
             m_hPos[i*4 + 1] = m_hPos[j*4 + 1];
             m_hPos[i*4 + 2] = m_hPos[j*4 + 2];
@@ -452,7 +615,7 @@ ParticleSystem::reset()
             m_hPos[j*4 + 0] = x; // Assign i pos to j
             m_hPos[j*4 + 1] = y;
             m_hPos[j*4 + 2] = z;
-            m_hPos[j*4 + 3] = m;
+            m_hPos[j*4 + 3] = r;
             m_hTangent[i*4 + 0] = -m_hTangent[i*4 + 0]; // Invert tangent i
             m_hTangent[i*4 + 1] = -m_hTangent[i*4 + 1];
             m_hTangent[i*4 + 2] = -m_hTangent[i*4 + 2];
@@ -464,45 +627,31 @@ ParticleSystem::reset()
         }
     }
 
-    setArray(POSITION, m_hPos, 0, m_numParticles);
-    setArray(VELOCITY, m_hVel, 0, m_numParticles);
-    setArray(TANGENT, m_hTangent, 0, m_numParticles);
-}
+    uint N = m_numParticles;
 
-void
-ParticleSystem::addSphere(int start, float *pos, float *vel, int r, float spacing)
-{
-    uint index = start;
-
-    for (int z=-r; z<=r; z++)
+    if (m_solventEnabled)
     {
-        for (int y=-r; y<=r; y++)
+        printf("Placing solvent particles.\n");
+        printf("numSolvent: %i\n", m_numSolvent);
+        N += m_numSolvent;
+
+        uint i;
+        const float v0 = 5.0f; // TODO: relate to kbT
+        for (int s = 0; s < m_numSolvent; s++)
         {
-            for (int x=-r; x<=r; x++)
-            {
-                float dx = x*spacing;
-                float dy = y*spacing;
-                float dz = z*spacing;
-                float l = sqrtf(dx*dx + dy*dy + dz*dz);
-                float jitter = m_params.particleRadius*0.01f;
-
-                if ((l <= m_params.particleRadius*2.0f*r) && (index < m_numParticles))
-                {
-                    m_hPos[index*4]   = pos[0] + dx + (frand()*2.0f-1.0f)*jitter;
-                    m_hPos[index*4+1] = pos[1] + dy + (frand()*2.0f-1.0f)*jitter;
-                    m_hPos[index*4+2] = pos[2] + dz + (frand()*2.0f-1.0f)*jitter;
-                    m_hPos[index*4+3] = pos[3];
-
-                    m_hVel[index*4]   = vel[0];
-                    m_hVel[index*4+1] = vel[1];
-                    m_hVel[index*4+2] = vel[2];
-                    m_hVel[index*4+3] = vel[3];
-                    index++;
-                }
-            }
+            i = m_numParticles + s;
+            m_hPos[i*4 + 0] = m_params.boxSize.x * frand() + m_params.origin.x;
+            m_hPos[i*4 + 1] = m_params.boxSize.y * frand() + m_params.origin.y;
+            m_hPos[i*4 + 2] = m_params.boxSize.z * frand() + m_params.origin.z;
+            m_hPos[i*4 + 3] = 0.0; // solvent radius not defined
+            m_hVel[i*4 + 0] = v0 * (frand() * 2.0f - 1.0f);
+            m_hVel[i*4 + 1] = v0 * (frand() * 2.0f - 1.0f);
+            m_hVel[i*4 + 2] = v0 * (frand() * 2.0f - 1.0f);
+            m_hVel[i*4 + 3] = m_solvent.particleMass;
         }
     }
 
-    setArray(POSITION, m_hPos, start, index);
-    setArray(VELOCITY, m_hVel, start, index);
+    setArray(POSITION, m_hPos, 0, N);
+    setArray(VELOCITY, m_hVel, 0, N);
+    setArray(TANGENT, m_hTangent, 0, m_numParticles);
 }
