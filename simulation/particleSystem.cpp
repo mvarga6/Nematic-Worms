@@ -488,7 +488,34 @@ ParticleSystem::writeOutputs(const std::string& fileName)
     std::ofstream fout;
     fout.open(fileName, std::ios::out | std::ios::app);
     fout << N << std::endl;
-    fout << "Active Filaments Simulation" << std::endl;
+
+    // Write SimParams as json object
+    auto p = this->m_params;
+    fout << "{"
+         << "\"num_particles\":"             << p.numParticles << ","
+         << "\"num_filaments\":"             << p.numFilaments << ","
+         << "\"filament_size\":"             << p.filamentSize << ","
+         << "\"bond_spring_coef\":"          << p.bondSpringK << ","
+         << "\"bond_spring_length\":"        << p.bondSpringL << ","
+         << "\"bond_bending_coef\":"         << p.bondBendingK << ","
+         << "\"activity\":"                  << p.activity << ","
+         << "\"kbT\":"                       << p.kbT << ","
+         << "\"gamma\":"                     << p.gamma << ","
+         << "\"particle_radius\":"           << p.particleRadius << ","
+         << "\"particle_mass\":"             << p.particleMass << ","
+         << "\"num_cells\":"                 << p.numCells << ","
+         << "\"grid_size\":"          << "[" << p.gridSize.x << "," << p.gridSize.y << "," << p.gridSize.z << "],"
+         << "\"box_size\":"           << "[" << p.boxSize.x << "," << p.boxSize.y << "," << p.boxSize.z << "],"
+         << "\"cell_size\":"          << "[" << p.cellSize.x << "," << p.cellSize.y << "," << p.cellSize.z << "],"
+         << "\"boundaries\":"         << "[" << p.boundaryX << "," << p.boundaryY << "," << p.boundaryZ << "],"
+         << "\"reverse_probability\":"       << p.reverseProbability << ","
+         << "\"collision_spring_coef\":"     << p.spring << ","
+         << "\"collision_damping_coef\":"    << p.damping << ","
+         << "\"collision_shear_coef\":"      << p.shear << ","
+         << "\"collision_attraction_coef\":" << p.attraction << ","
+         << "\"boundary_damping_coef\":"     << p.boundaryDamping
+         << "}" << std::endl;
+
     const char * type = "A";
     for (int i = 0; i < N; i++)
     {
