@@ -17,15 +17,16 @@ def read_vector_field(filename):
             if line in ["", None]:
                 break
 
+            # TODO infer format of line based on number of elements
             count += 1
             num_sites = int(line)
             comment = f.readline()
             R = np.zeros((num_sites, 3))
             V = np.zeros((num_sites, 3))
             for i in range(num_sites):
-                data = [float(x) for x in f.readline().split()]
+                data = [float(x) for x in f.readline().split()[1:]]
                 R[i] = data[:3]
-                V[i] = data[3:]
+                V[i] = data[3:6]
 
             origin = R.min(axis=0)
             frames.append({
