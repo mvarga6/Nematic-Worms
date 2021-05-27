@@ -48,7 +48,7 @@ class ParticleSystem
         void dumpGrid();
         void dumpSolventGrid();
         void dumpParticles(uint start, uint count);
-        void writeOutputs(const std::string& fileName);
+        void writeOutputs(const std::string& fileName, int iteration, float timeDelta);
 
         void setDamping(float x)
         {

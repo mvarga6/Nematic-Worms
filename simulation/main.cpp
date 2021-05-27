@@ -20,23 +20,23 @@
 
 // Simulation parameters
 std::string outFile = "nw.xyzv";
-uint numFilaments	= 135 * 6;
+uint numFilaments	= 7000;
 uint filamentSize 	= 30;
 float timestep 		= 0.002f;
-int printRate 		= 1000;
-int iterations 		= 1000000;
+int printRate 		= 2000;
+int iterations 		= 2000000;
 float gravity 		= 0.0f;
 float kBend			= 150.f;
 float kBond			= 57.146436f;
 float hardness		= kBond;
-float activity		= 0.025f;
+float activity		= 0.01f;
 float reverse   	= 0.0005f;
 float kbT			= 2.0f;
 float drag			= 0.01f;
 BoundaryType boundX = BoundaryType::PERIODIC;
 BoundaryType boundY = BoundaryType::WALL;
 BoundaryType boundZ = BoundaryType::WALL;
-uint3 gridSize 		= make_uint3(512, 64, 1);
+uint3 gridSize 		= make_uint3(1024, 128, 1);
 bool srdSolvent		= false;
 
 extern "C" void cudaInit(int argc, char **argv);
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 	psystem->setCollideSpring(hardness);
 
 	psystem->reset();
-	psystem->writeOutputs(outFile);
+	psystem->writeOutputs(outFile, 0, timestep);
 
 	// Pre time loop actions
 	StopWatchInterface *timer = NULL;
@@ -148,13 +148,13 @@ int main(int argc, char *argv[])
     sdkStartTimer(&timer);
 
 	// Run iterations
-	for (int i = 0; i < iterations; ++i)
+	for (int i = 1; i <= iterations; ++i)
     {
         psystem->update(timestep);
 
 		if (i % printRate == 0)
 		{
-			psystem->writeOutputs(outFile);
+			psystem->writeOutputs(outFile, i, timestep);
 			// psystem->dumpSolventGrid();
 			printInfo(timer, psystem->getNumParticles(), i);
 		}

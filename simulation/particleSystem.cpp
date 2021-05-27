@@ -479,7 +479,7 @@ ParticleSystem::dumpParticles(uint start, uint count)
 }
 
 void
-ParticleSystem::writeOutputs(const std::string& fileName)
+ParticleSystem::writeOutputs(const std::string& fileName, int iteration, float timeDelta)
 {
     const int N = m_numParticles + m_numSolvent;
     copyArrayFromDevice(m_hPos, m_dPos, 0, sizeof(float)*4*N);
@@ -492,6 +492,9 @@ ParticleSystem::writeOutputs(const std::string& fileName)
     // Write SimParams as json object
     auto p = this->m_params;
     fout << "{"
+         << "\"iteration\":"                 << iteration << ","
+         << "\"dt\":"                        << timeDelta << ","
+         << "\"time\":"                      << iteration * timeDelta << ","
          << "\"num_particles\":"             << p.numParticles << ","
          << "\"num_filaments\":"             << p.numFilaments << ","
          << "\"filament_size\":"             << p.filamentSize << ","
