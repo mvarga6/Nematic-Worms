@@ -51,19 +51,19 @@ __device__ void dampedWallBoundary(float &r, float &v, const float &coef, const 
     }
 }
 
-__device__ void noslipWallBoundary(float3 &pos, float &r, float3 &vel, const float3 &dr, const float &L0, const float &L, const float &R)
+__device__ void noslipWallBoundary(float3 &pos, float &r, float3 &vel, const float3 &dr, const float3 N, const float &L0, const float &L, const float &R)
 {
     if (r < L0 + R)
     {
         pos -= dr;
         r = L0 + R;
-        vel = -vel;
+        vel = make_float3(-vel.x * N.x, -vel.y * N.y, -vel.z * N.z);
     }
     else if (r > (L + L0) - R)
     {
         pos -= dr;
         r = (L + L0) - R;
-        vel = -vel;
+        vel = make_float3(-vel.x * N.x, -vel.y * N.y, -vel.z * N.z);
     }
 }
 
@@ -106,7 +106,8 @@ struct filament_integrator
         }
         else if(params.boundaryX == BoundaryType::WALL_NO_SLIP)
         {
-            noslipWallBoundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, params.particleRadius);
+            const float3 N = make_float3(1, 0, 0);
+            noslipWallBoundary(pos, pos.x, vel, dr, N, params.origin.x, params.boxSize.x, params.particleRadius);
         }
 
         if (params.boundaryY == BoundaryType::PERIODIC)
@@ -119,7 +120,8 @@ struct filament_integrator
         }
         else if(params.boundaryY == BoundaryType::WALL_NO_SLIP)
         {
-            noslipWallBoundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, params.particleRadius);
+            const float3 N = make_float3(0, 1, 0);
+            noslipWallBoundary(pos, pos.y, vel, dr, N, params.origin.y, params.boxSize.y, params.particleRadius);
         }
 
         if (params.boundaryZ == BoundaryType::PERIODIC)
@@ -169,7 +171,8 @@ struct solvent_integrator
         }
         else if(params.boundaryX == BoundaryType::WALL_NO_SLIP)
         {
-            noslipWallBoundary(pos, pos.x, vel, dr, params.origin.x, params.boxSize.x, 0.0f);
+            const float3 N = make_float3(1, 0, 0);
+            noslipWallBoundary(pos, pos.x, vel, dr, N, params.origin.x, params.boxSize.x, 0.0f);
         }
 
         if (params.boundaryY == BoundaryType::PERIODIC)
@@ -182,7 +185,8 @@ struct solvent_integrator
         }
         else if(params.boundaryY == BoundaryType::WALL_NO_SLIP)
         {
-            noslipWallBoundary(pos, pos.y, vel, dr, params.origin.y, params.boxSize.y, 0.0f);
+            const float3 N = make_float3(0, 1, 0);
+            noslipWallBoundary(pos, pos.y, vel, dr, N, params.origin.y, params.boxSize.y, 0.0f);
         }
 
         if (params.boundaryZ == BoundaryType::PERIODIC)
