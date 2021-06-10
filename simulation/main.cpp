@@ -20,13 +20,13 @@
 
 // Simulation parameters
 std::string outFile = "nw.xyzv";
-uint numFilaments	= 7000;
-uint filamentSize 	= 30;
+uint numFilaments	= 6000;
+uint filamentSize 	= 35;
 float timestep 		= 0.002f;
-int printRate 		= 2000;
-int iterations 		= 2000000;
+int printRate 		= 5000;
+int iterations 		= 5000000;
 float gravity 		= 0.0f;
-float kBend			= 150.f;
+float kBend			= 200.f;
 float kBond			= 57.146436f;
 float hardness		= kBond;
 float activity		= 0.01f;
