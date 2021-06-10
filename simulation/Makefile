@@ -385,3 +385,6 @@ clean:
 	rm -f nw particleSystem.o particleSystem_cuda.o main.o nw.xyzv
 
 clobber: clean
+
+job:
+	@sbatch slurm_job.sh
