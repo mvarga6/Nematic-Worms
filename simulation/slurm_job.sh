@@ -41,10 +41,15 @@ cd "$WORK_DIR"
 function clean_up {
   # - delete temporary files from the compute-node, before copying
   rm -r "$WORK_DIR/nw"
+  # - compress XYZ files
+  while IFS= read -r file_name; do
+    base_name=$(basename "${file_name}" .xyz)
+    tar -cJvf "${base_name}.tar.xz" "${file_name}"
+  done < <( ls *.xyz )
   # - change directory to the location of the sbatch command (on the head node)
   cd "${SUBMIT_DIR}"
-  # - copy everything from the temporary directory on the compute-node
-  cp -prf "${WORK_DIR}"/* .
+  # - copy compressed files from the temporary directory on the compute-node
+  cp -prf "${WORK_DIR}"/*.tar.xz .
   # - erase the temporary directory from the compute-node
   rm -rf "${workdir}"
   # - exit the script
