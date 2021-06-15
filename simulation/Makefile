@@ -386,5 +386,8 @@ clean:
 
 clobber: clean
 
-job:
-	@sbatch slurm_job.sh
+test-job: build
+	@sbatch --export=NW_ARGS="-o=test.xyz -iterations=50000" slurm_job.sh
+
+list-jobs:
+	@sacct --name active-nematic-simulation
