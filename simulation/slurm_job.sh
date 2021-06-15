@@ -45,7 +45,7 @@ function clean_up {
   while IFS= read -r file_name; do
     base_name=$(basename "${file_name}" .xyz)
     tar -cJvf "${base_name}.tar.xz" "${file_name}"
-  done < <( ls *.xyz )
+  done < <( ls {*.xyz,*.xyzv} 2> /dev/null )
   # - change directory to the location of the sbatch command (on the head node)
   cd "${SUBMIT_DIR}"
   # - copy compressed files from the temporary directory on the compute-node
