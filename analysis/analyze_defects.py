@@ -79,6 +79,38 @@ class PositionByAxisAnalysis:
         plt.savefig(self._filename)
 
 
+class NumberOfDefectsAnalysis:
+    def __init__(self, filename, type_labels=None):
+        self._filename = filename
+        self._type_labels = type_labels
+        self._counts = {}
+
+    def update(self, frame):
+        R = frame["positions"]
+        Q = frame["charge"]
+        L = frame["labels"]
+
+        if len(Q) != len(R) != len(L):
+            raise ValueError("R, Q, L are required to be the same length")
+
+        _counts = {}
+        for i in range(len(R)):
+            _counts.setdefault(L[i], 0)
+            _counts[L[i]] += 1
+
+        for label,counts in _counts.items():
+            self._counts.setdefault(label, []).append(counts)
+
+    def analyze(self):
+        print("NumberOfDefects Analyzing...")
+        for n, (label, counts) in enumerate(self._counts.items()):
+            plt.plot(counts, label=f"{self._type_labels[n]}")
+        plt.xlabel("Time Steps")
+        plt.ylabel("Defect Counts")
+        plt.legend()
+        plt.savefig(self._filename)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze XYZ sequence of defect positions.")
     parser.add_argument("-i", "--input", type=str, required=True, help="A director field sequence XYZV file")
@@ -91,15 +123,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     calculations = [
+        # NumberOfDefectsAnalysis(args.output, args.labels),
         PositionByAxisAnalysis(args.position_by_axis, args.output, args.nbins, args.labels)
     ]
 
     print(f"Reading {args.input} ...")
-    with open(args.output, "w+") as out:
-        for frame in tqdm(read_input(args.input, args.skip), desc=" Progress"):
-            if frame["contains_defects"]:
-                for calculation in calculations:
-                    calculation.update(frame)
+    for frame in tqdm(read_input(args.input, args.skip), desc=" Progress"):
+        if frame["contains_defects"]:
+            for calculation in calculations:
+                calculation.update(frame)
 
-        for calculation in calculations:
-            calculation.analyze()
+    for calculation in calculations:
+        calculation.analyze()
