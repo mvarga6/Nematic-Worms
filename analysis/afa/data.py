@@ -4,7 +4,7 @@ from tqdm import tqdm
 import subprocess
 from typing import Optional
 
-from .io import load_next_frame
+from .io import load_next_frame, EmptyLine
 from .utils import compute_tangents
 
 from multiprocessing.managers import BaseManager
@@ -58,13 +58,15 @@ class FilamentFrameLoader:
         filament_length: int,
         max_frames: int = 1000,
         skip: int = 0,
-        compute_displacements=False
+        compute_displacements=False,
+        exclude_n_end_of_frame: int = 0,
     ):
         self.frames = []
         self.max_frames = max_frames
         self.skip = skip
         self.ppf = filament_length
         self.compute_displacements = compute_displacements
+        self.exclude_last = exclude_n_end_of_frame
         self.load(filename)
 
 
@@ -85,23 +87,30 @@ class FilamentFrameLoader:
         with open(filename, "r") as f:
             r_old = None
             for frame_count in tqdm(range(self.skip + self.max_frames), desc=f" Reading {filename}"):
-                r, t = load_next_frame(f)
-                dr = None
+                try:
+                    r, t = load_next_frame(f)
+                    dr = None
 
-                if self.compute_displacements:
-                    if r_old is None:
-                        r_old = r
-                    dr = r - r_old
+                    if frame_count < self.skip:
+                        continue
 
-                if frame_count < self.skip:
-                    continue
+                    if self.exclude_last > 0:
+                        r = r[:-self.exclude_last]
+                        t = t[:-self.exclude_last]
 
-                self.frames.append(Frame(
-                    positions=r,
-                    displacements=dr,
-                    labels=t,
-                    filament_length=self.ppf,
-                    frame_number=frame_count))
+                    if self.compute_displacements:
+                        if r_old is None:
+                            r_old = r
+                        dr = r - r_old
+
+                    self.frames.append(Frame(
+                        positions=r,
+                        displacements=dr,
+                        labels=t,
+                        filament_length=self.ppf,
+                        frame_number=frame_count))
+                except EmptyLine:
+                    pass
 
 
 
